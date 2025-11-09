@@ -1,0 +1,8 @@
+{
+  "name": "Bakwaas FM",
+  "short_name": "Bakwaas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#22252B",
+  "theme_color": "#22252B"
+}
