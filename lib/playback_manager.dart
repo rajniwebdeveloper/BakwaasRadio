@@ -1,16 +1,32 @@
 import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
 class PlaybackManager extends ChangeNotifier {
-  PlaybackManager._internal();
+  PlaybackManager._internal() {
+    _audioPlayer = AudioPlayer();
+    _audioPlayer.onDurationChanged.listen((duration) {
+      _durationSeconds = duration.inSeconds;
+      notifyListeners();
+    });
+    _audioPlayer.onPositionChanged.listen((position) {
+      _progress = _durationSeconds > 0
+          ? position.inSeconds / _durationSeconds
+          : 0.0;
+      notifyListeners();
+    });
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      _isPlaying = state == PlayerState.playing;
+      notifyListeners();
+    });
+  }
   static final PlaybackManager instance = PlaybackManager._internal();
 
+  late final AudioPlayer _audioPlayer;
   Map<String, String>? _currentSong;
   bool _isPlaying = false;
   double _progress = 0.0; // 0.0 - 1.0
-  int _durationSeconds = 191; // default 3:11
-
-  Timer? _timer;
+  int _durationSeconds = 0;
 
   // Remember the last played song even when playback is stopped
   Map<String, String>? _lastSong;
@@ -22,69 +38,48 @@ class PlaybackManager extends ChangeNotifier {
   Map<String, String>? get lastSong =>
       _lastSong != null ? Map.from(_lastSong!) : null;
 
-  void play(Map<String, String> song, {int duration = 191}) {
+  void play(Map<String, String> song, {int duration = 0}) {
+    if (song['url'] == null || song['url']!.isEmpty) {
+      return;
+    }
+
     // If same song and was paused, resume
     if (_currentSong != null &&
         _mapEquals(_currentSong!, song) &&
-        _progress > 0.0) {
-      _durationSeconds = duration;
-      _startTimer();
-      _isPlaying = true;
-      notifyListeners();
+        !_isPlaying) {
+      _audioPlayer.resume();
       return;
     }
 
     _currentSong = Map.from(song);
-    _durationSeconds = duration;
-    _progress = 0.0;
-    _isPlaying = true;
-    _startTimer();
-    // remember last played
+    _audioPlayer.play(UrlSource(song['url']!));
     _lastSong = Map.from(song);
     notifyListeners();
   }
 
   void pause() {
-    _stopTimer();
-    _isPlaying = false;
-    notifyListeners();
+    _audioPlayer.pause();
   }
 
   void toggle() {
-    if (_isPlaying)
+    if (_isPlaying) {
       pause();
-    else {
+    } else {
       if (_currentSong != null) {
-        _isPlaying = true;
-        _startTimer();
-        notifyListeners();
+        play(_currentSong!);
       }
     }
   }
 
   void seek(double value) {
-    _progress = value.clamp(0.0, 1.0);
-    notifyListeners();
+    final position = value * _durationSeconds;
+    _audioPlayer.seek(Duration(seconds: position.round()));
   }
 
-  void _startTimer() {
-    _stopTimer();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!_isPlaying) return;
-      final step = 1 / (_durationSeconds <= 0 ? 1 : _durationSeconds);
-      _progress += step;
-      if (_progress >= 1.0) {
-        _progress = 1.0;
-        _isPlaying = false;
-        _stopTimer();
-      }
-      notifyListeners();
-    });
-  }
-
-  void _stopTimer() {
-    _timer?.cancel();
-    _timer = null;
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
   }
 
   bool _mapEquals(Map<String, String> a, Map<String, String> b) {

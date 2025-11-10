@@ -1,3 +1,5 @@
+import 'package:bakwaas_fm/api_service.dart';
+import 'package:bakwaas_fm/models/station.dart';
 import 'package:flutter/material.dart';
 import 'library/song_page.dart';
 import 'playback_manager.dart';
@@ -80,6 +82,17 @@ class HomePage extends StatelessWidget {
                   children: [
                     const TabsRow(), // Move TabsRow here
                     const SizedBox(height: 20), // Add space after the tabs
+                    Section(
+                        title: 'Stations',
+                        itemCount: 6,
+                        cardType: CardType.station,
+                        onViewAll: () {
+                          // Navigator.of(context).push(MaterialPageRoute(
+                          //     builder: (_) => AllSongsPage(
+                          //         title: 'Recently Played',
+                          //         songs: sampleSongs)));
+                        }),
+                    const SizedBox(height: 20),
                     Section(
                         title: 'Recently Played',
                         itemCount: 6,
@@ -196,7 +209,7 @@ class ToggleButton extends StatelessWidget {
   }
 }
 
-enum CardType { album, playlist }
+enum CardType { album, playlist, station }
 
 class Section extends StatelessWidget {
   final String title;
@@ -219,121 +232,191 @@ class Section extends StatelessWidget {
         const SizedBox(height: 12),
         SizedBox(
           height: cardType == CardType.album ? 130 : 150,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: itemCount,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (context, index) {
-              if (cardType == CardType.album) {
-                final song = sampleSongs[index % sampleSongs.length];
-                // inline album/song card
-                final title = song['title'] ?? '';
-                final subtitle = song['subtitle'] ?? '';
-                final image = song['image'];
-                return SizedBox(
-                  width: 120,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => SongPage(
-                              title: title,
-                              subtitle: subtitle,
-                              imageUrl: image,
-                              autoplay: true)));
-                    },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          height: 80,
-                          width: 120,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(8),
-                            image: image != null
-                                ? DecorationImage(
-                                    image: NetworkImage(image),
-                                    fit: BoxFit.cover)
-                                : null,
-                          ),
-                          child: image == null
-                              ? const Center(
-                                  child: Icon(Icons.album,
-                                      size: 36, color: Colors.black54))
-                              : null,
-                        ),
-                        const SizedBox(height: 6),
-                        Text(title,
-                            style: const TextStyle(fontSize: 12),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 4),
-                        Text(subtitle,
-                            style: const TextStyle(
-                                fontSize: 10, color: Colors.black87),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
-                      ],
-                    ),
-                  ),
-                );
-              } else {
-                final playlist =
-                    AppData.playlists[index % AppData.playlists.length];
-                final title = playlist['title'] ?? '';
-                final imageUrl = playlist['image'];
-                return SizedBox(
-                  width: 120,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) =>
-                            PlaylistDetailPage(playlist: playlist))),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          height: 90,
-                          width: 120,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            image: (imageUrl != null &&
-                                    (imageUrl as String).isNotEmpty)
-                                ? DecorationImage(
-                                    image: NetworkImage(imageUrl),
-                                    fit: BoxFit.cover)
-                                : null,
-                            gradient:
-                                imageUrl == null || (imageUrl as String).isEmpty
-                                    ? LinearGradient(
-                                        colors: [
-                                            Colors.teal.shade300,
-                                            Colors.purple.shade300
-                                          ],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight)
+          child: cardType == CardType.station
+              ? FutureBuilder<List<Station>>(
+                  future: ApiService.getStations(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      final stations = snapshot.data!;
+                      return ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: stations.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                        itemBuilder: (context, index) {
+                          final station = stations[index];
+                          return SizedBox(
+                            width: 120,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(8),
+                              onTap: () {
+                                Navigator.of(context).push(MaterialPageRoute(
+                                    builder: (_) => SongPage(
+                                        station: station,
+                                        title: station.name,
+                                        subtitle: station.description ?? '',
+                                        imageUrl: station.profilepic,
+                                        autoplay: true)));
+                              },
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    height: 80,
+                                    width: 120,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade200,
+                                      borderRadius: BorderRadius.circular(8),
+                                      image: station.profilepic != null
+                                          ? DecorationImage(
+                                              image: NetworkImage(
+                                                  station.profilepic!),
+                                              fit: BoxFit.cover)
+                                          : null,
+                                    ),
+                                    child: station.profilepic == null
+                                        ? const Center(
+                                            child: Icon(Icons.album,
+                                                size: 36,
+                                                color: Colors.black54))
+                                        : null,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(station.name,
+                                      style: const TextStyle(fontSize: 12),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis),
+                                  const SizedBox(height: 4),
+                                  Text(station.description ?? '',
+                                      style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.black87),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    } else if (snapshot.hasError) {
+                      return const Center(child: Text('Failed to load data'));
+                    }
+                    return const Center(child: CircularProgressIndicator());
+                  },
+                )
+              : ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: itemCount,
+                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  itemBuilder: (context, index) {
+                    if (cardType == CardType.album) {
+                      final song = sampleSongs[index % sampleSongs.length];
+                      // inline album/song card
+                      final title = song['title'] ?? '';
+                      final subtitle = song['subtitle'] ?? '';
+                      final image = song['image'];
+                      return SizedBox(
+                        width: 120,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () {
+                            Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => SongPage(
+                                    title: title,
+                                    subtitle: subtitle,
+                                    imageUrl: image,
+                                    autoplay: true)));
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 80,
+                                width: 120,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(8),
+                                  image: image != null
+                                      ? DecorationImage(
+                                          image: NetworkImage(image),
+                                          fit: BoxFit.cover)
+                                      : null,
+                                ),
+                                child: image == null
+                                    ? const Center(
+                                        child: Icon(Icons.album,
+                                            size: 36, color: Colors.black54))
                                     : null,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(title,
+                                  style: const TextStyle(fontSize: 12),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                              const SizedBox(height: 4),
+                              Text(subtitle,
+                                  style: const TextStyle(
+                                      fontSize: 10, color: Colors.black87),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                            ],
                           ),
-                          child:
-                              (imageUrl == null || (imageUrl as String).isEmpty)
-                                  ? const Center(
-                                      child: Icon(Icons.playlist_play,
-                                          size: 36, color: Colors.white))
-                                  : null,
                         ),
-                        const SizedBox(height: 6),
-                        Text(title,
-                            style: const TextStyle(fontSize: 12),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
-                      ],
-                    ),
-                  ),
-                );
-              }
-            },
-          ),
+                      );
+                    } else {
+                      final playlist =
+                          AppData.playlists[index % AppData.playlists.length];
+                      final title = playlist['title'] ?? '';
+                      final imageUrl = playlist['image'];
+                      return SizedBox(
+                        width: 120,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      PlaylistDetailPage(playlist: playlist))),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 90,
+                                width: 120,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(10),
+                                  image: (imageUrl != null &&
+                                          (imageUrl as String).isNotEmpty)
+                                      ? DecorationImage(
+                                          image: NetworkImage(imageUrl),
+                                          fit: BoxFit.cover)
+                                      : null,
+                                  gradient: imageUrl == null ||
+                                          (imageUrl as String).isEmpty
+                                      ? LinearGradient(colors: [
+                                          Colors.teal.shade300,
+                                          Colors.purple.shade300
+                                        ], begin: Alignment.topLeft, end: Alignment.bottomRight)
+                                      : null,
+                                ),
+                                child: (imageUrl == null ||
+                                        (imageUrl as String).isEmpty)
+                                    ? const Center(
+                                        child: Icon(Icons.playlist_play,
+                                            size: 36, color: Colors.white))
+                                    : null,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(title,
+                                  style: const TextStyle(fontSize: 12),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
         ),
       ],
     );

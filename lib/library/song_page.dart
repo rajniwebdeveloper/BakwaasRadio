@@ -1,16 +1,19 @@
 import 'dart:math' as math;
+import 'package:bakwaas_fm/models/station.dart';
 import 'package:flutter/material.dart';
 import 'liked_songs_manager.dart';
 import '../playback_manager.dart';
 import '../app_data.dart';
 
 class SongPage extends StatefulWidget {
+  final Station? station;
   final String title;
   final String subtitle;
   final String? imageUrl; // optional image to show inside the CD
   final bool autoplay; // whether to auto-start playback when opened
   const SongPage(
       {super.key,
+      this.station,
       required this.title,
       required this.subtitle,
       this.imageUrl,
@@ -66,6 +69,23 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
     // listen to global playback manager
     PlaybackManager.instance.addListener(_playbackListener);
 
+    if (widget.station != null) {
+      _songs.insert(0, {
+        'title': widget.station!.name,
+        'subtitle': widget.station!.description ?? '',
+        'image': widget.station!.profilepic ?? '',
+        'url': widget.station!.playerUrl ?? ''
+      });
+      _currentIndex = 0;
+      if (widget.autoplay) {
+        PlaybackManager.instance.play({
+          'title': widget.station!.name,
+          'subtitle': widget.station!.description ?? '',
+          'image': widget.station!.profilepic ?? '',
+          'url': widget.station!.playerUrl ?? ''
+        }, duration: _totalSeconds);
+      }
+    } else
     // if widget provides a specific song, insert it at top
     if (widget.title.isNotEmpty) {
       _songs.insert(0, {
@@ -106,7 +126,8 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
           {
             'title': widget.title,
             'subtitle': widget.subtitle,
-            'image': widget.imageUrl ?? ''
+            'image': widget.imageUrl ?? '',
+            'url': widget.station?.playerUrl ?? ''
           };
       PlaybackManager.instance.play(current, duration: _totalSeconds);
     }
@@ -510,7 +531,8 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                                         shape: BoxShape.circle,
                                         color: Colors.grey.shade200),
                                     child: ClipOval(
-                                      child: imageUrl != null
+                                      child: imageUrl != null &&
+                                              imageUrl.isNotEmpty
                                           ? Image.network(imageUrl,
                                               fit: BoxFit.cover,
                                               width: albumSize - 28,
@@ -783,10 +805,11 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                                   leading: CircleAvatar(
                                       radius: 22,
                                       backgroundColor: Colors.grey.shade200,
-                                      backgroundImage: img != null
+                                      backgroundImage: img != null &&
+                                              img.isNotEmpty
                                           ? NetworkImage(img)
                                           : null,
-                                      child: img == null
+                                      child: img == null || img.isEmpty
                                           ? const Icon(Icons.album,
                                               color: Colors.black87)
                                           : null),
