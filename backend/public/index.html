@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BakwaasFM - Premium Audio Experience</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.3/cdn.min.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+        .pulse-animation { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div x-data="bakwaasFM()" class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-white shadow-lg sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 flex items-center">
+                            <i class="fas fa-radio text-purple-600 text-2xl mr-2"></i>
+                            <span class="text-2xl font-bold text-gray-900">BakwaasFM</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button @click="showSection = 'home'; clearFilters()" :class="showSection === 'home' ? 'text-purple-600' : 'text-gray-700'" class="px-3 py-2 hover:text-purple-600 transition">Home</button>
+                        <button @click="showAllStations()" :class="showSection === 'stations' && !currentSeries ? 'text-purple-600' : 'text-gray-700'" class="px-3 py-2 hover:text-purple-600 transition">All Stations</button>
+                        <button @click="showSection = 'series'; clearFilters()" :class="showSection === 'series' ? 'text-purple-600' : 'text-gray-700'" class="px-3 py-2 hover:text-purple-600 transition">Series</button>
+                        <button @click="showStandalone()" :class="showSection === 'standalone' ? 'text-purple-600' : 'text-gray-700'" class="px-3 py-2 hover:text-purple-600 transition">Standalone</button>
+                    
+                        <button class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">Download App</button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Error Alert -->
+        <div x-show="error" x-transition class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mx-4 mt-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    <span x-text="error"></span>
+                </div>
+                <button @click="error = null" class="text-red-700 hover:text-red-900">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Success Alert -->
+        <div x-show="success" x-transition class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mx-4 mt-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    <span x-text="success"></span>
+                </div>
+                <button @click="success = null" class="text-green-700 hover:text-green-900">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Hero Section -->
+        <div x-show="showSection === 'home'" class="gradient-bg text-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+                <div class="text-center">
+                    <h1 class="text-5xl font-bold mb-6">Welcome to BakwaasFM</h1>
+                    <p class="text-xl mb-8 max-w-2xl mx-auto">Experience premium audio content with our curated collection of radio stations and exclusive series.</p>
+                    <div class="flex justify-center space-x-4">
+                        <button @click="showSection = 'stations'" class="bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
+                            <i class="fas fa-play mr-2"></i>Start Listening
+                        </button>
+                        <button class="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-purple-600 transition">
+                            <i class="fas fa-download mr-2"></i>Download App
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div x-show="showSection === 'home'" class="py-16 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-4">Why Choose BakwaasFM?</h2>
+                    <p class="text-gray-600 max-w-2xl mx-auto">Discover what makes our platform the best choice for audio entertainment</p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="text-center p-6 rounded-lg hover:shadow-lg transition">
+                        <div class="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-headphones text-purple-600 text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Premium Audio Quality</h3>
+                        <p class="text-gray-600">Crystal clear audio streaming with high-quality mp3 formats</p>
+                    </div>
+                    <div class="text-center p-6 rounded-lg hover:shadow-lg transition">
+                        <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-list text-blue-600 text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Organized Series</h3>
+                        <p class="text-gray-600">Content organized in series with up to 10 episodes each</p>
+                    </div>
+                    <div class="text-center p-6 rounded-lg hover:shadow-lg transition">
+                        <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-mobile-alt text-green-600 text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Mobile App</h3>
+                        <p class="text-gray-600">Listen on the go with our Android application</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stations Section -->
+        <div x-show="showSection === 'stations'" class="py-16 bg-gray-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-4">
+                        <span x-show="!currentSeries">All Radio Stations</span>
+                        <span x-show="currentSeries">Series: <span x-text="currentSeries"></span></span>
+                    </h2>
+                    <p class="text-gray-600">
+                        <span x-show="!currentSeries">Explore our complete collection of premium radio stations</span>
+                        <span x-show="currentSeries">Episodes from <span x-text="currentSeries"></span></span>
+                    </p>
+                    <div x-show="currentSeries" class="mt-4">
+                        <button @click="showAllStations()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+                            <i class="fas fa-arrow-left mr-2"></i>Back to All Stations
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Loading State -->
+                <div x-show="loading" class="text-center py-12">
+                    <div class="inline-block">
+                        <i class="fas fa-spinner fa-spin text-4xl text-purple-600 pulse-animation"></i>
+                        <p class="mt-4 text-gray-600">Loading stations...</p>
+                    </div>
+                </div>
+
+                <!-- No Stations Found -->
+                <div x-show="!loading && stations.length === 0" class="text-center py-12">
+                    <i class="fas fa-radio text-6xl text-gray-300 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-600 mb-2">No Stations Found</h3>
+                    <p class="text-gray-500 mb-6">
+                        <span x-show="!currentSeries">No stations are available at the moment.</span>
+                        <span x-show="currentSeries">No stations found for Series <span x-text="currentSeries"></span>.</span>
+                    </p>
+                    <button @click="loadStations()" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-refresh mr-2"></i>Refresh
+                    </button>
+                </div>
+
+                <!-- Stations Grid -->
+                <div x-show="!loading && stations.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <template x-for="station in stations" :key="station._id">
+                        <div class="bg-white rounded-lg shadow-md card-hover overflow-hidden">
+                            <div class="h-48 bg-gradient-to-br from-purple-400 to-blue-500 bg-cover bg-center relative" 
+                                 :style="station.banner ? `background-image: url(${station.banner})` : ''">
+                                <div x-show="station.isPaid" class="absolute top-3 right-3">
+                                    <span class="bg-yellow-400 text-yellow-900 text-xs px-3 py-1 rounded-full font-semibold">
+                                        <i class="fas fa-crown mr-1"></i>Premium
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="p-6">
+                                <div class="flex items-center mb-4">
+                                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center mr-4 overflow-hidden">
+                                        <img x-show="station.profilepic" :src="station.profilepic" :alt="station.name" class="w-full h-full object-cover">
+                                        <i x-show="!station.profilepic" class="fas fa-radio text-white"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="font-semibold text-lg text-gray-900" x-text="station.name"></h3>
+                                        <div class="flex items-center text-sm text-gray-500">
+                                            <span x-text="station.seriesName || 'Standalone'"></span>
+                                            <span x-show="station.audioCount" class="ml-2">• <span x-text="station.audioCount"></span> tracks</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-gray-600 mb-4 text-sm leading-relaxed" x-text="station.description || 'No description available'"></p>
+                                <div class="flex justify-between items-center">
+                                    <div class="text-xs text-gray-400">
+                                        <i class="fas fa-music mr-1"></i>Audio Station
+                                    </div>
+                                    <button @click="playStation(station)" 
+                                            :disabled="!station.mp3Url && !station.playerUrl"
+                                            :class="station.mp3Url || station.playerUrl ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-400 cursor-not-allowed'"
+                                            class="text-white px-4 py-2 rounded-lg transition flex items-center">
+                                        <i class="fas fa-play mr-2"></i>
+                                        <span x-text="station.mp3Url || station.playerUrl ? 'Play' : 'Unavailable'"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Series Section -->
+        <div x-show="showSection === 'series'" class="py-16 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-4">Browse Series</h2>
+                    <p class="text-gray-600">Discover episodic audio content organized by series</p>
+                </div>
+                
+                <!-- Loading State -->
+                <div x-show="loadingSeries" class="text-center py-12">
+                    <div class="inline-block">
+                        <i class="fas fa-spinner fa-spin text-4xl text-purple-600 pulse-animation"></i>
+                        <p class="mt-4 text-gray-600">Loading series...</p>
+                    </div>
+                </div>
+
+                <!-- Series Grid -->
+                <div x-show="!loadingSeries && allSeries.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <template x-for="series in allSeries" :key="series._id">
+                        <div @click="loadSeriesStations(series.seriesName)" class="bg-white rounded-lg shadow-md card-hover overflow-hidden cursor-pointer">
+                            <div class="h-48 bg-gradient-to-br from-purple-400 to-blue-500 bg-cover bg-center relative" 
+                                 :style="series.banner ? `background-image: url(${series.banner})` : ''">
+                                <div class="absolute top-3 right-3 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm">
+                                    <span x-text="series.totalEpisodes"></span> Episodes
+                                </div>
+                                <div class="absolute bottom-3 left-3 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm">
+                                    <span x-text="series.seriesName"></span>
+                                </div>
+                            </div>
+                            <div class="p-6">
+                                <div class="flex items-center mb-4">
+                                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center mr-4 overflow-hidden">
+                                        <img x-show="series.profilepic" :src="series.profilepic" class="w-full h-full object-cover">
+                                        <i x-show="!series.profilepic" class="fas fa-list text-white"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="font-semibold text-lg text-gray-900" x-text="series.seriesName"></h3>
+                                        <div class="flex items-center text-sm text-gray-500">
+                                            <span x-text="series.genre"></span>
+                                            <span class="mx-1">•</span>
+                                            <span x-text="series.language"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-gray-600 mb-4 text-sm leading-relaxed" x-text="series.seriesDescription || 'No description available'"></p>
+                                <div class="flex justify-between items-center">
+                                    <div class="flex space-x-2">
+                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full" x-text="`${series.freeCount} Free`"></span>
+                                        <span x-show="series.paidCount > 0" class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full" x-text="`${series.paidCount} Premium`"></span>
+                                    </div>
+                                    <span class="text-xs text-gray-400">
+                                        <i class="fas fa-play mr-1"></i>Click to explore
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- No Series Found -->
+                <div x-show="!loadingSeries && allSeries.length === 0" class="text-center py-12">
+                    <i class="fas fa-list text-6xl text-gray-300 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-600 mb-2">No Series Found</h3>
+                    <p class="text-gray-500 mb-6">No audio series are available at the moment.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Standalone Section -->
+        <div x-show="showSection === 'standalone'" class="py-16 bg-gray-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-4">Standalone Audio</h2>
+                    <p class="text-gray-600">Individual audio content not part of any series</p>
+                </div>
+                
+                <!-- Loading State -->
+                <div x-show="loading" class="text-center py-12">
+                    <div class="inline-block">
+                        <i class="fas fa-spinner fa-spin text-4xl text-purple-600 pulse-animation"></i>
+                        <p class="mt-4 text-gray-600">Loading standalone content...</p>
+                    </div>
+                </div>
+
+                <!-- Standalone Grid -->
+                <div x-show="!loading && stations.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <template x-for="station in stations" :key="station._id">
+                        <div class="bg-white rounded-lg shadow-md card-hover overflow-hidden">
+                            <div class="h-48 bg-gradient-to-br from-green-400 to-teal-500 bg-cover bg-center relative" 
+                                 :style="station.banner ? `background-image: url(${station.banner})` : ''">
+                                <div x-show="station.isPaid" class="absolute top-3 right-3">
+                                    <span class="bg-yellow-400 text-yellow-900 text-xs px-3 py-1 rounded-full font-semibold">
+                                        <i class="fas fa-crown mr-1"></i>Premium
+                                    </span>
+                                </div>
+                                <div class="absolute bottom-3 left-3 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm">
+                                    <i class="fas fa-music mr-1"></i>Standalone
+                                </div>
+                            </div>
+                            <div class="p-6">
+                                <div class="flex items-center mb-4">
+                                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-teal-500 flex items-center justify-center mr-4 overflow-hidden">
+                                        <img x-show="station.profilepic" :src="station.profilepic" :alt="station.name" class="w-full h-full object-cover">
+                                        <i x-show="!station.profilepic" class="fas fa-music text-white"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="font-semibold text-lg text-gray-900" x-text="station.name"></h3>
+                                        <div class="flex items-center text-sm text-gray-500">
+                                            <span x-text="station.genre"></span>
+                                            <span class="mx-1">•</span>
+                                            <span x-text="station.language"></span>
+                                            <span x-show="station.duration" class="mx-1">•</span>
+                                            <span x-show="station.duration" x-text="station.duration"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-gray-600 mb-4 text-sm leading-relaxed" x-text="station.description || 'No description available'"></p>
+                                <div class="flex justify-between items-center">
+                                    <div class="text-xs text-gray-400">
+                                        <i class="fas fa-headphones mr-1"></i>Audio Content
+                                    </div>
+                                    <button @click="playStation(station)" 
+                                            :disabled="!station.mp3Url && !station.playerUrl"
+                                            :class="station.mp3Url || station.playerUrl ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'"
+                                            class="text-white px-4 py-2 rounded-lg transition flex items-center">
+                                        <i class="fas fa-play mr-2"></i>
+                                        <span x-text="station.mp3Url || station.playerUrl ? 'Play' : 'Unavailable'"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- No Standalone Content -->
+                <div x-show="!loading && stations.length === 0" class="text-center py-12">
+                    <i class="fas fa-music text-6xl text-gray-300 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-600 mb-2">No Standalone Content</h3>
+                    <p class="text-gray-500 mb-6">No standalone audio content is available at the moment.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio Player -->
+        <div x-show="currentStation" x-transition:enter="transition ease-out duration-300" 
+             x-transition:enter-start="transform translate-y-full" 
+             x-transition:enter-end="transform translate-y-0"
+             class="fixed bottom-0 left-0 right-0 bg-white shadow-2xl border-t z-40">
+            <div class="max-w-7xl mx-auto px-4 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center flex-1 min-w-0">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center mr-4 overflow-hidden flex-shrink-0">
+                            <img x-show="currentStation?.profilepic" :src="currentStation?.profilepic" class="w-full h-full object-cover">
+                            <i x-show="!currentStation?.profilepic" class="fas fa-radio text-white"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h4 class="font-semibold truncate" x-text="currentStation?.name"></h4>
+                            <p class="text-sm text-gray-600 truncate" x-text="currentStation?.description || 'Now playing...'"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4 ml-4">
+                        <div x-show="audioLoading" class="text-gray-500">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <button @click="togglePlay()" 
+                                :disabled="audioLoading"
+                                class="bg-purple-600 text-white w-12 h-12 rounded-full flex items-center justify-center hover:bg-purple-700 transition disabled:opacity-50">
+                            <i :class="isPlaying ? 'fas fa-pause' : 'fas fa-play'"></i>
+                        </button>
+                        <button @click="stopPlayer()" class="text-gray-600 hover:text-gray-800 transition">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                <audio x-ref="audioPlayer" 
+                       @loadstart="audioLoading = true" 
+                       @canplay="audioLoading = false; audioError = null" 
+                       @error="handleAudioError()"
+                       @ended="isPlaying = false"
+                       @pause="isPlaying = false"
+                       @play="isPlaying = true"
+                       preload="none"></audio>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer id="contact" x-show="showSection === 'home'" class="bg-gray-800 text-white py-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid md:grid-cols-4 gap-8">
+                    <div class="md:col-span-2">
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-radio text-purple-400 text-2xl mr-2"></i>
+                            <span class="text-2xl font-bold">Bakwaas FM</span>
+                        </div>
+                        <p class="text-gray-300 mb-4">Your premium destination for quality audio content. Stream, discover, and enjoy the best audio entertainment. Safe for ages 13 and up.</p>
+                        <div class="flex space-x-4 mb-4">
+                            <a href="mailto:contact@rajnikantmahato.me" class="text-gray-300 hover:text-white transition" title="Email Support">
+                                <i class="fas fa-envelope text-xl"></i>
+                            </a>
+                            <a href="https://rajnikantmahato.me" target="_blank" class="text-gray-300 hover:text-white transition" title="Developer Website">
+                                <i class="fas fa-globe text-xl"></i>
+                            </a>
+                            <a href="mailto:contact@rajnikantmahato.me" class="text-gray-300 hover:text-white transition" title="Child Safety">
+                                <i class="fas fa-shield-alt text-xl"></i>
+                            </a>
+                        </div>
+                        <div class="bg-blue-900 bg-opacity-50 p-3 rounded-lg">
+                            <p class="text-xs text-blue-200">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                <strong>Age Requirement:</strong> This app is for users aged 13+. 
+                                We comply with COPPA and child safety regulations.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Quick Links</h3>
+                        <ul class="space-y-2">
+                            <li><a href="#" @click="showSection = 'home'" class="text-gray-300 hover:text-white transition">Home</a></li>
+                            <li><a href="#" @click="showAllStations()" class="text-gray-300 hover:text-white transition">All Stations</a></li>
+                            <li><a href="#" @click="showSection = 'series'" class="text-gray-300 hover:text-white transition">Series</a></li>
+                            <li><a href="#" @click="showStandalone()" class="text-gray-300 hover:text-white transition">Standalone</a></li>
+                              </ul>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Legal & Safety</h3>
+                        <ul class="space-y-2">
+                            <li><a href="/privacy" target="_blank" class="text-gray-300 hover:text-white transition">Privacy Policy</a></li>
+                            <li><a href="/terms" target="_blank" class="text-gray-300 hover:text-white transition">Terms & Conditions</a></li>
+                            <li><a href="mailto:contact@rajnikantmahato.me" class="text-gray-300 hover:text-white transition">Copyright Issues</a></li>
+                            <li><a href="mailto:contact@rajnikantmahato.me" class="text-gray-300 hover:text-white transition">Child Safety</a></li>
+                            <li><a href="mailto:contact@rajnikantmahato.me" class="text-gray-300 hover:text-white transition">Contact Support</a></li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="border-t border-gray-700 mt-8 pt-8">
+                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                        <div>
+                            <p class="text-sm text-gray-400">&copy; 2024 Bakwaas FM. All rights reserved.</p>
+                            <p class="text-xs text-gray-500 mt-1">
+                                Developed by <a href="https://rajnikantmahato.me" target="_blank" class="text-purple-400 hover:underline">Rajni Web Developer</a> | 
+                                <span class="text-blue-300">Ages 13+ Only</span>
+                            </p>
+                        </div>
+                        
+                        <div class="grid md:grid-cols-2 gap-4 max-w-2xl">
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                <p class="text-xs text-yellow-800">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    <strong>Copyright Notice:</strong> We use publicly available content. 
+                                </p>
+                                <p class="text-xs text-yellow-700 mt-1">
+                                    For copyright issues: <a href="mailto:contact@rajnikantmahato.me" class="font-semibold underline">contact@rajnikantmahato.me</a>
+                                </p>
+                            </div>
+                            
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <p class="text-xs text-blue-800">
+                                    <i class="fas fa-shield-alt mr-1"></i>
+                                    <strong>Child Safety:</strong> Family-friendly content for ages 13+
+                                </p>
+                                <p class="text-xs text-blue-700 mt-1">
+                                    Parents: <a href="mailto:contact@rajnikantmahato.me" class="font-semibold underline">contact@rajnikantmahato.me</a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 pt-4 border-t border-gray-600">
+                        <p class="text-xs text-gray-500 text-center">
+                            This platform complies with COPPA, GDPR, and international child protection laws. 
+                            All content is moderated for age-appropriateness. 
+                            <a href="/privacy" target="_blank" class="text-purple-400 hover:underline">Privacy Policy</a> | 
+                            <a href="/terms" target="_blank" class="text-purple-400 hover:underline">Terms of Service</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        function bakwaasFM() {
+            return {
+                showSection: 'home',
+                stations: [],
+                currentStation: null,
+                currentSeries: null,
+                isPlaying: false,
+                loading: false,
+                audioLoading: false,
+                error: null,
+                success: null,
+                audioError: false,
+                allSeries: [],
+                loadingSeries: false,
+
+                async init() {
+                    await this.loadStations(false);
+                    await this.loadAllSeries();
+                },
+
+                clearFilters() {
+                    this.currentSeries = null;
+                    this.error = null;
+                    this.success = null;
+                },
+
+                showAllStations() {
+                    this.showSection = 'stations';
+                    this.currentSeries = null;
+                    this.loadStations(true);
+                },
+
+                async loadStations(showLoading = true) {
+                    if (showLoading) {
+                        this.loading = true;
+                    }
+                    this.error = null;
+                    try {
+                        const response = await fetch('/api/stations');
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        const data = await response.json();
+                        this.stations = data;
+                        
+                        if (showLoading) {
+                            this.showSection = 'stations';
+                            
+                            if (data.length === 0) {
+                                this.error = 'No stations found in the database.';
+                            } else {
+                                this.success = `Loaded ${data.length} stations successfully.`;
+                                setTimeout(() => this.success = null, 3000);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error loading stations:', error);
+                        if (showLoading) {
+                            this.error = `Failed to load stations: ${error.message}`;
+                        }
+                        this.stations = [];
+                    }
+                    if (showLoading) {
+                        this.loading = false;
+                    }
+                },
+
+                async loadAllSeries() {
+                    this.loadingSeries = true;
+                    this.error = null;
+                    try {
+                        const response = await fetch('/api/stations/series/all');
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        const data = await response.json();
+                        this.allSeries = Array.isArray(data) ? data : [];
+                    } catch (error) {
+                        console.error('Error loading series:', error);
+                        this.allSeries = [];
+                    }
+                    this.loadingSeries = false;
+                },
+
+                async showStandalone() {
+                    this.showSection = 'standalone';
+                    this.currentSeries = null;
+                    this.loading = true;
+                    this.error = null;
+                    
+                    try {
+                        const response = await fetch('/api/stations/standalone');
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        const data = await response.json();
+                        this.stations = data;
+                        
+                        if (data.length === 0) {
+                            this.error = 'No standalone content found.';
+                        } else {
+                            this.success = `Found ${data.length} standalone audio files.`;
+                            setTimeout(() => this.success = null, 3000);
+                        }
+                    } catch (error) {
+                        console.error('Error loading standalone content:', error);
+                        this.error = `Failed to load standalone content: ${error.message}`;
+                        this.stations = [];
+                    }
+                    this.loading = false;
+                },
+
+                async loadSeriesStations(seriesName) {
+                    this.loading = true;
+                    this.error = null;
+                    this.currentSeries = seriesName;
+                    this.showSection = 'stations';
+                    
+                    try {
+                        const response = await fetch(`/api/stations/series/${encodeURIComponent(seriesName)}/info`);
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        const seriesInfo = await response.json();
+                        this.stations = seriesInfo.episodes;
+                        
+                        if (seriesInfo.episodes.length === 0) {
+                            this.error = `No episodes found for ${seriesInfo.seriesName}.`;
+                        } else {
+                            this.success = `Found ${seriesInfo.episodes.length} episodes in ${seriesInfo.seriesName}.`;
+                            setTimeout(() => this.success = null, 3000);
+                        }
+                    } catch (error) {
+                        console.error('Error loading series episodes:', error);
+                        this.error = `Failed to load series episodes: ${error.message}`;
+                        this.stations = [];
+                    }
+                    this.loading = false;
+                },
+
+                playStation(station) {
+                    if (!station.mp3Url && !station.playerUrl) {
+                        this.error = 'Audio URL not available for this station.';
+                        return;
+                    }
+
+                    this.currentStation = station;
+                    this.audioLoading = true;
+                    this.audioError = false;
+                    
+                    const audio = this.$refs.audioPlayer;
+                    const audioUrl = station.playerUrl || station.mp3Url;
+                    console.log('🎵 Playing station:', station.name, 'URL:', audioUrl);
+                    
+                    audio.src = audioUrl;
+                    
+                    audio.load();
+                    const playPromise = audio.play();
+                    
+                    if (playPromise !== undefined) {
+                        playPromise
+                            .then(() => {
+                                this.isPlaying = true;
+                                this.success = `Now playing: ${station.name}`;
+                                setTimeout(() => this.success = null, 3000);
+                            })
+                            .catch((error) => {
+                                this.handleAudioError();
+                                console.error('Audio play error:', error);
+                            });
+                    }
+                },
+
+                togglePlay() {
+                    if (this.audioLoading) return;
+                    
+                    const audio = this.$refs.audioPlayer;
+                    if (this.isPlaying) {
+                        audio.pause();
+                    } else {
+                        const playPromise = audio.play();
+                        if (playPromise !== undefined) {
+                            playPromise.catch((error) => {
+                                this.handleAudioError();
+                                console.error('Audio play error:', error);
+                            });
+                        }
+                    }
+                },
+
+                stopPlayer() {
+                    const audio = this.$refs.audioPlayer;
+                    audio.pause();
+                    audio.currentTime = 0;
+                    this.currentStation = null;
+                    this.isPlaying = false;
+                    this.audioLoading = false;
+                    this.audioError = false;
+                },
+
+                handleAudioError() {
+                    this.audioLoading = false;
+                    this.audioError = true;
+                    this.isPlaying = false;
+                    this.error = `Failed to load audio for ${this.currentStation?.name || 'this station'}. Please try again.`;
+                }
+            }
+        }
+
+        // Auto-hide alerts after 5 seconds
+        document.addEventListener('alpine:init', () => {
+            Alpine.effect(() => {
+                const app = Alpine.$data(document.querySelector('[x-data]'));
+                if (app.error) {
+                    setTimeout(() => app.error = null, 5000);
+                }
+            });
+        });
+    </script>
+    <script src="/scripts/url-handler.js"></script>
+</body>
+</html>

@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BakwaasFM - Admin Control Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.3/cdn.min.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .table-scroll { max-height: 600px; overflow-y: auto; }
+        .modal-backdrop { backdrop-filter: blur(5px); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div x-data="adminCP()" x-init="init()" class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 flex items-center">
+                            <i class="fas fa-cog text-purple-600 text-2xl mr-2"></i>
+                            <span class="text-2xl font-bold text-gray-900">BakwaasFM 2 Admin</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button @click="activeSection = 'dashboard'" :class="activeSection === 'dashboard' ? 'text-purple-600' : 'text-gray-700'" class="px-3 py-2 hover:text-purple-600 transition">Dashboard</button>
+                        <button @click="activeSection = 'stations'" :class="activeSection === 'stations' ? 'text-purple-600' : 'text-gray-700'" class="px-3 py-2 hover:text-purple-600 transition">Stations</button>
+                        <button @click="activeSection = 'series'" :class="activeSection === 'series' ? 'text-purple-600' : 'text-gray-700'" class="px-3 py-2 hover:text-purple-600 transition">Series</button>
+                        <button @click="activeSection = 'analytics'" :class="activeSection === 'analytics' ? 'text-purple-600' : 'text-gray-700'" class="px-3 py-2 hover:text-purple-600 transition">Analytics</button>
+                        <a href="/" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+                            <i class="fas fa-home mr-2"></i>Back to Site
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Alerts -->
+        <div x-show="alert.show" x-transition class="mx-4 mt-4">
+            <div :class="alert.type === 'success' ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700'" class="border px-4 py-3 rounded">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i :class="alert.type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'" class="mr-2"></i>
+                        <span x-text="alert.message"></span>
+                    </div>
+                    <button @click="alert.show = false" class="hover:opacity-75">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div x-show="activeSection === 'dashboard'" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+                <p class="text-gray-600">Overview of your BakwaasFM platform</p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-radio text-purple-600 text-2xl"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Total Stations</dt>
+                                <dd class="text-lg font-medium text-gray-900" x-text="stats.totalStations"></dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-crown text-yellow-600 text-2xl"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Premium Stations</dt>
+                                <dd class="text-lg font-medium text-gray-900" x-text="stats.premiumStations"></dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-list text-blue-600 text-2xl"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Active Series</dt>
+                                <dd class="text-lg font-medium text-gray-900" x-text="stats.activeSeries"></dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-music text-green-600 text-2xl"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Total Audio Files</dt>
+                                <dd class="text-lg font-medium text-gray-900" x-text="stats.totalAudioFiles"></dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Stations -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Recent Stations</h3>
+                </div>
+                <div class="p-6">
+                    <div x-show="recentStations.length === 0" class="text-center py-4 text-gray-500">
+                        No stations found
+                    </div>
+                    <div x-show="recentStations.length > 0" class="space-y-4">
+                        <template x-for="station in recentStations.slice(0, 5)" :key="station._id">
+                            <div class="flex items-center justify-between p-4 border rounded-lg">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center mr-4">
+                                        <img x-show="station.profilepic" :src="station.profilepic" class="w-full h-full object-cover rounded-full">
+                                        <i x-show="!station.profilepic" class="fas fa-radio text-white"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium" x-text="station.name"></h4>
+                                        <p class="text-sm text-gray-500" x-text="station.seriesName || 'Standalone'"></p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span x-show="station.isPaid" class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Premium</span>
+                                    <button @click="editStation(station)" class="text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stations Management Section -->
+        <div x-show="activeSection === 'stations'" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="mb-8">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900 mb-2">Stations Management</h1>
+                        <p class="text-gray-600">Manage all radio stations</p>
+                    </div>
+                    <button @click="showCreateModal = true; resetForm()" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-plus mr-2"></i>Add New Station
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                        <input x-model="filters.search" @input="filterStations()" type="text" placeholder="Search stations..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Series</label>
+                        <select x-model="filters.series" @change="filterStations()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="">All Series</option>
+                            <template x-for="series in allSeries" :key="series._id">
+                                <option :value="series.seriesName || series.name" x-text="series.seriesName || series.name"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                        <select x-model="filters.type" @change="filterStations()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="">All Types</option>
+                            <option value="free">Free</option>
+                            <option value="premium">Premium</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button @click="clearFilters()" class="w-full bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition">
+                            <i class="fas fa-times mr-2"></i>Clear Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stations Table -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="table-scroll">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Station</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Series</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Audio Count</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="station in filteredStations" :key="station._id">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center mr-4">
+                                                <img x-show="station.profilepic" :src="station.profilepic" class="w-full h-full object-cover rounded-full">
+                                                <i x-show="!station.profilepic" class="fas fa-radio text-white"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-sm font-medium text-gray-900" x-text="station.name"></div>
+                                                <div class="text-sm text-gray-500" x-text="station.description?.substring(0, 50) + '...'"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="station.seriesName || 'Standalone'"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span :class="station.isPaid ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'" 
+                                              class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full">
+                                            <span x-text="station.isPaid ? 'Premium' : 'Free'"></span>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="station.audioCount || 0"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-2">
+                                            <button @click="editStation(station)" class="text-blue-600 hover:text-blue-900" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button @click="deleteStation(station._id)" class="text-red-600 hover:text-red-900" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            <button @click="playStation(station)" class="text-green-600 hover:text-green-900" title="Play">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                            <button @click="addSimilarStation(station)" class="text-purple-600 hover:text-purple-900" title="Add Similar">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div x-show="filteredStations.length === 0" class="text-center py-8 text-gray-500">
+                    <i class="fas fa-radio text-4xl mb-4"></i>
+                    <p>No stations found</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Series Management Section -->
+        <div x-show="activeSection === 'series'" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="mb-8">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900 mb-2">Series Management</h1>
+                        <p class="text-gray-600">Manage audio series and episodes</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button @click="loadAllSeries()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                            <i class="fas fa-refresh mr-2"></i>Refresh
+                        </button>
+                        <button @click="showCreateSeriesModal = true; resetSeriesForm()" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition">
+                            <i class="fas fa-plus mr-2"></i>Create New Series
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Series Stats -->
+            <div x-show="allSeries.length > 0" class="mb-6 p-4 bg-blue-50 rounded-lg">
+                <p class="text-sm text-blue-800">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Total Series: <span class="font-semibold" x-text="allSeries.length"></span> | 
+                    Total Episodes: <span class="font-semibold" x-text="allSeries.reduce((sum, s) => sum + (s.totalEpisodes || 0), 0)"></span>
+                </p>
+            </div>
+
+            <!-- Loading State -->
+            <div x-show="loadingAllSeries" class="text-center py-12">
+                <div class="inline-block">
+                    <i class="fas fa-spinner fa-spin text-4xl text-purple-600"></i>
+                    <p class="mt-4 text-gray-600">Loading series...</p>
+                </div>
+            </div>
+
+            <!-- Series Grid -->
+            <div x-show="!loadingAllSeries && allSeries.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="series in allSeries" :key="series._id">
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                        <div class="h-48 bg-gradient-to-br from-purple-400 to-blue-500 bg-cover bg-center relative" 
+                             :style="series.banner ? `background-image: url(${series.banner})` : ''">
+                            <div class="absolute top-3 right-3 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm">
+                                <span x-text="series.totalEpisodes || 0"></span> Episodes
+                            </div>
+                            <div class="absolute bottom-3 left-3 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm">
+                                <i class="fas fa-list mr-1"></i>Series
+                            </div>
+                        </div>
+                        <div class="p-6">
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center mr-4 overflow-hidden">
+                                    <img x-show="series.profilepic" :src="series.profilepic" class="w-full h-full object-cover">
+                                    <i x-show="!series.profilepic" class="fas fa-list text-white"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="font-semibold text-lg text-gray-900" x-text="series.seriesName || series.name"></h3>
+                                    <div class="flex items-center text-sm text-gray-500">
+                                        <span x-text="series.genre || 'General'"></span>
+                                        <span class="mx-1">•</span>
+                                        <span x-text="series.language || 'Hindi'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-gray-600 mb-4 text-sm line-clamp-2" x-text="(series.seriesDescription || series.description || 'No description available').substring(0, 100) + '...'"></p>
+                            <div class="flex justify-between gap-2">
+                                <button @click="editSeries(series)" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition text-sm">
+                                    <i class="fas fa-edit mr-1"></i>Edit
+                                </button>
+                                <button @click="deleteSeries(series._id, series.name)" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition text-sm">
+                                    <i class="fas fa-trash mr-1"></i>Delete
+                                </button>
+                                <button @click="viewSeriesEpisodes(series.seriesName || series.name)" class="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 transition text-sm">
+                                    <i class="fas fa-eye mr-1"></i>View
+                                </button>
+                                <button @click="addEpisodeToSeries(series.seriesName || series.name)" class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition text-sm">
+                                    <i class="fas fa-plus mr-1"></i>Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- No Series Found -->
+            <div x-show="!loadingAllSeries && allSeries.length === 0" class="text-center py-12">
+                <i class="fas fa-list text-6xl text-gray-300 mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-600 mb-2">No Series Found</h3>
+                <p class="text-gray-500 mb-6">Create your first audio series to get started.</p>
+                <div class="flex justify-center space-x-4">
+                    <button @click="loadAllSeries()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-refresh mr-2"></i>Refresh
+                    </button>
+                    <button @click="showCreateSeriesModal = true; resetSeriesForm()" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-plus mr-2"></i>Create New Series
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div x-show="activeSection === 'analytics'" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Analytics</h1>
+                <p class="text-gray-600">Platform statistics and insights</p>
+            </div>
+
+            <!-- Series Analytics -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Stations by Series</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <template x-for="seriesStat in seriesStats" :key="seriesStat._id">
+                        <div class="border rounded-lg p-4">
+                            <div class="text-center">
+                                <h4 class="font-semibold text-lg" x-text="seriesStat.seriesName"></h4>
+                                <div class="mt-2">
+                                    <div class="text-2xl font-bold text-purple-600" x-text="seriesStat.count"></div>
+                                    <div class="text-sm text-gray-500">Total Stations</div>
+                                </div>
+                                <div class="mt-2 flex justify-around text-xs">
+                                    <div>
+                                        <div class="text-green-600 font-semibold" x-text="seriesStat.freeCount"></div>
+                                        <div class="text-gray-500">Free</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-yellow-600 font-semibold" x-text="seriesStat.paidCount"></div>
+                                        <div class="text-gray-500">Premium</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create/Edit Station Modal -->
+        <div x-show="showCreateModal || showEditModal" x-transition class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center modal-backdrop">
+                <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" @click="showCreateModal = false; showEditModal = false"></div>
+                
+                <div class="inline-block w-full max-w-4xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-medium text-gray-900">
+                            <span x-show="showCreateModal">Add New Station/Episode</span>
+                            <span x-show="showEditModal">Edit Station</span>
+                        </h3>
+                        <button @click="showCreateModal = false; showEditModal = false" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <form @submit.prevent="showCreateModal ? createStation() : updateStation()">
+                        <!-- Basic Information -->
+                        <div class="mb-6">
+                            <h4 class="text-md font-semibold text-gray-800 mb-3">Basic Information</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Station/Episode Name</label>
+                                    <input x-model="form.name" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Episode Title (Optional)</label>
+                                    <input x-model="form.episodeTitle" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Content Type -->
+                        <div class="mb-6">
+                            <h4 class="text-md font-semibold text-gray-800 mb-3">Content Type</h4>
+                            <div class="flex space-x-4">
+                                <label class="flex items-center">
+                                    <input x-model="form.isStandalone" type="radio" :value="true" name="contentType" class="mr-2" @click="handleContentTypeChange(true)">
+                                    <span class="text-sm">Standalone Audio</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input x-model="form.isStandalone" type="radio" :value="false" name="contentType" class="mr-2" @click="handleContentTypeChange(false)">
+                                    <span class="text-sm">Part of Series</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Series Information (shown only if not standalone) -->
+                        <div x-show="!form.isStandalone" class="mb-6 series-information-section">
+                            <h4 class="text-md font-semibold text-gray-800 mb-3">Series Information</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Series</label>
+                                    <select x-model="form.seriesName" :required="!form.isStandalone" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                        <option value="" disabled>Choose a series...</option>
+                                        <template x-for="series in availableSeries" :key="series._id">
+                                            <option :value="series.name" x-text="series.name || 'Unnamed Series'"></option>
+                                        </template>
+                                    </select>
+                                    <div x-show="availableSeries.length === 0" class="text-sm text-gray-500 mt-1">
+                                        <i class="fas fa-spinner fa-spin mr-1"></i> Loading series...
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">Don't see your series? <button type="button" @click="showCreateSeriesModal = true" class="text-purple-600 hover:underline">Create a new one</button></p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Episode Number</label>
+                                    <input x-model="form.episodeNumber" type="number" min="1" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Duration</label>
+                                    <input x-model="form.duration" type="text" placeholder="e.g., 25:30" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Episode Title (Optional)</label>
+                                <input x-model="form.episodeTitle" type="text" placeholder="Specific title for this episode" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            </div>
+                        </div>
+
+                        <!-- Media & Metadata -->
+                        <div class="mb-6">
+                            <h4 class="text-md font-semibold text-gray-800 mb-3">Media & Metadata</h4>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                                <textarea x-model="form.description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Profile Picture URL</label>
+                                    <input x-model="form.profilepic" type="url" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Banner URL</label>
+                                    <input x-model="form.banner" type="url" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">MP3 URL</label>
+                                    <input x-model="form.mp3Url" type="url" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Genre</label>
+                                    <select x-model="form.genre" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                        <option value="General">General</option>
+                                        <option value="Comedy">Comedy</option>
+                                        <option value="Drama">Drama</option>
+                                        <option value="Horror">Horror</option>
+                                        <option value="Romance">Romance</option>
+                                        <option value="Action">Action</option>
+                                        <option value="Educational">Educational</option>
+                                        <option value="News">News</option>
+                                        <option value="Music">Music</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Language</label>
+                                    <select x-model="form.language" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                        <option value="Hindi">Hindi</option>
+                                        <option value="English">English</option>
+                                        <option value="Punjabi">Punjabi</option>
+                                        <option value="Bengali">Bengali</option>
+                                        <option value="Tamil">Tamil</option>
+                                        <option value="Telugu">Telugu</option>
+                                        <option value="Marathi">Marathi</option>
+                                        <option value="Gujarati">Gujarati</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Settings -->
+                        <div class="mb-6">
+                            <h4 class="text-md font-semibold text-gray-800 mb-3">Settings</h4>
+                            <div class="flex items-center space-x-6">
+                                <label class="flex items-center bg-yellow-50 border border-yellow-200 px-4 py-3 rounded-lg">
+                                    <input x-model="form.isPaid" type="checkbox" class="rounded border-yellow-400 text-yellow-600 shadow-sm focus:border-yellow-400 focus:ring focus:ring-yellow-200 focus:ring-opacity-50 h-5 w-5">
+                                    <span class="ml-2 text-sm font-medium text-yellow-800">Premium Content</span>
+                                    <span class="ml-2 text-xs text-yellow-600">(Users will need subscription to access)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" @click="showCreateModal = false; showEditModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition">
+                                Cancel
+                            </button>
+                            <button type="submit" :disabled="loading" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 transition disabled:opacity-50">
+                                <span x-show="!loading">
+                                    <span x-show="showCreateModal">Create</span>
+                                    <span x-show="showEditModal">Update</span>
+                                </span>
+                                <span x-show="loading">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>Processing...
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create/Edit Series Modal -->
+        <div x-show="showEditSeriesModal || showCreateSeriesModal" x-transition class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center modal-backdrop">
+                <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" @click="showEditSeriesModal = false; showCreateSeriesModal = false"></div>
+                
+                <div class="inline-block w-full max-w-2xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-medium text-gray-900">
+                            <span x-show="showCreateSeriesModal">Create New Series</span>
+                            <span x-show="showEditSeriesModal">Edit Series</span>
+                        </h3>
+                        <button @click="showCreateSeriesModal = false; showEditSeriesModal = false" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <form @submit.prevent="showEditSeriesModal ? updateSeries() : createSeries()">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Series Name</label>
+                            <input x-model="seriesForm.name" type="text" required placeholder="e.g., Comedy Hour, News Today, Drama Stories" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" :disabled="showEditSeriesModal">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Series Description</label>
+                            <textarea x-model="seriesForm.description" rows="3" placeholder="Brief description of what this series is about" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Profile Picture URL</label>
+                                <input x-model="seriesForm.profilepic" type="url" placeholder="https://example.com/image.jpg" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Banner URL</label>
+                                <input x-model="seriesForm.banner" type="url" placeholder="https://example.com/banner.jpg" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Genre</label>
+                                <select x-model="seriesForm.genre" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <option value="General">General</option>
+                                    <option value="Comedy">Comedy</option>
+                                    <option value="Drama">Drama</option>
+                                    <option value="Horror">Horror</option>
+                                    <option value="Romance">Romance</option>
+                                    <option value="Action">Action</option>
+                                    <option value="Educational">Educational</option>
+                                    <option value="News">News</option>
+                                    <option value="Music">Music</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Language</label>
+                                <select x-model="seriesForm.language" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <option value="Hindi">Hindi</option>
+                                    <option value="English">English</option>
+                                    <option value="Punjabi">Punjabi</option>
+                                    <option value="Bengali">Bengali</option>
+                                    <option value="Tamil">Tamil</option>
+                                    <option value="Telugu">Telugu</option>
+                                    <option value="Marathi">Marathi</option>
+                                    <option value="Gujarati">Gujarati</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" @click="showCreateSeriesModal = false; showEditSeriesModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition">
+                                Cancel
+                            </button>
+                            <button type="submit" :disabled="loading" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 transition disabled:opacity-50">
+                                <span x-show="!loading">
+                                    <span x-show="showCreateSeriesModal">Create Series</span>
+                                    <span x-show="showEditSeriesModal">Update Series</span>
+                                </span>
+                                <span x-show="loading">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>Processing...
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Series Episodes Modal -->
+        <div x-show="showEpisodesModal" x-transition class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center modal-backdrop">
+                <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" @click="showEpisodesModal = false"></div>
+                
+                <div class="inline-block w-full max-w-6xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-medium text-gray-900" x-text="`Episodes - ${currentSeriesInfo.seriesName}`"></h3>
+                        <button @click="showEpisodesModal = false" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-4 max-h-96 overflow-y-auto">
+                        <template x-for="episode in currentSeriesInfo.episodes" :key="episode._id">
+                            <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                                <div class="flex items-center flex-1">
+                                    <div class="w-12 h-12 rounded bg-purple-100 flex items-center justify-center mr-4">
+                                        <span class="text-purple-600 font-semibold" x-text="episode.episodeNumber"></span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="font-medium" x-text="episode.episodeTitle || episode.name"></h4>
+                                        <p class="text-sm text-gray-500" x-text="episode.description"></p>
+                                        <div class="flex items-center space-x-4 mt-1">
+                                            <span x-show="episode.duration" class="text-xs text-gray-400">
+                                                <i class="fas fa-clock mr-1"></i><span x-text="episode.duration"></span>
+                                            </span>
+                                            <span x-show="episode.isPaid" class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Premium</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button @click="editStation(episode)" class="text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button @click="deleteStation(episode._id)" class="text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    <button @click="playStation(episode)" class="text-green-600 hover:text-green-800">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function adminCP() {
+            return {
+                activeSection: 'dashboard',
+                stations: [],
+                filteredStations: [],
+                recentStations: [],
+                seriesStats: [],
+                allSeries: [],
+                availableSeries: [],
+                showEpisodesModal: false,
+                showCreateSeriesModal: false,
+                showEditSeriesModal: false,
+                currentSeriesInfo: {},
+                loading: false,
+                loadingAllSeries: false,
+                showCreateModal: false,
+                showEditModal: false,
+                editingStation: null,
+                editingSeries: null,
+                alert: {
+                    show: false,
+                    type: 'success',
+                    message: ''
+                },
+                stats: {
+                    totalStations: 0,
+                    premiumStations: 0,
+                    activeSeries: 0,
+                    totalAudioFiles: 0
+                },
+                filters: {
+                    search: '',
+                    series: '',
+                    type: ''
+                },
+                form: {
+                    name: '',
+                    profilepic: '',
+                    banner: '',
+                    description: '',
+                    mp3Url: '',
+                    isPaid: false,
+                    seriesName: null,
+                    episodeNumber: null,
+                    episodeTitle: '',
+                    duration: '',
+                    isStandalone: true,
+                    audioCount: 1,
+                    genre: 'General',
+                    language: 'Hindi',
+                    tags: []
+                },
+                seriesForm: {
+                    name: '',
+                    description: '',
+                    profilepic: '',
+                    banner: '',
+                    genre: 'General',
+                    language: 'Hindi'
+                },
+
+                async init() {
+                    console.log('🔄 Initializing Admin CP...');
+                    try {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        console.log('🔎 Checking if elements are properly rendered');
+                        
+                        // Load data in correct order
+                        await this.loadStations();
+                        await this.loadAllSeries();
+                        await this.loadSeriesStats();
+                        
+                        // Calculate stats after data is loaded
+                        this.calculateStats();
+                        console.log('✅ Stats calculated:', this.stats);
+                        
+                        console.log('✅ Admin CP initialized');
+                    } catch (error) {
+                        console.error('❌ Error during initialization:', error);
+                        this.showAlert('error', 'Failed to initialize: ' + error.message);
+                        console.error('Error stack:', error.stack);
+                    }
+                },
+
+                showAlert(type, message) {
+                    this.alert = { show: true, type, message };
+                    setTimeout(() => this.alert.show = false, 5000);
+                },
+
+                async loadStations() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch('/api/stations?show=original');
+                        if (!response.ok) throw new Error('Failed to load stations');
+                        
+                        this.stations = await response.json();
+                        this.filteredStations = [...this.stations];
+                        this.recentStations = [...this.stations].reverse();
+                        
+                        this.calculateStats();
+                    } catch (error) {
+                        this.showAlert('error', 'Failed to load stations: ' + error.message);
+                    }
+                    this.loading = false;
+                },
+
+                async loadAllSeries() {
+                    this.loadingAllSeries = true;
+                    try {
+                        console.log('🔄 Loading all series...');
+                        
+                        // First try to get the enhanced series data with statistics
+                        let response = await fetch('/api/stations/series/all');
+                        
+                        if (!response.ok) {
+                            console.error('Server error on series/all:', response.status);
+                            throw new Error(`Server error ${response.status}: Failed to load series with stats`);
+                        }
+                        
+                        let data = await response.json();
+                        
+                        // If we got empty array or non-array result, fall back to regular series list
+                        if (!data || !Array.isArray(data) || data.length === 0) {
+                            console.log('📊 No data or empty array from series/all, falling back to series/list');
+                            // Fall back to the regular series endpoint that we know works
+                            response = await fetch('/api/stations/series/list');
+                            
+                            if (!response.ok) {
+                                throw new Error('Failed to load series from backup endpoint');
+                            }
+                            
+                            const seriesList = await response.json();
+                            
+                            if (Array.isArray(seriesList) && seriesList.length > 0) {
+                                // Format the data to match expected structure
+                                data = seriesList.map(series => ({
+                                    _id: series._id,
+                                    name: series.name,
+                                    seriesName: series.name,
+                                    description: series.description,
+                                    seriesDescription: series.description,
+                                    banner: series.banner || '',
+                                    profilepic: series.profilepic || '',
+                                    genre: series.genre || 'General',
+                                    language: series.language || 'Hindi',
+                                    tags: series.tags || [],
+                                    isActive: series.isActive,
+                                    totalEpisodes: 0, // Will be updated later
+                                    paidCount: 0,
+                                    freeCount: 0,
+                                    latestEpisode: 0,
+                                    createdAt: series.createdAt,
+                                    updatedAt: series.updatedAt
+                                }));
+
+                                console.log('📊 Successfully retrieved data from backup endpoint');
+                            }
+                        }
+                        
+                        console.log('📊 Raw series data from API:', data);
+                        
+                        // Ensure we have a valid array
+                        this.allSeries = Array.isArray(data) ? data : [];
+                        
+                        // Log the received data for debugging
+                        console.log('✅ Series data loaded:', this.allSeries);
+                        console.log('📊 Total series found:', this.allSeries.length);
+                        
+                        // If using fallback data, try to get episode counts
+                        if (response.url.includes('series/list')) {
+                            // Update episode counts asynchronously (don't wait for it)
+                            this.updateSeriesEpisodeCounts();
+                        }
+                    } catch (error) {
+                        console.error('❌ Error loading series:', error);
+                        this.showAlert('error', 'Failed to load series: ' + error.message);
+                        // Attempt to fetch from alternate endpoint
+                        await this.fallbackSeriesLoad();
+                    } finally {
+                        this.loadingAllSeries = false;
+                    }
+                },
+
+                // New fallback method to try an alternate endpoint if the main one fails
+                async fallbackSeriesLoad() {
+                    try {
+                        console.log('🔄 Attempting fallback series load...');
+                        const response = await fetch('/api/stations/series/list');
+                        if (!response.ok) {
+                            throw new Error(`HTTP error ${response.status}`);
+                        }
+                        
+                        const seriesList = await response.json();
+                        if (Array.isArray(seriesList)) {
+                            this.allSeries = seriesList.map(series => ({
+                                _id: series._id,
+                                name: series.name,
+                                seriesName: series.name,
+                                description: series.description,
+                                seriesDescription: series.description,
+                                banner: series.banner || '',
+                                profilepic: series.profilepic || '',
+                                genre: series.genre || 'General',
+                                language: series.language || 'Hindi',
+                                tags: series.tags || [],
+                                isActive: series.isActive,
+                                totalEpisodes: 0,
+                                paidCount: 0,
+                                freeCount: 0,
+                                latestEpisode: 0,
+                                createdAt: series.createdAt,
+                                updatedAt: series.updatedAt
+                            }));
+                            console.log('✅ Fallback series load successful:', this.allSeries.length);
+                            
+                            // Update episode counts asynchronously (don't wait for it)
+                            this.updateSeriesEpisodeCounts();
+                        }
+                    } catch (error) {
+                        console.error('❌ Fallback series load failed:', error);
+                        this.allSeries = []; // Ensure it's an empty array and not null
+                    }
+                },
+                
+                // New method to update episode counts for series loaded via fallback
+                async updateSeriesEpisodeCounts() {
+                    try {
+                        // For each series, fetch its episodes
+                        await Promise.all(this.allSeries.map(async (series) => {
+                            try {
+                                const response = await fetch(`/api/stations/series/${series.name}`);
+                                if (response.ok) {
+                                    const episodes = await response.json();
+                                    if (Array.isArray(episodes)) {
+                                        // Update this series with episode counts
+                                        series.totalEpisodes = episodes.length;
+                                        series.paidCount = episodes.filter(ep => ep.isPaid).length;
+                                        series.freeCount = episodes.length - series.paidCount;
+                                        if (episodes.length > 0) {
+                                            series.latestEpisode = Math.max(...episodes
+                                                .map(ep => ep.episodeNumber || 0)
+                                                .filter(num => !isNaN(num)));
+                                        }
+                                    }
+                                }
+                            } catch (error) {
+                                console.error(`Failed to fetch episodes for ${series.name}:`, error);
+                            }
+                        }));
+                        // Force UI update
+                        this.allSeries = [...this.allSeries];
+                        console.log('✅ Updated series with episode counts');
+                    } catch (error) {
+                        console.error('❌ Error updating episode counts:', error);
+                    }
+                },
+
+                async loadAvailableSeries() {
+                    try {
+                        console.log('🔄 Loading available series...');
+                        const response = await fetch('/api/stations/series/list');
+                        if (!response.ok) throw new Error('Failed to load available series');
+                        this.availableSeries = await response.json();
+                        console.log('✅ Available series loaded:', this.availableSeries);
+                        console.log('📊 Series count:', this.availableSeries.length);
+                    } catch (error) {
+                        console.error('❌ Error loading available series:', error);
+                        this.showAlert('error', 'Failed to load available series: ' + error.message);
+                    }
+                },
+
+                async loadSeriesStats() {
+                    try {
+                        console.log('🔄 Loading series stats...');
+                        const response = await fetch('/api/stations/stats/series');
+                        if (!response.ok) throw new Error('Failed to load series stats');
+                        this.seriesStats = await response.json();
+                        console.log('✅ Series stats loaded:', this.seriesStats);
+                    } catch (error) {
+                        console.error('❌ Error loading series stats:', error);
+                        this.showAlert('error', 'Failed to load series statistics');
+                    }
+                },
+
+                calculateStats() {
+                    if (!this.stations || !Array.isArray(this.stations)) {
+                        console.error('❌ Cannot calculate stats: stations is not an array');
+                        this.stats = {
+                            totalStations: 0,
+                            premiumStations: 0,
+                            activeSeries: 0,
+                            totalAudioFiles: 0
+                        };
+                        return;
+                    }
+                    
+                    console.log('📊 Calculating stats from', this.stations.length, 'stations');
+                    
+                    this.stats.totalStations = this.stations.length;
+                    this.stats.premiumStations = this.stations.filter(s => s.isPaid).length;
+                    
+                    const seriesNames = new Set();
+                    this.stations.forEach(station => {
+                        if (station.seriesName && station.seriesName.trim() !== '') {
+                            seriesNames.add(station.seriesName);
+                        }
+                    });
+                    this.stats.activeSeries = seriesNames.size;
+                    
+                    this.stats.totalAudioFiles = this.stations.reduce((sum, s) => sum + (s.audioCount || 1), 0);
+                    
+                    console.log('✅ Stats calculated:', this.stats);
+                },
+
+                filterStations() {
+                    this.filteredStations = this.stations.filter(station => {
+                        const matchesSearch = !this.filters.search || 
+                            station.name.toLowerCase().includes(this.filters.search.toLowerCase()) ||
+                            station.description?.toLowerCase().includes(this.filters.search.toLowerCase());
+                        
+                        const matchesSeries = !this.filters.series || station.seriesName === this.filters.series;
+                        
+                        const matchesType = !this.filters.type || 
+                            (this.filters.type === 'premium' && station.isPaid) ||
+                            (this.filters.type === 'free' && !station.isPaid);
+
+                        return matchesSearch && matchesSeries && matchesType;
+                    });
+                },
+
+                clearFilters() {
+                    this.filters = { search: '', series: '', type: '' };
+                    this.filteredStations = [...this.stations];
+                },
+
+                resetForm() {
+                    this.form = {
+                        name: '',
+                        profilepic: '',
+                        banner: '',
+                        description: '',
+                        mp3Url: '',
+                        isPaid: false,
+                        seriesName: null,
+                        episodeNumber: null,
+                        episodeTitle: '',
+                        duration: '',
+                        isStandalone: true,
+                        audioCount: 1,
+                        genre: 'General',
+                        language: 'Hindi',
+                        tags: []
+                    };
+                    
+                    // Initialize availableSeries with an empty array
+                    // It will be loaded when "Part of Series" is selected
+                    this.availableSeries = [];
+                },
+
+                resetSeriesForm() {
+                    this.seriesForm = {
+                        name: '',
+                        description: '',
+                        profilepic: '',
+                        banner: '',
+                        genre: 'General',
+                        language: 'Hindi'
+                    };
+                },
+
+                handleContentTypeChange(isStandalone) {
+                    this.form.isStandalone = isStandalone;
+                    
+                    if (!isStandalone) {
+                        // Load series options when switching to "Part of Series"
+                        this.loadSeriesForSelector();
+                        
+                        // Make series section visible using JavaScript
+                        setTimeout(() => {
+                            const seriesSection = document.querySelector('.series-information-section');
+                            if (seriesSection) {
+                                seriesSection.style.display = 'block';
+                            }
+                        }, 50);
+                    } else {
+                        // Clear series-related fields when switching to standalone
+                        this.form.seriesName = null;
+                        this.form.episodeNumber = null;
+                    }
+                    
+                    console.log('Content type changed to:', isStandalone ? 'Standalone' : 'Series');
+                },
+
+                async loadSeriesForSelector() {
+                    try {
+                        console.log('🔄 Loading series for selector...');
+                        
+                        // Reset available series and show loading state
+                        this.availableSeries = [];
+                        
+                        // Make sure the series section is visible using JavaScript
+                        const seriesSection = document.querySelector('.series-information-section');
+                        if (seriesSection) {
+                            seriesSection.style.display = 'block';
+                        }
+                        
+                        const response = await fetch('/api/stations/series/list');
+                        if (!response.ok) throw new Error('Failed to load available series');
+                        
+                        const seriesList = await response.json();
+                        
+                        // Add series data
+                        this.availableSeries = seriesList || [];
+                        
+                        console.log('✅ Series data loaded for selector:', this.availableSeries.length, 'series');
+                        
+                        // If there's exactly one series, pre-select it for better UX
+                        if (this.availableSeries.length === 1) {
+                            this.form.seriesName = this.availableSeries[0].name;
+                        }
+                        
+                    } catch (error) {
+                        console.error('❌ Error loading series for selector:', error);
+                        this.showAlert('error', 'Failed to load series data. Please try again.');
+                    }
+                },
+
+                async createStation() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch('/api/stations', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(this.form)
+                        });
+
+                        if (!response.ok) throw new Error('Failed to create station');
+                        
+                        await this.loadStations();
+                        await this.loadAllSeries();
+                        await this.loadAvailableSeries();
+                        await this.loadSeriesStats();
+                        this.showCreateModal = false;
+                        this.resetForm();
+                        this.showAlert('success', 'Station created successfully!');
+                    } catch (error) {
+                        this.showAlert('error', 'Failed to create station: ' + error.message);
+                    }
+                    this.loading = false;
+                },
+
+                async createSeries() {
+                    this.loading = true;
+                    try {
+                        console.log('🔄 Creating new series with data:', this.seriesForm);
+                        const response = await fetch('/api/stations/series', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(this.seriesForm)
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.message || 'Failed to create series');
+                        }
+                        
+                        const newSeries = await response.json();
+                        console.log('✅ Series created successfully:', newSeries);
+                        
+                        this.showCreateSeriesModal = false;
+                        this.resetSeriesForm();
+                        
+                        this.showAlert('success', `Series "${newSeries.name}" created successfully!`);
+                        
+                        console.log('🔄 Refreshing all data after series creation...');
+                        await this.loadAllSeries();
+                        await this.loadAvailableSeries();
+                        await this.loadSeriesStats();
+                        
+                        this.activeSection = 'series';
+                        
+                    } catch (error) {
+                        console.error('❌ Error creating series:', error);
+                        this.showAlert('error', 'Failed to create series: ' + error.message);
+                    }
+                    this.loading = false;
+                },
+
+                editStation(station) {
+                    this.editingStation = station;
+                    this.form = { 
+                        ...station,
+                        tags: station.tags || []
+                    };
+                    this.showEditModal = true;
+                    this.showEpisodesModal = false;
+                },
+
+                async updateStation() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch(`/api/stations/${this.editingStation._id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(this.form)
+                        });
+
+                        if (!response.ok) throw new Error('Failed to update station');
+                        
+                        await this.loadStations();
+                        await this.loadAllSeries();
+                        await this.loadAvailableSeries();
+                        await this.loadSeriesStats();
+                        this.showEditModal = false;
+                        this.editingStation = null;
+                        this.resetForm();
+                        this.showAlert('success', 'Station updated successfully!');
+                    } catch (error) {
+                        this.showAlert('error', 'Failed to update station: ' + error.message);
+                    }
+                    this.loading = false;
+                },
+
+                async deleteStation(stationId) {
+                    // Use the window.confirm method with a clear message
+                    const confirmDelete = window.confirm('Are you sure you want to delete this station?\nThis action cannot be undone.');
+                    
+                    // Only proceed if user confirmed
+                    if (!confirmDelete) {
+                        console.log('🚫 Station deletion cancelled by user');
+                        return;
+                    }
+
+                    this.loading = true;
+                    try {
+                        console.log('🗑️ Deleting station:', stationId);
+                        const response = await fetch(`/api/stations/${stationId}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (!response.ok) throw new Error('Failed to delete station');
+                        
+                        await this.loadStations();
+                        await this.loadAllSeries();
+                        await this.loadAvailableSeries();
+                        await this.loadSeriesStats();
+                        this.showAlert('success', 'Station deleted successfully!');
+                        
+                        if (this.showEpisodesModal) {
+                            await this.viewSeriesEpisodes(this.currentSeriesInfo.seriesName);
+                        }
+                    } catch (error) {
+                        this.showAlert('error', 'Failed to delete station: ' + error.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async deleteSeries(seriesId, seriesName) {
+                    // Use the window.confirm method with a clearer message
+                    const confirmDelete = window.confirm(`Are you sure you want to delete the series "${seriesName}"?\n\nWARNING: This will also delete ALL episodes in this series.\nThis action CANNOT be undone!`);
+                    
+                    // Only proceed if user confirmed
+                    if (!confirmDelete) {
+                        console.log('🚫 Series deletion cancelled by user');
+                        return;
+                    }
+
+                    this.loading = true;
+                    try {
+                        console.log('🗑️ Deleting series:', seriesId, seriesName);
+                        const response = await fetch(`/api/stations/series/${seriesId}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            throw new Error(errorData.message || 'Failed to delete series');
+                        }
+                        
+                        this.showAlert('success', `Series "${seriesName}" deleted successfully!`);
+                        
+                        // Refresh data
+                        await this.loadAllSeries();
+                        await this.loadAvailableSeries();
+                        await this.loadSeriesStats();
+                        await this.loadStations(); // Refresh stations as they might be affected
+                    } catch (error) {
+                        console.error('❌ Error deleting series:', error);
+                        this.showAlert('error', 'Failed to delete series: ' + error.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async viewSeriesEpisodes(seriesName) {
+                    try {
+                        const response = await fetch(`/api/stations/series/${seriesName}/info?show=original`);
+                        if (!response.ok) throw new Error('Failed to load series info');
+                        this.currentSeriesInfo = await response.json();
+                        this.showEpisodesModal = true;
+                    } catch (error) {
+                        this.showAlert('error', 'Failed to load series episodes: ' + error.message);
+                    }
+                },
+
+                addEpisodeToSeries(seriesName) {
+                    // Reset the form first
+                    this.resetForm();
+                    
+                    // Initialize form with specific series settings
+                    this.form.isStandalone = false; // Force "Part of Series" option
+                    this.form.seriesName = seriesName; // Pre-select the specified series
+                    
+                    // Find the series to get its details
+                    const seriesData = this.allSeries.find(s => (s.seriesName === seriesName) || (s.name === seriesName));
+                    if (seriesData) {
+                        // Pre-fill more fields based on the series data
+                        this.form.episodeNumber = (seriesData.latestEpisode || 0) + 1;
+                        this.form.genre = seriesData.genre || 'General';
+                        this.form.language = seriesData.language || 'Hindi';
+                        
+                        // Set a suggested episode name
+                        this.form.name = `${seriesName} - Episode ${this.form.episodeNumber}`;
+                        
+                        // Use series banners as defaults if available
+                        if (seriesData.banner) this.form.banner = seriesData.banner;
+                        if (seriesData.profilepic) this.form.profilepic = seriesData.profilepic;
+                        
+                        // Add description placeholder based on series description
+                        if (seriesData.description) {
+                            this.form.description = `Episode ${this.form.episodeNumber} of ${seriesName}`;
+                        }
+                    }
+                    
+                    console.log('📝 Adding episode to series:', seriesName);
+                    console.log('📝 Form prepared with series data:', this.form);
+                    
+                    // Show the create modal with pre-selected options
+                    this.showCreateModal = true;
+                    
+                    // Focus on name input after a short delay
+                    setTimeout(() => {
+                        const nameInput = document.querySelector('input[x-model="form.name"]');
+                        if (nameInput) {
+                            nameInput.focus();
+                            nameInput.select(); // Select the text for easy replacement
+                        }
+                    }, 100);
+                },
+
+                addSimilarStation(station) {
+                    // Reset the form first
+                    this.resetForm();
+                    
+                    // Copy all relevant fields from the original station
+                    this.form.isStandalone = !!station.isStandalone;
+                    this.form.seriesName = station.seriesName;
+                    this.form.genre = station.genre || 'General';
+                    this.form.language = station.language || 'Hindi';
+                    
+                    // Copy MP3 URL and ensure it's filled
+                    this.form.mp3Url = station.mp3Url || '';
+                    
+                    // Don't copy name as it needs to be unique
+                    // But set a suggested name based on the original
+                    this.form.name = `Similar to ${station.name}`;
+                    
+                    // Copy media-related fields
+                    this.form.banner = station.banner || '';
+                    this.form.profilepic = station.profilepic || '';
+                    this.form.description = station.description || '';
+                    
+                    // Copy other metadata
+                    this.form.isPaid = !!station.isPaid;
+                    this.form.duration = station.duration || '';
+                    this.form.audioCount = station.audioCount || 1;
+                    this.form.tags = [...(station.tags || [])];
+                    
+                    // For series-specific data
+                    if (!station.isStandalone) {
+                        // Find the series to get its details
+                        const seriesData = this.allSeries.find(s => s.name === station.seriesName);
+                        if (seriesData) {
+                            this.form.episodeNumber = (seriesData.latestEpisode || 0) + 1;
+                            // Load the series selector options
+                            this.loadSeriesForSelector();
+                        } else {
+                            this.form.episodeNumber = (station.episodeNumber || 0) + 1;
+                        }
+                        this.form.episodeTitle = '';
+                        
+                        // Make sure series section is visible with JS
+                        setTimeout(() => {
+                            const seriesSection = document.querySelector('.series-information-section');
+                            if (seriesSection) {
+                                seriesSection.style.display = 'block';
+                            }
+                        }, 50);
+                    }
+                    
+                    console.log('📝 Adding similar station based on:', station.name);
+                    console.log('📝 Form prepared with data:', this.form);
+                    console.log('📝 MP3 URL copied:', this.form.mp3Url);
+                    
+                    // Show the create modal with pre-selected options
+                    this.showCreateModal = true;
+                    
+                    // Focus on name input after a short delay
+                    setTimeout(() => {
+                        const nameInput = document.querySelector('input[x-model="form.name"]');
+                        if (nameInput) {
+                            nameInput.focus();
+                            nameInput.select(); // Select the text for easy replacement
+                        }
+                    }, 100);
+                },
+
+                playStation(station) {
+                    // Always prefer original URL for admin playback
+                    const audioUrl = station.originalMp3Url || station.mp3Url || station.playerUrl;
+                    
+                    if (audioUrl && audioUrl !== 'https://example.com/placeholder.mp3') {
+                        console.log('🎵 Admin playing:', station.name, 'URL:', audioUrl);
+                        window.open(audioUrl, '_blank');
+                    } else {
+                        this.showAlert('error', 'No valid audio URL available for this station');
+                    }
+                },
+
+                editSeries(series) {
+                    this.editingSeries = series;
+                    this.seriesForm = { 
+                        _id: series._id,
+                        name: series.seriesName || series.name,
+                        description: series.seriesDescription || series.description || '',
+                        profilepic: series.profilepic || '',
+                        banner: series.banner || '',
+                        genre: series.genre || 'General',
+                        language: series.language || 'Hindi',
+                        tags: series.tags || []
+                    };
+                    this.showEditSeriesModal = true;
+                },
+                
+                async updateSeries() {
+                    this.loading = true;
+                    try {
+                        console.log('🔄 Updating series:', this.seriesForm);
+                        const response = await fetch(`/api/stations/series/${this.editingSeries._id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(this.seriesForm)
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.message || 'Failed to update series');
+                        }
+                        
+                        const updatedSeries = await response.json();
+                        console.log('✅ Series updated successfully:', updatedSeries);
+                        
+                        this.showEditSeriesModal = false;
+                        this.resetSeriesForm();
+                        this.editingSeries = null;
+                        
+                        this.showAlert('success', `Series "${updatedSeries.name}" updated successfully!`);
+                        
+                        // Refresh data
+                        await this.loadAllSeries();
+                        await this.loadAvailableSeries();
+                        await this.loadSeriesStats();
+                        
+                    } catch (error) {
+                        console.error('❌ Error updating series:', error);
+                        this.showAlert('error', 'Failed to update series: ' + error.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async loadRadioItems() {
+                    this.loading = true;
+                    try {
+                        console.log('🔄 Loading radio items...');
+                        
+                        // Try the detailed endpoint first with show=original parameter
+                        let response = await fetch('/api/radio?limit=100&show=original');
+                        
+                        if (!response.ok) {
+                            console.log('📡 Detailed endpoint failed, trying list endpoint...');
+                            response = await fetch('/api/radio/list?show=original');
+                        }
+                        
+                        // ...existing code...
+                    } catch (error) {
+                        // ...existing code...
+                    }
+                    this.loading = false;
+                }
+            }
+        }
+        
+        window.addEventListener('error', function(e) {
+            console.error('Global error caught:', e.error || e.message);
+            alert('An error occurred: ' + (e.error?.message || e.message));
+        });
+    </script>
+</body>
+</html>
