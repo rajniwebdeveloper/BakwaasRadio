@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'song_page.dart';
 
 class ArtistsPage extends StatefulWidget {
   const ArtistsPage({super.key});

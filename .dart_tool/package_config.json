@@ -87,13 +87,19 @@
     },
     {
       "name": "flutter",
-      "rootUri": "file:///home/rajnikant/snap/flutter/common/flutter/packages/flutter",
+      "rootUri": "file:///home/rajnikant/flutter/packages/flutter",
       "packageUri": "lib/",
       "languageVersion": "3.8"
     },
     {
+      "name": "flutter_lints",
+      "rootUri": "file:///home/rajnikant/.pub-cache/hosted/pub.dev/flutter_lints-3.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
+    },
+    {
       "name": "flutter_web_plugins",
-      "rootUri": "file:///home/rajnikant/snap/flutter/common/flutter/packages/flutter_web_plugins",
+      "rootUri": "file:///home/rajnikant/flutter/packages/flutter_web_plugins",
       "packageUri": "lib/",
       "languageVersion": "3.8"
     },
@@ -110,6 +116,12 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "lints",
+      "rootUri": "file:///home/rajnikant/.pub-cache/hosted/pub.dev/lints-3.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "material_color_utilities",
       "rootUri": "file:///home/rajnikant/.pub-cache/hosted/pub.dev/material_color_utilities-0.11.1",
       "packageUri": "lib/",
@@ -117,9 +129,9 @@
     },
     {
       "name": "meta",
-      "rootUri": "file:///home/rajnikant/.pub-cache/hosted/pub.dev/meta-1.16.0",
+      "rootUri": "file:///home/rajnikant/.pub-cache/hosted/pub.dev/meta-1.17.0",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.5"
     },
     {
       "name": "path",
@@ -177,7 +189,7 @@
     },
     {
       "name": "sky_engine",
-      "rootUri": "file:///home/rajnikant/snap/flutter/common/flutter/bin/cache/pkg/sky_engine",
+      "rootUri": "file:///home/rajnikant/flutter/bin/cache/pkg/sky_engine",
       "packageUri": "lib/",
       "languageVersion": "3.8"
     },
@@ -309,8 +321,8 @@
     }
   ],
   "generator": "pub",
-  "generatorVersion": "3.9.2",
-  "flutterRoot": "file:///home/rajnikant/snap/flutter/common/flutter",
-  "flutterVersion": "3.35.7",
+  "generatorVersion": "3.10.1",
+  "flutterRoot": "file:///home/rajnikant/flutter",
+  "flutterVersion": "3.38.3",
   "pubCache": "file:///home/rajnikant/.pub-cache"
 }
