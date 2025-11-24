@@ -1,9 +1,10 @@
 import 'dart:math' as math;
+import 'dart:ui';
 import 'package:bakwaas_fm/models/station.dart';
 import 'package:flutter/material.dart';
-import 'liked_songs_manager.dart';
 import '../playback_manager.dart';
 import '../app_data.dart';
+import 'liked_songs_manager.dart';
 
 class SongPage extends StatefulWidget {
   final Station? station;
@@ -25,8 +26,10 @@ class SongPage extends StatefulWidget {
 
 class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
   late final AnimationController _rotationController;
+  late final AnimationController _ringController;
   bool _isPlaying = false;
   double _progress = 0.0;
+  double _volume = 1.0;
 
   // sample song list
   final List<Map<String, String>> _songs = [
@@ -65,6 +68,11 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
     super.initState();
     _rotationController =
         AnimationController(vsync: this, duration: const Duration(seconds: 10));
+    _ringController =
+        AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))
+          ..repeat();
+
+    _volume = PlaybackManager.instance.volume;
 
     // listen to global playback manager
     PlaybackManager.instance.addListener(_playbackListener);
@@ -85,16 +93,13 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
           'url': widget.station!.playerUrl ?? ''
         }, duration: _totalSeconds);
       }
-    } else
-    // if widget provides a specific song, insert it at top
-    if (widget.title.isNotEmpty) {
+    } else if (widget.title.isNotEmpty) {
       _songs.insert(0, {
         'title': widget.title,
         'subtitle': widget.subtitle,
         'image': widget.imageUrl ?? 'https://picsum.photos/400?image=60'
       });
       _currentIndex = 0;
-      // start playing immediately if requested
       if (widget.autoplay) {
         PlaybackManager.instance.play({
           'title': widget.title,
@@ -108,6 +113,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
   @override
   void dispose() {
     _rotationController.dispose();
+    _ringController.dispose();
     PlaybackManager.instance.removeListener(_playbackListener);
     super.dispose();
   }
@@ -140,7 +146,6 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
       if (autoplay) {
         PlaybackManager.instance.play(s, duration: _totalSeconds);
       } else {
-        // only select but don't autoplay: update manager current song but paused
         PlaybackManager.instance.play(s, duration: _totalSeconds);
         PlaybackManager.instance.pause();
       }
@@ -178,12 +183,12 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
     setState(() {
       _isPlaying = mgr.isPlaying;
       _progress = mgr.progress;
+      _volume = mgr.volume;
       if (_isPlaying) {
         if (!_rotationController.isAnimating) _rotationController.repeat();
       } else {
         _rotationController.stop();
       }
-      // if manager song differs, update current index/current song
       final cur = mgr.currentSong;
       if (cur != null) {
         final idx = _songs.indexWhere((s) =>
@@ -191,7 +196,6 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
         if (idx != -1 && idx != _currentIndex) {
           _currentIndex = idx;
         } else if (idx == -1) {
-          // add to list if missing
           _songs.insert(0, Map.from(cur));
           _currentIndex = 0;
         }
@@ -199,7 +203,6 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
     });
   }
 
-  // show bottom sheet to add given song to a playlist
   void _showAddToPlaylistSheet(Map<String, String> song) {
     showModalBottomSheet(
         context: context,
@@ -228,31 +231,6 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 12),
 
-                  // Create new playlist row
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                      leading: const Icon(Icons.create_new_folder,
-                          color: Colors.black87),
-                      title: const Text('Create new playlist',
-                          style: TextStyle(color: Colors.black)),
-                      trailing: IconButton(
-                          icon: const Icon(Icons.add, color: Colors.black87),
-                          onPressed: () {
-                            setStateSB(() {
-                              creating = !creating;
-                            });
-                          }),
-                      onTap: () {
-                        setStateSB(() {
-                          creating = !creating;
-                        });
-                      },
-                    ),
-                  ),
-
-                  // Inline creation UI
                   if (creating)
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -282,20 +260,18 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                                         content: Text('Enter a name')));
                                 return;
                               }
-                              // create playlist and add the song
                               AppData.playlists.add({
                                 'title': name,
                                 'songs': [Map.from(song)],
                                 'image': null,
                               });
-                              setStateSB(() {
+                              setState(() {
                                 creating = false;
                                 nameController.clear();
                               });
                               ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                      content: Text(
-                                          'Created "$name" and added song')));
+                                      content: Text('Created "$name" and added song')));
                             },
                             child: const Text('Add',
                                 style: TextStyle(color: Colors.tealAccent)),
@@ -324,19 +300,16 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                               style: const TextStyle(
                                   color: Colors.black87, fontSize: 12)),
                           onTap: () {
-                            // add song and close
                             (p['songs'] as List).add(Map.from(song));
                             Navigator.of(ctx).pop();
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                                 content: Text('Added to ${p['title']}')));
                           },
-                          // quick-add plus button that keeps sheet open
                           trailing: IconButton(
                             icon: const Icon(Icons.add_circle_outline,
                                 color: Colors.black87),
                             onPressed: () {
                               (p['songs'] as List).add(Map.from(song));
-                              setStateSB(() {});
                               ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                       content: Text('Added to ${p['title']}')));
@@ -355,610 +328,572 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    const double albumSize = 220.0;
+    const double albumSize = 260.0;
     final current = _songs[_currentIndex];
     final imageUrl = current['image'];
-    final bg = Colors.white;
+
+    final bgGradient = const LinearGradient(
+      colors: [Color(0xFF071029), Color(0xFF1B0330)],
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+    );
 
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
-        child: Column(
-          children: [
-            // fixed header (does not scroll)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: Row(
+        child: Container(
+          decoration: BoxDecoration(gradient: bgGradient),
+          child: Stack(
+            children: [
+              // blurred full-screen album background (dimmed)
+              if (imageUrl != null && imageUrl.isNotEmpty)
+                Positioned.fill(
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    child: Opacity(
+                      opacity: 0.70,
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: Colors.black),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // soft translucent overlay to darken background a bit more
+              Positioned.fill(
+                child: Container(color: Colors.black.withOpacity(0.28)),
+              ),
+
+              Column(
                 children: [
-                  IconButton(
-                      icon: const Icon(Icons.close, color: Colors.black),
-                      onPressed: () => Navigator.of(context).pop()),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  // top bar with centered title and left/right actions
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 10),
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        Text(current['title'] ?? '',
-                            style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 2),
-                        Text(current['subtitle'] ?? '',
-                            style: const TextStyle(
-                                color: Colors.black87, fontSize: 12),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              onPressed: () {},
+                              icon: const Icon(Icons.menu, color: Colors.white),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.of(context).maybePop(),
+                              icon: const Icon(Icons.exit_to_app, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                        // centered title
+                        Center(
+                          child: Text(
+                            'BAKWAAS FM',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.6,
+                              // slight geometric retro feel with heavy weight
+                            ),
+                          ),
+                        )
                       ],
                     ),
                   ),
-                  // IconButton(
-                  //     icon: Icon(
-                  //         _isLiked(current)
-                  //             ? Icons.favorite
-                  //             : Icons.favorite_border,
-                  //         color: _isLiked(current)
-                  //             ? Colors.white
-                  //             : Colors.white70),
-                  //     onPressed: () => _toggleLike(current),
-                  //     iconSize: 24),
-                  PopupMenuButton<String>(
-                    color: bg,
-                    icon: const Icon(Icons.more_vert, color: Colors.black87),
-                    onSelected: (value) {
-                      if (value == 'like') {
-                        final song = {
-                          'title': current['title'] ?? '',
-                          'subtitle': current['subtitle'] ?? '',
-                          'image': current['image'] ?? ''
-                        };
-                        _toggleLike(song);
-                        return;
-                      }
-                      if (value == 'add_playlist') {
-                        final song = {
-                          'title': current['title'] ?? '',
-                          'subtitle': current['subtitle'] ?? '',
-                          'image': current['image'] ?? ''
-                        };
-                        _showAddToPlaylistSheet(song);
-                        return;
-                      }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('$value selected')));
-                    },
-                    itemBuilder: (_) {
-                      final song = {
-                        'title': current['title'] ?? '',
-                        'subtitle': current['subtitle'] ?? '',
-                        'image': current['image'] ?? ''
-                      };
-                      final liked = _isLiked(song);
-                      return [
-                        PopupMenuItem(
-                            value: 'like',
-                            child: Row(children: [
-                              Icon(Icons.favorite,
-                                  color: liked ? Colors.red : Colors.black87),
-                              const SizedBox(width: 8),
-                              Text(liked ? 'Liked' : 'Like',
-                                  style: const TextStyle(color: Colors.black))
-                            ])),
-                        PopupMenuItem(
-                            value: 'add_playlist',
-                            child: Row(children: const [
-                              Icon(Icons.playlist_add, color: Colors.black87),
-                              SizedBox(width: 8),
-                              Text('Add to playlist',
-                                  style: TextStyle(color: Colors.black))
-                            ])),
-                        PopupMenuItem(
-                            value: 'download',
-                            child: Row(children: const [
-                              Icon(Icons.download, color: Colors.black87),
-                              SizedBox(width: 8),
-                              Text('Download',
-                                  style: TextStyle(color: Colors.black))
-                            ])),
-                        PopupMenuItem(
-                            value: 'add_queue',
-                            child: Row(children: const [
-                              Icon(Icons.queue_music, color: Colors.black87),
-                              SizedBox(width: 8),
-                              Text('Add to queue',
-                                  style: TextStyle(color: Colors.black))
-                            ])),
-                        PopupMenuItem(
-                            value: 'share',
-                            child: Row(children: const [
-                              Icon(Icons.share, color: Colors.black87),
-                              SizedBox(width: 8),
-                              Text('Share',
-                                  style: TextStyle(color: Colors.black))
-                            ])),
-                      ];
-                    },
-                  ),
-                ],
-              ),
-            ),
 
-            // scrollable content
-            Expanded(
-              child: Container(
-                color: bg, // ensure scroll area background matches scaffold
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 12),
+                  const SizedBox(height: 8),
 
-                      // rotating CD
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Center(
-                          child: Container(
-                            width: albumSize,
-                            height: albumSize,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: RadialGradient(colors: [
-                                Colors.grey.shade300,
-                                Colors.grey.shade500
-                              ]),
-                              boxShadow: const [
-                                BoxShadow(
-                                    color: Colors.black26,
-                                    blurRadius: 20,
-                                    offset: Offset(0, 10))
-                              ],
-                            ),
+                  // rotating vinyl with animated orbital ring
+                  Expanded(
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // animated orbital ring painter
+                          SizedBox(
+                            width: albumSize + 64,
+                            height: albumSize + 64,
                             child: AnimatedBuilder(
-                              animation: _rotationController,
-                              builder: (context, child) => Transform.rotate(
-                                  angle:
-                                      _rotationController.value * 2 * math.pi,
-                                  child: child),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // inner image
-                                  Container(
-                                    width: albumSize - 28,
-                                    height: albumSize - 28,
-                                    decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: Colors.grey.shade200),
-                                    child: ClipOval(
-                                      child: imageUrl != null &&
-                                              imageUrl.isNotEmpty
-                                          ? Image.network(imageUrl,
-                                              fit: BoxFit.cover,
-                                              width: albumSize - 28,
-                                              height: albumSize - 28,
-                                              errorBuilder: (_, __, ___) =>
-                                                  Container(
-                                                      color:
-                                                          Colors.grey.shade200))
-                                          : Container(
-                                              color: Colors.grey.shade200,
-                                              child: const Center(
-                                                  child: Icon(Icons.album,
-                                                      size: 80,
-                                                      color: Colors.black87))),
+                              animation: _ringController,
+                              builder: (context, _) {
+                                // ring reacts more strongly when playing
+                                final intensity = (_isPlaying ? 1.0 : 0.25);
+                                return CustomPaint(
+                                  painter: _OrbitalRingPainter(
+                                    tick: _ringController.value,
+                                    color: Colors.tealAccent,
+                                    intensity: intensity,
+                                  ),
+                                  child: Center(
+                                    child: AnimatedBuilder(
+                                      animation: _rotationController,
+                                      builder: (context, child) => Transform.rotate(
+                                          angle: _rotationController.value * 2 * math.pi,
+                                          child: child),
+                                      child: Container(
+                                        width: albumSize,
+                                        height: albumSize,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          gradient: LinearGradient(
+                                              colors: [
+                                                Colors.grey.shade900,
+                                                Colors.black
+                                              ],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight),
+                                          boxShadow: [
+                                            BoxShadow(
+                                                color: Colors.black.withOpacity(0.6),
+                                                blurRadius: 20,
+                                                offset: const Offset(0, 12))
+                                          ],
+                                        ),
+                                        child: Center(
+                                          child: Container(
+                                            width: albumSize - 40,
+                                            height: albumSize - 40,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: Colors.grey.shade900,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                    color: Colors.black.withOpacity(0.4),
+                                                    blurRadius: 12,
+                                                    offset: const Offset(0, 6))
+                                              ],
+                                            ),
+                                            child: ClipOval(
+                                              child: imageUrl != null && imageUrl.isNotEmpty
+                                                  ? Image.network(imageUrl,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (_, __, ___) =>
+                                                          Container(color: Colors.grey.shade900))
+                                                  : Container(
+                                                      color: Colors.grey.shade900,
+                                                      child: const Center(
+                                                          child: Icon(Icons.album,
+                                                              size: 64,
+                                                              color: Colors.white70))),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
-
-                                  // central hole
-                                  Container(
-                                      width: 28,
-                                      height: 28,
-                                      decoration: BoxDecoration(
-                                          color: Colors.black,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                              color: Colors.grey.shade300,
-                                              width: 2)))
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // title + menu
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 18),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(current['title'] ?? '',
-                                      style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold)),
-                                  const SizedBox(height: 6),
-                                  Text(current['subtitle'] ?? '',
-                                      style: const TextStyle(
-                                          color: Colors.black87, fontSize: 13)),
-                                ],
-                              ),
-                            ),
-                            PopupMenuButton<String>(
-                              color: bg,
-                              icon: const Icon(Icons.more_vert,
-                                  color: Colors.black87),
-                              onSelected: (value) {
-                                if (value == 'like') {
-                                  final song = {
-                                    'title': current['title'] ?? '',
-                                    'subtitle': current['subtitle'] ?? '',
-                                    'image': current['image'] ?? ''
-                                  };
-                                  _toggleLike(song);
-                                  return;
-                                }
-                                if (value == 'add_playlist') {
-                                  final song = {
-                                    'title': current['title'] ?? '',
-                                    'subtitle': current['subtitle'] ?? '',
-                                    'image': current['image'] ?? ''
-                                  };
-                                  _showAddToPlaylistSheet(song);
-                                  return;
-                                }
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('$value selected')));
-                              },
-                              itemBuilder: (_) {
-                                final song = {
-                                  'title': current['title'] ?? '',
-                                  'subtitle': current['subtitle'] ?? '',
-                                  'image': current['image'] ?? ''
-                                };
-                                final liked = _isLiked(song);
-                                return [
-                                  PopupMenuItem(
-                                      value: 'like',
-                                      child: Row(children: [
-                                        Icon(Icons.favorite,
-                                            color: liked
-                                                ? Colors.red
-                                                : Colors.black87),
-                                        const SizedBox(width: 8),
-                                        Text(liked ? 'Liked' : 'Like',
-                                            style: const TextStyle(
-                                                color: Colors.black))
-                                      ])),
-                                  PopupMenuItem(
-                                      value: 'add_playlist',
-                                      child: Row(children: const [
-                                        Icon(Icons.playlist_add,
-                                            color: Colors.black87),
-                                        SizedBox(width: 8),
-                                        Text('Add to playlist',
-                                            style:
-                                                TextStyle(color: Colors.black))
-                                      ])),
-                                  PopupMenuItem(
-                                      value: 'download',
-                                      child: Row(children: const [
-                                        Icon(Icons.download,
-                                            color: Colors.black87),
-                                        SizedBox(width: 8),
-                                        Text('Download',
-                                            style:
-                                                TextStyle(color: Colors.black))
-                                      ])),
-                                  PopupMenuItem(
-                                      value: 'add_queue',
-                                      child: Row(children: const [
-                                        Icon(Icons.queue_music,
-                                            color: Colors.black87),
-                                        SizedBox(width: 8),
-                                        Text('Add to queue',
-                                            style:
-                                                TextStyle(color: Colors.black))
-                                      ])),
-                                  PopupMenuItem(
-                                      value: 'share',
-                                      child: Row(children: const [
-                                        Icon(Icons.share,
-                                            color: Colors.black87),
-                                        SizedBox(width: 8),
-                                        Text('Share',
-                                            style:
-                                                TextStyle(color: Colors.black))
-                                      ])),
-                                ];
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // progress slider
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 18),
-                        child: AnimatedBuilder(
-                          animation: _rotationController,
-                          builder: (context, child) {
-                            final cur = (_progress * _totalSeconds).round();
-                            return Column(
-                              children: [
-                                Slider(
-                                    value: _progress.clamp(0.0, 1.0),
-                                    onChanged: (v) => PlaybackManager.instance
-                                        .seek(v.clamp(0.0, 1.0)),
-                                    activeColor: Colors.tealAccent,
-                                    inactiveColor: Colors.grey.shade300),
-                                Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(_formatTime(cur),
-                                          style: const TextStyle(
-                                              color: Colors.black87,
-                                              fontSize: 12)),
-                                      Text(_formatTime(_totalSeconds),
-                                          style: const TextStyle(
-                                              color: Colors.black87,
-                                              fontSize: 12))
-                                    ])
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // controls
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24.0, vertical: 8),
-                        child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              IconButton(
-                                  icon: Icon(
-                                      _isLiked(current)
-                                          ? Icons.favorite
-                                          : Icons.favorite_border,
-                                      color: _isLiked(current)
-                                          ? Colors.red
-                                          : Colors.black87),
-                                  onPressed: () => _toggleLike(current),
-                                  iconSize: 24),
-                              IconButton(
-                                  icon: const Icon(Icons.skip_previous,
-                                      color: Colors.black),
-                                  onPressed: _playPrevious,
-                                  iconSize: 28),
-                              Container(
-                                  height: 64,
-                                  width: 64,
-                                  decoration: const BoxDecoration(
-                                      color: Colors.black,
-                                      shape: BoxShape.circle),
-                                  child: IconButton(
-                                      icon: Icon(
-                                          _isPlaying
-                                              ? Icons.pause
-                                              : Icons.play_arrow,
-                                          color: Colors.white,
-                                          size:
-                                              32), // This should be white for contrast
-                                      onPressed: _togglePlay)),
-                              IconButton(
-                                  icon: const Icon(Icons.skip_next,
-                                      color: Colors.black),
-                                  onPressed: _playNext,
-                                  iconSize: 28),
-                              IconButton(
-                                  icon: const Icon(Icons.cast,
-                                      color: Colors.black87),
-                                  onPressed: () {},
-                                  iconSize: 22),
-                            ]),
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // song list (integrated and same background)
-                      Container(
-                        color: bg, // match scaffold background
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Padding(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 16.0, vertical: 12),
-                              child: Text('Up Next',
-                                  style: TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                            ListView.separated(
-                              physics: const NeverScrollableScrollPhysics(),
-                              shrinkWrap: true,
-                              itemCount: _songs.length,
-                              separatorBuilder: (_, __) => const Divider(
-                                  height: 1,
-                                  color: Color.fromARGB(255, 240, 240, 240)),
-                              itemBuilder: (context, index) {
-                                // The divider color should be updated
-                                final s = _songs[index];
-                                final isActive = index == _currentIndex;
-                                final img = s['image'];
-                                return ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 4),
-                                  leading: CircleAvatar(
-                                      radius: 22,
-                                      backgroundColor: Colors.grey.shade200,
-                                      backgroundImage: img != null &&
-                                              img.isNotEmpty
-                                          ? NetworkImage(img)
-                                          : null,
-                                      child: img == null || img.isEmpty
-                                          ? const Icon(Icons.album,
-                                              color: Colors.black87)
-                                          : null),
-                                  title: Text(s['title'] ?? '',
-                                      style: TextStyle(
-                                          color: isActive
-                                              ? Colors.tealAccent
-                                              : Colors.black,
-                                          fontWeight: isActive
-                                              ? FontWeight.w600
-                                              : FontWeight.normal),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis),
-                                  subtitle: Text(s['subtitle'] ?? '',
-                                      style: const TextStyle(
-                                          color: Colors.black87, fontSize: 12)),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(
-                                            isActive && _isPlaying
-                                                ? Icons.pause_circle
-                                                : Icons.play_circle,
-                                            color: Colors.black,
-                                            size: 28),
-                                        onPressed: () =>
-                                            _selectSong(index, autoplay: true),
-                                      ),
-                                      PopupMenuButton<String>(
-                                        color: bg,
-                                        icon: const Icon(Icons.more_vert,
-                                            color: Colors.black87),
-                                        onSelected: (value) {
-                                          if (value == 'like') {
-                                            final song = {
-                                              'title': s['title'] ?? '',
-                                              'subtitle': s['subtitle'] ?? '',
-                                              'image': s['image'] ?? ''
-                                            };
-                                            if (LikedSongsManager.contains(
-                                                song)) {
-                                              LikedSongsManager.remove(song);
-                                            } else {
-                                              LikedSongsManager.add(song);
-                                            }
-                                            setState(() {});
-                                            return;
-                                          }
-                                          if (value == 'add_playlist') {
-                                            final song = {
-                                              'title': s['title'] ?? '',
-                                              'subtitle': s['subtitle'] ?? '',
-                                              'image': s['image'] ?? ''
-                                            };
-                                            _showAddToPlaylistSheet(song);
-                                            return;
-                                          }
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(SnackBar(
-                                                  content:
-                                                      Text('$value selected')));
-                                        },
-                                        itemBuilder: (_) {
-                                          final song = {
-                                            'title': s['title'] ?? '',
-                                            'subtitle': s['subtitle'] ?? '',
-                                            'image': s['image'] ?? ''
-                                          };
-                                          final liked =
-                                              LikedSongsManager.contains(song);
-                                          return [
-                                            PopupMenuItem(
-                                              value: 'like',
-                                              child: Row(children: [
-                                                Icon(Icons.favorite,
-                                                    color: liked
-                                                        ? Colors.red
-                                                        : Colors.black87),
-                                                const SizedBox(width: 8),
-                                                Text(liked ? 'Liked' : 'Like',
-                                                    style: const TextStyle(
-                                                        color: Colors.black))
-                                              ]),
-                                            ),
-                                            PopupMenuItem(
-                                                value: 'add_playlist',
-                                                child: Row(children: const [
-                                                  Icon(Icons.playlist_add,
-                                                      color: Colors.black87),
-                                                  SizedBox(width: 8),
-                                                  Text('Add to playlist',
-                                                      style: TextStyle(
-                                                          color: Colors.black))
-                                                ])),
-                                            PopupMenuItem(
-                                                value: 'download',
-                                                child: Row(children: const [
-                                                  Icon(Icons.download,
-                                                      color: Colors.black87),
-                                                  SizedBox(width: 8),
-                                                  Text('Download',
-                                                      style: TextStyle(
-                                                          color: Colors.black))
-                                                ])),
-                                            PopupMenuItem(
-                                                value: 'add_queue',
-                                                child: Row(children: const [
-                                                  Icon(Icons.queue_music,
-                                                      color: Colors.black87),
-                                                  SizedBox(width: 8),
-                                                  Text('Add to queue',
-                                                      style: TextStyle(
-                                                          color: Colors.black))
-                                                ])),
-                                            PopupMenuItem(
-                                                value: 'share',
-                                                child: Row(children: const [
-                                                  Icon(Icons.share,
-                                                      color: Colors.black87),
-                                                  SizedBox(width: 8),
-                                                  Text('Share',
-                                                      style: TextStyle(
-                                                          color: Colors.black))
-                                                ])),
-                                          ];
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                  onTap: () =>
-                                      _selectSong(index, autoplay: false),
                                 );
                               },
                             ),
-                            const SizedBox(height: 24),
-                          ],
-                        ),
-                      ),
+                          ),
 
-                      const SizedBox(height: 24),
-                    ],
+                          const SizedBox(height: 18),
+
+                          // NOW PLAYING tag (musical style)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.06),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white.withOpacity(0.06)),
+                            ),
+                            child: const Text('♪ NOW PLAYING ♪',
+                                style: TextStyle(
+                                    color: Colors.tealAccent,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1.2)),
+                          ),
+
+                          const SizedBox(height: 8),
+
+              // Station title (use provided title or station name)
+              Text('Dhaka FM',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 6),
+                          Text(current['subtitle'] ?? widget.subtitle,
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.72),
+                                  fontSize: 13)),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+
+                  // player capsule controls
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.04),
+                            borderRadius: BorderRadius.circular(48),
+                            border: Border.all(
+                                color: Colors.white.withOpacity(0.06)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              // previous
+                              IconButton(
+                                onPressed: _playPrevious,
+                                icon: const Icon(Icons.skip_previous,
+                                    color: Colors.white70),
+                                iconSize: 36,
+                              ),
+
+                              // play button (green)
+                              GestureDetector(
+                                onTap: _togglePlay,
+                                child: Container(
+                                  width: 82,
+                                  height: 82,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(colors: [
+                                      Colors.greenAccent.shade400,
+                                      Colors.green.shade700
+                                    ]),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.green.withOpacity(0.34),
+                                        blurRadius: 22,
+                                        spreadRadius: 2,
+                                      )
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      _isPlaying ? Icons.pause : Icons.play_arrow,
+                                      color: Colors.white,
+                                      size: 42,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              // next
+                              IconButton(
+                                onPressed: _playNext,
+                                icon:
+                                    const Icon(Icons.skip_next, color: Colors.white70),
+                                iconSize: 36,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // progress slider with label
+                        Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6.0, vertical: 6),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: SliderTheme(
+                                      data: SliderTheme.of(context).copyWith(
+                                        trackHeight: 4,
+                                        activeTrackColor: Colors.tealAccent,
+                                        inactiveTrackColor:
+                                            Colors.white.withOpacity(0.12),
+                                        thumbColor: Colors.white,
+                                        overlayColor:
+                                            Colors.tealAccent.withOpacity(0.12),
+                                        thumbShape: const RoundSliderThumbShape(
+                                            enabledThumbRadius: 8),
+                                      ),
+                                      child: Slider(
+                                        value: _progress.clamp(0.0, 1.0),
+                                        onChanged: (v) =>
+                                            PlaybackManager.instance.seek(v),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 20),
+                                  child: Text(
+                                      _isPlaying ? "Now Playing..." : "Let's Play...",
+                                      style: TextStyle(
+                                          color:
+                                              Colors.white.withOpacity(0.75))),
+                                ),
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 20),
+                                  child: Text(_formatTime((_progress * _totalSeconds).round()),
+                                      style: TextStyle(
+                                          color:
+                                              Colors.white.withOpacity(0.75))),
+                                )
+                              ],
+                            )
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                    // volume control block
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
+                      child: Column(
+                        children: [
+                          // glowing knob
+                          GestureDetector(
+                            onPanUpdate: (details) {
+                              // vertical drag changes volume
+                              setState(() {
+                                _volume = (_volume - details.delta.dy / 300).clamp(0.0, 1.0);
+                                PlaybackManager.instance.setVolume(_volume);
+                              });
+                            },
+                            child: Column(
+                              children: [
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // radial glow that expands with volume
+                                    Container(
+                                      width: 98 + (_volume * 18),
+                                      height: 98 + (_volume * 18),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.transparent,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.tealAccent.withOpacity(0.12 + _volume * 0.28),
+                                            blurRadius: 24 + _volume * 18,
+                                            spreadRadius: 8 + _volume * 6,
+                                          )
+                                        ],
+                                      ),
+                                    ),
+
+                                    // knob
+                                    Container(
+                                      width: 98,
+                                      height: 98,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: LinearGradient(colors: [
+                                          Colors.greenAccent.shade400.withOpacity(0.9 * (_volume * 0.6 + 0.4)),
+                                          Colors.green.shade700.withOpacity(0.9 * (_volume * 0.6 + 0.4))
+                                        ], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.green.withOpacity(0.28 * (_volume + 0.1)),
+                                            blurRadius: 18 + _volume * 12,
+                                            spreadRadius: 1 + _volume * 3,
+                                          )
+                                        ],
+                                      ),
+                                      child: Transform.rotate(
+                                        angle: (_volume - 0.5) * math.pi, // rotate knob with volume
+                                        child: const Center(
+                                          child: Icon(Icons.volume_up, color: Colors.white, size: 36),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 12),
+                                // slim white volume slider
+                                SliderTheme(
+                                  data: SliderTheme.of(context).copyWith(
+                                    trackHeight: 3,
+                                    activeTrackColor: Colors.white,
+                                    inactiveTrackColor: Colors.white.withOpacity(0.18),
+                                    thumbColor: Colors.white,
+                                    overlayColor: Colors.tealAccent.withOpacity(0.12),
+                                  ),
+                                  child: Slider(
+                                    value: _volume,
+                                    onChanged: (v) {
+                                      setState(() {
+                                        _volume = v;
+                                        PlaybackManager.instance.setVolume(_volume);
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // bottom mini banner
+                          Container(
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.06),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.play_arrow, color: Colors.black),
+                                ),
+                                const SizedBox(width: 10),
+                                const Text("Let's Play Dhaka FM",
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14)
+                ],
               ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        height: 76,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.03),
+          border: Border(top: BorderSide(color: Colors.white.withOpacity(0.04))),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, -4))],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            // Home with yellow highlight bubble
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE082),
+                    shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: const Color(0xFFFFE082).withOpacity(0.28), blurRadius: 12, spreadRadius: 1)],
+                  ),
+                  child: const Icon(Icons.home, color: Colors.black87),
+                ),
+                const SizedBox(height: 6),
+                const Text('Home', style: TextStyle(color: Colors.white70, fontSize: 12))
+              ],
+            ),
+
+            // Heart
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.favorite_border, color: Colors.white70, size: 28),
+                SizedBox(height: 6),
+                Text('Liked', style: TextStyle(color: Colors.white70, fontSize: 12))
+              ],
+            ),
+
+            // Radio
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.radio, color: Colors.white70, size: 28),
+                SizedBox(height: 6),
+                Text('Radio', style: TextStyle(color: Colors.white70, fontSize: 12))
+              ],
+            ),
+
+            // Settings/info
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.info_outline, color: Colors.white70, size: 28),
+                SizedBox(height: 6),
+                Text('Info', style: TextStyle(color: Colors.white70, fontSize: 12))
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+class _OrbitalRingPainter extends CustomPainter {
+  final double tick; // 0..1 animation tick
+  final Color color;
+  final double intensity; // 0..1 reaction intensity
+
+  _OrbitalRingPainter({required this.tick, required this.color, this.intensity = 1.0});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (math.min(size.width, size.height) / 2) - 6;
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
+
+    // draw several thin arcs with varying alpha/length driven by sin waves
+    final rings = 5;
+    for (int i = 0; i < rings; i++) {
+      final phase = tick * 2 * math.pi + (i * 0.9);
+      final amp = 0.6 + 0.4 * math.sin(phase * (1 + i * 0.2));
+      final width = 1.2 + i * 0.6;
+      paint.strokeWidth = width;
+      final alpha = (160 * amp * intensity).clamp(18, 220).toInt();
+      paint.color = color.withAlpha(alpha);
+
+      // draw multiple small arc segments around the circle
+      final segments = 60 - i * 6;
+      for (int s = 0; s < segments; s++) {
+        final start = (s / segments) * 2 * math.pi + (i * 0.12) + tick * 2 * math.pi * (0.4 + i * 0.2);
+        final sweep = 0.06 + 0.02 * math.sin(phase + s * 0.12);
+        final path = Path();
+        path.addArc(Rect.fromCircle(center: center, radius: radius - i * 4), start, sweep);
+        canvas.drawPath(path, paint);
+      }
+    }
+
+    // subtle outer glow ring
+    final glow = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = color.withAlpha((30 * intensity).toInt());
+    canvas.drawCircle(center, radius + 6, glow);
+  }
+
+  @override
+  bool shouldRepaint(covariant _OrbitalRingPainter old) {
+    return old.tick != tick || old.intensity != intensity || old.color != color;
   }
 }

@@ -266,25 +266,19 @@ class Section extends StatelessWidget {
                                     decoration: BoxDecoration(
                                       color: Colors.grey.shade200,
                                       borderRadius: BorderRadius.circular(8),
-                                      image: station.profilepic != null
+                                      image: (station.profilepic != null && station.profilepic!.isNotEmpty)
                                           ? DecorationImage(
-                                              image: NetworkImage(
-                                                  station.profilepic!),
+                                              image: NetworkImage(station.profilepic!),
                                               fit: BoxFit.cover)
                                           : null,
                                     ),
-                                    child: station.profilepic == null
+                                    child: (station.profilepic == null || station.profilepic!.isEmpty)
                                         ? const Center(
                                             child: Icon(Icons.album,
                                                 size: 36,
                                                 color: Colors.black54))
                                         : null,
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text(station.name,
-                                      style: const TextStyle(fontSize: 12),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis),
                                   const SizedBox(height: 4),
                                   Text(station.description ?? '',
                                       style: const TextStyle(

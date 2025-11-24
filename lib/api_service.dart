@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'models/station.dart';
 
 class ApiService {
-  static const String _baseUrl = 'http://radio.rajnikantmahato.me';
+  static const String _baseUrl = 'http://localhost:3222' ;
 
   static Future<List<Station>> getStations() async {
     try {
