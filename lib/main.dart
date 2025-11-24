@@ -10,34 +10,7 @@ import 'profile_page.dart';
 import 'library/playlists_page.dart';
 import 'library/playlist_detail_page.dart';
 
-// sample songs used by Recently Played and Trending sections
-final List<Map<String, String>> sampleSongs = [
-  {
-    'title': 'Manjha',
-    'subtitle': 'Vishal Mishra',
-    'image': 'https://picsum.photos/400?image=10'
-  },
-  {
-    'title': 'Main Rahoon Ya Na Rahoon',
-    'subtitle': 'Armaan Malik',
-    'image': 'https://picsum.photos/400?image=20'
-  },
-  {
-    'title': 'Hum Dum',
-    'subtitle': 'Unknown Artist',
-    'image': 'https://picsum.photos/400?image=30'
-  },
-  {
-    'title': 'Shiddat (Reprise)',
-    'subtitle': 'Artist',
-    'image': 'https://picsum.photos/400?image=40'
-  },
-  {
-    'title': 'Barbaadiyan',
-    'subtitle': 'Artist',
-    'image': 'https://picsum.photos/400?image=50'
-  },
-];
+// Demo/sample songs removed. App will show live data or empty states.
 
 void main() => runApp(const MyApp());
 
@@ -93,34 +66,15 @@ class HomePage extends StatelessWidget {
                           //         songs: sampleSongs)));
                         }),
                     const SizedBox(height: 20),
-                    Section(
-                        title: 'Recently Played',
-                        itemCount: 6,
-                        cardType: CardType.album,
-                        onViewAll: () {
-                          Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => AllSongsPage(
-                                  title: 'Recently Played',
-                                  songs: sampleSongs)));
-                        }),
-                    const SizedBox(height: 20),
+                    // Stations section remains; demo sections removed.
                     Section(
                         title: 'Your Playlists',
-                        itemCount: 6,
+                        // use actual data length so empty lists are handled safely
+                        itemCount: AppData.playlists.length,
                         cardType: CardType.playlist,
                         onViewAll: () {
                           Navigator.of(context).push(MaterialPageRoute(
                               builder: (_) => const PlaylistsPage()));
-                        }),
-                    const SizedBox(height: 20),
-                    Section(
-                        title: 'Trending Now',
-                        itemCount: 6,
-                        cardType: CardType.album,
-                        onViewAll: () {
-                          Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) =>
-                                  TrendingGridPage(songs: sampleSongs)));
                         }),
                     const SizedBox(height: 120), // leave room for mini-player
                   ],
@@ -304,11 +258,10 @@ class Section extends StatelessWidget {
                   separatorBuilder: (_, __) => const SizedBox(width: 10),
                   itemBuilder: (context, index) {
                     if (cardType == CardType.album) {
-                      final song = sampleSongs[index % sampleSongs.length];
-                      // inline album/song card
-                      final title = song['title'] ?? '';
-                      final subtitle = song['subtitle'] ?? '';
-                      final image = song['image'];
+                      // No demo sample songs — show simple placeholders.
+                      final title = 'Item ${index + 1}';
+                      final subtitle = '';
+                      final image = null;
                       return SizedBox(
                         width: 120,
                         child: InkWell(
@@ -319,7 +272,7 @@ class Section extends StatelessWidget {
                                     title: title,
                                     subtitle: subtitle,
                                     imageUrl: image,
-                                    autoplay: true)));
+                                    autoplay: false)));
                           },
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -330,17 +283,10 @@ class Section extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   color: Colors.grey.shade200,
                                   borderRadius: BorderRadius.circular(8),
-                                  image: image != null
-                                      ? DecorationImage(
-                                          image: NetworkImage(image),
-                                          fit: BoxFit.cover)
-                                      : null,
                                 ),
-                                child: image == null
-                                    ? const Center(
-                                        child: Icon(Icons.album,
-                                            size: 36, color: Colors.black54))
-                                    : null,
+                                child: const Center(
+                                    child: Icon(Icons.album,
+                                        size: 36, color: Colors.black54)),
                               ),
                               const SizedBox(height: 6),
                               Text(title,
@@ -358,8 +304,18 @@ class Section extends StatelessWidget {
                         ),
                       );
                     } else {
-                      final playlist =
-                          AppData.playlists[index % AppData.playlists.length];
+                      // Handle empty playlists gracefully
+                      if (AppData.playlists.isEmpty) {
+                        return SizedBox(
+                          width: 120,
+                          child: Center(
+                              child: Text('No playlists yet',
+                                  style:
+                                      TextStyle(color: Colors.black54))),
+                        );
+                      }
+                      final playlist = AppData.playlists[
+                          index % AppData.playlists.length];
                       final title = playlist['title'] ?? '';
                       final imageUrl = playlist['image'];
                       return SizedBox(
@@ -572,125 +528,29 @@ class _BottomWithMiniPlayerState extends State<BottomWithMiniPlayer> {
   @override
   Widget build(BuildContext context) {
     final mgr = PlaybackManager.instance;
-    final song = mgr.currentSong ?? mgr.lastSong;
+    final song = mgr.currentSong;
     final isPlaying = mgr.isPlaying;
 
     return Container(
-      color: Colors.grey.shade200,
-      padding: const EdgeInsets.only(top: 8, bottom: 8, left: 12, right: 12),
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: SafeArea(
         top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (song != null) ...[
-              Container(
-                height: 56,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.grey.shade50, Colors.white],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2))
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: song['image']?.isNotEmpty == true
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: Image.network(song['image']!,
-                                  fit: BoxFit.cover))
-                          : const Icon(Icons.music_note, color: Colors.black87),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => SongPage(
-                                  title: song['title'] ?? '',
-                                  subtitle: song['subtitle'] ?? '',
-                                  imageUrl: song['image'],
-                                  autoplay: true)));
-                        },
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: isPlaying
-                              ? [
-                                  Text(song['title'] ?? '',
-                                      style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.black),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis),
-                                  const SizedBox(height: 2),
-                                  Text(song['subtitle'] ?? '',
-                                      style: const TextStyle(
-                                          fontSize: 12, color: Colors.black87),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis),
-                                ]
-                              : [
-                                  const Text('Not playing',
-                                      style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.grey))
-                                ],
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => PlaybackManager.instance.toggle(),
-                      icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow,
-                          color: Colors.black87),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.home, color: Colors.black87)),
-                IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.search, color: Colors.black87)),
-                IconButton(
-                    onPressed: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => const LibraryPage()));
-                    },
-                    icon:
-                        const Icon(Icons.library_music, color: Colors.black87)),
-                IconButton(
-                    onPressed: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => const ProfilePage()));
-                    },
-                    icon: const Icon(Icons.person, color: Colors.black87)),
-              ],
-            )
+            // Only a slider is shown per request. If no song is loaded,
+            // the slider is disabled.
+            Slider.adaptive(
+              value: (mgr.progress >= 0.0 && mgr.progress <= 1.0)
+                  ? mgr.progress
+                  : 0.0,
+              onChanged: song != null
+                  ? (v) {
+                      mgr.seek(v);
+                    }
+                  : null,
+            ),
           ],
         ),
       ),

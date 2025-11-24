@@ -28,6 +28,9 @@ class PlaybackManager extends ChangeNotifier {
   double _progress = 0.0; // 0.0 - 1.0
   int _durationSeconds = 0;
 
+  // simple volume support to satisfy callers in UI
+  double _volume = 1.0;
+
   // Remember the last played song even when playback is stopped
   Map<String, String>? _lastSong;
 
@@ -37,6 +40,8 @@ class PlaybackManager extends ChangeNotifier {
   int get durationSeconds => _durationSeconds;
   Map<String, String>? get lastSong =>
       _lastSong != null ? Map.from(_lastSong!) : null;
+
+  double get volume => _volume;
 
   void play(Map<String, String> song, {int duration = 0}) {
     if (song['url'] == null || song['url']!.isEmpty) {
@@ -74,6 +79,17 @@ class PlaybackManager extends ChangeNotifier {
   void seek(double value) {
     final position = value * _durationSeconds;
     _audioPlayer.seek(Duration(seconds: position.round()));
+  }
+
+  /// Set player volume (0.0 - 1.0)
+  void setVolume(double v) {
+    _volume = v.clamp(0.0, 1.0);
+    try {
+      _audioPlayer.setVolume(_volume);
+    } catch (_) {
+      // ignore if underlying player doesn't support setVolume
+    }
+    notifyListeners();
   }
 
   @override
