@@ -208,7 +208,6 @@ class BakwaasBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = [
       const _NavItem(Icons.home, 'Home'),
-      const _NavItem(Icons.favorite_border, 'Liked'),
       const _NavItem(Icons.library_music, 'Library'),
     ];
     return SafeArea(
@@ -237,30 +236,15 @@ class BakwaasBottomNav extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? BakwaasPalette.softYellow
-                          : Colors.transparent,
-                      shape: BoxShape.circle,
-                      boxShadow: isActive
-                          ? [
-                              BoxShadow(
-                                color:
-                                    BakwaasPalette.softYellow.withOpacity(0.35),
-                                blurRadius: 18,
-                                spreadRadius: 1,
-                              )
-                            ]
-                          : null,
-                    ),
+                  // Render a flat icon (no circular background). Active state
+                  // shows a subtle underline to indicate selection.
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6.0),
                     child: Icon(item.icon,
                         color: isActive
-                            ? Colors.black87
-                            : Colors.white.withOpacity(0.8)),
+                            ? BakwaasPalette.softYellow
+                            : Colors.white.withOpacity(0.88),
+                        size: 22),
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -269,6 +253,17 @@ class BakwaasBottomNav extends StatelessWidget {
                       color: Colors.white.withOpacity(isActive ? 0.95 : 0.7),
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // small indicator
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: isActive ? 20 : 0,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: isActive ? BakwaasPalette.softYellow : Colors.transparent,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ],

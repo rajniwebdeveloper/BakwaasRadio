@@ -337,11 +337,12 @@ class _HomePageState extends State<HomePage>
               child: LikedSongsContent(),
             ),
       onNavTap: (index) {
-        // index 0: Home, 1: Liked, 2: Library
-        if (index == 2) {
-          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LibraryPage()));
-          return;
-        }
+          // index 0: Home, 1: Library (we removed the Liked tab from the bottom nav
+          // so Liked songs are accessible only from the Library or the hamburger menu)
+          if (index == 1) {
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LibraryPage()));
+            return;
+          }
         setState(() => _activeTab = index);
       },
     );
@@ -654,20 +655,13 @@ class _HomePageState extends State<HomePage>
               ],
             ),
           ),
-          GestureDetector(
-            onTap: _openFullPlayer,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _playback.isPlaying ? Icons.pause : Icons.play_arrow,
-                color: Colors.black,
-              ),
+          IconButton(
+            onPressed: _openFullPlayer,
+            icon: Icon(
+              _playback.isPlaying ? Icons.pause : Icons.play_arrow,
+              color: Colors.white,
             ),
+            tooltip: 'Now Playing',
           )
         ],
       ),
@@ -1077,12 +1071,11 @@ class AllSongsPage extends StatelessWidget {
                     child: Row(
                       children: [
                         CircleAvatar(
-                          radius: 28,
-                          backgroundImage: s['image'] != null
-                              ? NetworkImage(s['image']!)
-                              : null,
-                          backgroundColor: Colors.white.withOpacity(0.08),
-                        ),
+                            radius: 28,
+                            backgroundImage: s['image'] != null && s['image']!.isNotEmpty
+                                ? NetworkImage(s['image']!)
+                                : const AssetImage('assets/logo.png') as ImageProvider,
+                            backgroundColor: Colors.white.withOpacity(0.08)),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
