@@ -207,10 +207,9 @@ class BakwaasBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      _NavItem(Icons.home, 'Home'),
-      _NavItem(Icons.favorite_border, 'Liked'),
-      _NavItem(Icons.radio, 'Radio'),
-      _NavItem(Icons.info_outline, 'Info'),
+      const _NavItem(Icons.home, 'Home'),
+      const _NavItem(Icons.favorite_border, 'Liked'),
+      const _NavItem(Icons.library_music, 'Library'),
     ];
     return SafeArea(
       top: false,

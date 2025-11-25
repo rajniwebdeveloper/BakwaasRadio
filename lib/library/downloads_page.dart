@@ -65,7 +65,7 @@ class _DownloadsPageState extends State<DownloadsPage> {
               ]),
             ),
           ),
-        Expanded(
+        const Expanded(
             child: Center(
                 child:
                     Text('No downloads', style: TextStyle(color: Colors.grey))))

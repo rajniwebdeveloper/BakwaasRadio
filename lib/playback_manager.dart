@@ -1,6 +1,8 @@
-import 'dart:async';
+import 'dart:convert';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PlaybackManager extends ChangeNotifier {
   PlaybackManager._internal() {
@@ -33,6 +35,8 @@ class PlaybackManager extends ChangeNotifier {
 
   // Remember the last played song even when playback is stopped
   Map<String, String>? _lastSong;
+  // persisted history (most-recent-first)
+  List<Map<String, String>> _history = [];
 
   Map<String, String>? get currentSong => _currentSong;
   bool get isPlaying => _isPlaying;
@@ -42,6 +46,27 @@ class PlaybackManager extends ChangeNotifier {
       _lastSong != null ? Map.from(_lastSong!) : null;
 
   double get volume => _volume;
+
+  List<Map<String, String>> get history => List.unmodifiable(_history);
+
+  // Load persisted state (lastSong and history)
+  Future<void> loadPersisted() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastJson = prefs.getString('last_song');
+      if (lastJson != null && lastJson.isNotEmpty) {
+        final Map<String, dynamic> decoded = json.decode(lastJson);
+        _lastSong = decoded.map((k, v) => MapEntry(k.toString(), v.toString()));
+      }
+      final histJson = prefs.getStringList('play_history') ?? [];
+      _history = histJson.map((s) {
+        final m = json.decode(s) as Map<String, dynamic>;
+        return m.map((k, v) => MapEntry(k.toString(), v.toString()));
+      }).toList();
+    } catch (_) {
+      // ignore errors and keep defaults
+    }
+  }
 
   void play(Map<String, String> song, {int duration = 0}) {
     if (song['url'] == null || song['url']!.isEmpty) {
@@ -59,7 +84,23 @@ class PlaybackManager extends ChangeNotifier {
     _currentSong = Map.from(song);
     _audioPlayer.play(UrlSource(song['url']!));
     _lastSong = Map.from(song);
+    // update history: push front and persist
+    _addToHistory(Map.from(song));
     notifyListeners();
+  }
+
+  void _addToHistory(Map<String, String> song) async {
+    try {
+      // remove duplicates by url
+      _history.removeWhere((s) => s['url'] == song['url']);
+      _history.insert(0, song);
+      // cap history
+      if (_history.length > 200) _history = _history.sublist(0, 200);
+      final prefs = await SharedPreferences.getInstance();
+      final list = _history.map((m) => json.encode(m)).toList();
+      await prefs.setStringList('play_history', list);
+      await prefs.setString('last_song', json.encode(_lastSong ?? {}));
+    } catch (_) {}
   }
 
   void pause() {

@@ -8,7 +8,7 @@ class PlaylistDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = Colors.white;
+    const bg = Colors.white;
     final songs = (playlist['songs'] as List).cast<Map<String, String>>();
     return Scaffold(
       backgroundColor: bg,

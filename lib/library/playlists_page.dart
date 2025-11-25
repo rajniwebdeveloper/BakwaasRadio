@@ -164,9 +164,10 @@ class _PlaylistsPageState extends State<PlaylistsPage> {
                                           for (var i = 0;
                                               i < candidates.length;
                                               i++) {
-                                            if (selected[i])
+                                            if (selected[i]) {
                                               selectedSongs
                                                   .add(Map.from(candidates[i]));
+                                            }
                                           }
                                           final newPlaylist = {
                                             'title': name.isEmpty
@@ -244,7 +245,7 @@ class _PlaylistsPageState extends State<PlaylistsPage> {
                                     child: Image.network(p['image'],
                                         fit: BoxFit.cover),
                                   )
-                                : Center(
+                                : const Center(
                                     child: Icon(Icons.music_note,
                                         color: Colors.grey),
                                   ),

@@ -30,34 +30,8 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
   double _progress = 0.0;
   double _volume = 1.0;
 
-  // sample song list
-  final List<Map<String, String>> _songs = [
-    {
-      'title': 'Manjha',
-      'subtitle': 'Vishal Mishra',
-      'image': 'https://picsum.photos/400?image=10'
-    },
-    {
-      'title': 'Main Rahoon Ya Na Rahoon',
-      'subtitle': 'Armaan Malik',
-      'image': 'https://picsum.photos/400?image=20'
-    },
-    {
-      'title': 'Hum Dum',
-      'subtitle': 'Unknown Artist',
-      'image': 'https://picsum.photos/400?image=30'
-    },
-    {
-      'title': 'Shiddat (Reprise)',
-      'subtitle': 'Artist',
-      'image': 'https://picsum.photos/400?image=40'
-    },
-    {
-      'title': 'Barbaadiyan',
-      'subtitle': 'Artist',
-      'image': 'https://picsum.photos/400?image=50'
-    },
-  ];
+  // Songs list starts empty; we'll populate from `station` or passed title only.
+  final List<Map<String, String>> _songs = [];
 
   int _currentIndex = 0;
   static const int _totalSeconds = 3 * 60 + 11; // 3:11
@@ -96,7 +70,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
       _songs.insert(0, {
         'title': widget.title,
         'subtitle': widget.subtitle,
-        'image': widget.imageUrl ?? 'https://picsum.photos/400?image=60'
+        'image': widget.imageUrl ?? ''
       });
       _currentIndex = 0;
       if (widget.autoplay) {
@@ -250,17 +224,18 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               image: imageUrl != null && imageUrl.isNotEmpty
-                                  ? DecorationImage(
-                                      image: NetworkImage(imageUrl),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null,
+                                    ? DecorationImage(
+                                        image: NetworkImage(imageUrl),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : const DecorationImage(
+                                        image: AssetImage('assets/logo.png'),
+                                        fit: BoxFit.cover,
+                                      ),
                               color: Colors.black,
                             ),
-                            child: (imageUrl == null || imageUrl.isEmpty)
-                                ? const Icon(Icons.radio,
-                                    color: Colors.white, size: 48)
-                                : null,
+                            // Do not show fallback radio icon — prefer an empty thumbnail.
+                            child: null,
                           ),
                         ),
                       ),
@@ -286,9 +261,9 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
               ),
               child: Column(
                 children: [
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children: [
                       Text('♪',
                           style: TextStyle(
                               color: Colors.tealAccent,
@@ -480,13 +455,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                                   )
                                 ],
                               ),
-                              child: Transform.rotate(
-                                angle: (_volume - 0.5) * math.pi,
-                                child: const Center(
-                                  child: Icon(Icons.volume_up,
-                                      color: Colors.white, size: 36),
-                                ),
-                              ),
+                              child: const SizedBox.shrink(),
                             ),
                           ],
                         ),
@@ -513,35 +482,35 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Container(
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
+                  // Show the quick play banner only when we have a real title
+                  if ((current['title'] ?? '').isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.play_arrow, color: Colors.black),
                           ),
-                          child:
-                              const Icon(Icons.play_arrow, color: Colors.black),
-                        ),
-                        const SizedBox(width: 10),
-                        const Text("Let's Play Dhaka FM",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  )
+                          const SizedBox(width: 10),
+                          Text("Let's Play ${current['title']}",
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    )
                 ],
               ),
             ),

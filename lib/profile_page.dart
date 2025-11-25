@@ -90,10 +90,10 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(12.0),
+                  const Padding(
+                    padding: EdgeInsets.all(12.0),
                     child: Text('Choose language',
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: Colors.black,
                             fontSize: 16,
                             fontWeight: FontWeight.w600)),
@@ -125,7 +125,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   child: Container(
                                     decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(10),
-                                        gradient: LinearGradient(
+                                        gradient: const LinearGradient(
                                             colors: [
                                               Colors.black26,
                                               Colors.black38
@@ -215,9 +215,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     child: const Text('Add'))
               ],
             ));
-    if (added == true)
+    if (added == true) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Singer added')));
+    }
   }
 
   void _showEditProfileDialog() async {
@@ -283,9 +284,10 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           );
         });
-    if (saved == true)
+    if (saved == true) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Profile updated')));
+    }
   }
 
   @override
@@ -456,7 +458,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 trailing: Switch(
                     value: _notifications,
                     onChanged: (v) => setState(() => _notifications = v),
-                    activeColor: Colors.tealAccent),
+                    activeThumbColor: Colors.tealAccent),
               ),
 
               const SizedBox(height: 6),
@@ -522,7 +524,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               });
                             },
                             child: Container(
-                              decoration: BoxDecoration(
+                              decoration: const BoxDecoration(
                                   color: Colors.black26,
                                   shape: BoxShape.circle),
                               child: const Icon(Icons.close,

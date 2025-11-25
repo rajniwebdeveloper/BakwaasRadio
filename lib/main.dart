@@ -7,10 +7,11 @@ import 'playback_manager.dart';
 import 'library/library_page.dart';
 import 'app_data.dart';
 import 'profile_page.dart';
-import 'library/playlists_page.dart';
 import 'library/playlist_detail_page.dart';
+import 'library/liked_songs_page.dart';
 import 'widgets/bakwaas_chrome.dart';
 import 'widgets/orbital_ring.dart';
+import 'stations_page.dart';
 
 // Demo/sample songs removed. App will show live data or empty states.
 
@@ -26,19 +27,114 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Bakwaas FM',
       theme: base.copyWith(
-        useMaterial3: true,
         scaffoldBackgroundColor: Colors.black,
         colorScheme: base.colorScheme.copyWith(
           primary: BakwaasPalette.neonGreen,
           secondary: BakwaasPalette.aqua,
-          background: BakwaasPalette.navy,
+          surface: BakwaasPalette.navy,
         ),
         textTheme: base.textTheme.apply(
           bodyColor: Colors.white,
           displayColor: Colors.white,
         ),
       ),
-      home: const HomePage(),
+      home: const SplashPage(),
+    );
+  }
+}
+
+/// A small splash page that initializes the app (loads persisted playback,
+/// checks backend connectivity) and then navigates to `HomePage`.
+class SplashPage extends StatefulWidget {
+  const SplashPage({super.key});
+
+  @override
+  State<SplashPage> createState() => _SplashPageState();
+}
+
+class _SplashPageState extends State<SplashPage> {
+  String _status = 'Starting...';
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    try {
+      setState(() => _status = 'Restoring playback...');
+      await PlaybackManager.instance.loadPersisted();
+
+      setState(() => _status = 'Checking backend...');
+      // Try a quick stations call to verify backend is reachable. Ignore errors.
+      try {
+        await ApiService.getStations();
+      } catch (_) {
+        // ignore - we'll still continue to app; UI will show errors where needed
+      }
+
+      // Small delay so splash is visible briefly
+      await Future.delayed(const Duration(milliseconds: 700));
+
+      // Navigate to home
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+          builder: (_) => const HomePage()));
+    } catch (e) {
+      // On unexpected failure, still proceed but show message briefly
+      setState(() => _status = 'Initialization failed — continuing');
+      await Future.delayed(const Duration(seconds: 1));
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+          builder: (_) => const HomePage()));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final base = Theme.of(context);
+    return Scaffold(
+      backgroundColor: base.scaffoldBackgroundColor,
+      body: Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: BakwaasTheme.glowGradient,
+              boxShadow: [BoxShadow(
+                color: BakwaasPalette.neonGreen.withOpacity(0.18),
+                blurRadius: 24,
+                spreadRadius: 4,
+              )],
+            ),
+            child: Container(
+              margin: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                image: DecorationImage(
+                  image: AssetImage('assets/logo.png'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text('Bakwaas FM', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(children: [
+              const SizedBox(height: 6),
+              const CircularProgressIndicator(color: BakwaasPalette.neonGreen),
+              const SizedBox(height: 8),
+              Text(_status, style: const TextStyle(color: Colors.white70)),
+            ]),
+          )
+        ]),
+      ),
     );
   }
 }
@@ -54,6 +150,7 @@ class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   final PlaybackManager _playback = PlaybackManager.instance;
   late final AnimationController _ringController;
+  int _activeTab = 0;
 
   @override
   void initState() {
@@ -62,6 +159,23 @@ class _HomePageState extends State<HomePage>
         AnimationController(vsync: this, duration: const Duration(seconds: 12))
           ..repeat();
     _playback.addListener(_handlePlayback);
+    // Auto-play and open last known song if it has a valid URL (after build)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Load persisted playback state, then resume if possible
+      PlaybackManager.instance.loadPersisted().then((_) {
+        final last = PlaybackManager.instance.lastSong;
+        if (last != null && (last['url']?.isNotEmpty == true) && !PlaybackManager.instance.isPlaying) {
+          PlaybackManager.instance.play(last);
+          // open the full player page so user sees what's playing
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => SongPage(
+            title: last['title'] ?? '',
+            subtitle: last['subtitle'] ?? '',
+            imageUrl: last['image'],
+            autoplay: true,
+          )));
+        }
+      });
+    });
   }
 
   @override
@@ -77,17 +191,12 @@ class _HomePageState extends State<HomePage>
       _playback.currentSong ?? _playback.lastSong;
 
   void _openFullPlayer() {
-    final song = _heroSong ??
-        {
-          'title': 'Dhaka FM',
-          'subtitle': 'Live Radio',
-          'image': '',
-          'url': '',
-        };
+    // Open full player using current/last song data if available.
+    final song = _heroSong ?? <String, String>{};
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => SongPage(
-        title: song['title'] ?? 'Dhaka FM',
-        subtitle: song['subtitle'] ?? 'Live Radio',
+        title: song['title'] ?? '',
+        subtitle: song['subtitle'] ?? '',
         imageUrl: song['image'],
         autoplay: _playback.isPlaying,
       ),
@@ -96,50 +205,145 @@ class _HomePageState extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
-    final heroSong = _heroSong ??
-        {
-          'title': 'Dhaka FM',
-          'subtitle': 'Live Radio',
-          'image': '',
-        };
+    // Avoid demo defaults; show live data only when available.
+    final heroSong = _heroSong ?? <String, String>{};
     final cover = heroSong['image'];
 
     return BakwaasScaffold(
       backgroundImage: cover,
-      activeTab: 0,
-      onMenuTap: () => Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => const LibraryPage())),
+      activeTab: _activeTab,
+      onMenuTap: () => showModalBottomSheet<void>(
+          context: context,
+          backgroundColor: Colors.transparent,
+          builder: (_) {
+            return SafeArea(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12))),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.person, color: Colors.white),
+                      title: const Text('Profile', style: TextStyle(color: Colors.white)),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfilePage()));
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.settings, color: Colors.white),
+                      title: const Text('Settings', style: TextStyle(color: Colors.white)),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        showDialog(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                                  title: const Text('Settings'),
+                                  content: const Text('Settings not implemented yet.'),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: const Text('OK'))
+                                  ],
+                                ));
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.play_circle_fill, color: Colors.white),
+                      title: const Text('Now Playing', style: TextStyle(color: Colors.white)),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        final song = _heroSong ?? {'title': 'Dhaka FM', 'subtitle': 'Live Radio', 'image': ''};
+                        Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => SongPage(
+                                  title: song['title'] ?? 'Dhaka FM',
+                                  subtitle: song['subtitle'] ?? 'Live Radio',
+                                  imageUrl: song['image'],
+                                  autoplay: _playback.isPlaying,
+                                )));
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.timer, color: Colors.white),
+                      title: const Text('Sleep Timer', style: TextStyle(color: Colors.white)),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        showModalBottomSheet<void>(
+                            context: context,
+                            builder: (_) {
+                              return SafeArea(
+                                  child: Container(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                  const Text('Set Sleep Timer', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 12),
+                                  ListTile(title: const Text('15 minutes'), onTap: () => Navigator.of(context).pop()),
+                                  ListTile(title: const Text('30 minutes'), onTap: () => Navigator.of(context).pop()),
+                                  ListTile(title: const Text('60 minutes'), onTap: () => Navigator.of(context).pop()),
+                                ]),
+                              ));
+                            });
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                  ],
+                ),
+              ),
+            );
+          }),
       onExitTap: () {
         Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => const ProfilePage()));
+        .push(MaterialPageRoute(builder: (_) => const ProfilePage()));
       },
       bodyPadding: EdgeInsets.zero,
-      body: ListView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
-        children: [
-          _buildHeroSection(heroSong),
-          const SizedBox(height: 24),
-          const TabsRow(),
-          const SizedBox(height: 20),
-          Section(
-            title: 'Stations',
-            itemCount: 6,
-            cardType: CardType.station,
-            onViewAll: () {},
-          ),
-          const SizedBox(height: 20),
-          Section(
-            title: 'Your Playlists',
-            itemCount: AppData.playlists.length,
-            cardType: CardType.playlist,
-            onViewAll: () {
-              Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const PlaylistsPage()));
-            },
-          ),
-        ],
-      ),
+      body: _activeTab == 0
+          ? ListView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+              children: [
+                _buildHeroSection(heroSong),
+                const SizedBox(height: 18),
+                // Quick access to Stations
+                GestureDetector(
+                  onTap: () => Navigator.of(context)
+                      .push(MaterialPageRoute(builder: (_) => const StationsPage())),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BakwaasTheme.glassDecoration(radius: 22, opacity: 0.06),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.radio, color: Colors.white70),
+                        SizedBox(width: 12),
+                        Expanded(
+                            child: Text('Browse Stations',
+                                style: TextStyle(
+                                    color: Colors.white, fontWeight: FontWeight.w700))),
+                        Icon(Icons.chevron_right, color: Colors.white70)
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+              ],
+            )
+          : const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 140),
+              child: LikedSongsContent(),
+            ),
+      onNavTap: (index) {
+        // index 0: Home, 1: Liked, 2: Library
+        if (index == 2) {
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LibraryPage()));
+          return;
+        }
+        setState(() => _activeTab = index);
+      },
     );
   }
 
@@ -195,7 +399,7 @@ class _HomePageState extends State<HomePage>
                       ),
                     ],
                   ),
-                  child: Container(
+                    child: Container(
                     margin: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
@@ -204,12 +408,12 @@ class _HomePageState extends State<HomePage>
                               image: NetworkImage(imageUrl),
                               fit: BoxFit.cover,
                             )
-                          : null,
+                          : const DecorationImage(
+                              image: AssetImage('assets/logo.png'),
+                              fit: BoxFit.cover,
+                            ),
                       color: Colors.black,
                     ),
-                    child: (imageUrl == null || imageUrl.isEmpty)
-                        ? const Icon(Icons.radio, color: Colors.white, size: 44)
-                        : null,
                   ),
                 ),
               ),
@@ -226,9 +430,9 @@ class _HomePageState extends State<HomePage>
       decoration: BakwaasTheme.glassDecoration(radius: 32, opacity: 0.12),
       child: Column(
         children: [
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
+            children: [
               Text('♪',
                   style: TextStyle(color: BakwaasPalette.aqua, fontSize: 14)),
               SizedBox(width: 6),
@@ -244,7 +448,7 @@ class _HomePageState extends State<HomePage>
             ],
           ),
           const SizedBox(height: 12),
-          Text(song['title'] ?? 'Dhaka FM',
+            Text(song['title'] ?? '',
               textAlign: TextAlign.center,
               style: const TextStyle(
                   color: Colors.white,
@@ -252,10 +456,7 @@ class _HomePageState extends State<HomePage>
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5)),
           const SizedBox(height: 6),
-          Text(
-              song['subtitle']?.isNotEmpty == true
-                  ? song['subtitle']!
-                  : 'Live Radio',
+            Text(song['subtitle'] ?? '',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white.withOpacity(0.78))),
         ],
@@ -393,11 +594,7 @@ class _HomePageState extends State<HomePage>
                         ),
                       ],
                     ),
-                    child: Transform.rotate(
-                      angle: (volume - 0.5) * math.pi,
-                      child: const Icon(Icons.volume_up,
-                          color: Colors.white, size: 36),
-                    ),
+                    child: const SizedBox.shrink(),
                   ),
                 ],
               ),
@@ -490,10 +687,10 @@ class TabsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 8),
       child: Row(
-        children: const [
+        children: [
           ToggleButton(label: 'Music', selected: true),
           SizedBox(width: 10),
           ToggleButton(label: 'Shows', selected: false),
@@ -816,9 +1013,9 @@ class SectionHeader extends StatelessWidget {
             minimumSize: const Size(0, 0),
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
-          child: Row(
+          child: const Row(
             mainAxisSize: MainAxisSize.min,
-            children: const [
+            children: [
               Text('VIEW ALL',
                   style: TextStyle(
                       color: BakwaasPalette.aqua,

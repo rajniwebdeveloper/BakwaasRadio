@@ -3,7 +3,7 @@ import 'app_data.dart';
 
 Future<void> showAddToPlaylistSheet(
     BuildContext context, Map<String, String> song) {
-  final bg = const Color(0xFF2B2F35);
+  const bg = Color(0xFF2B2F35);
   return showModalBottomSheet(
       context: context,
       backgroundColor: bg,
