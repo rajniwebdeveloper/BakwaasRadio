@@ -397,123 +397,123 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                 )
               ],
             ),
-            const SizedBox(height: 10),
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onPanUpdate: (details) {
-                      setState(() {
-                        _volume =
-                            (_volume - details.delta.dy / 300).clamp(0.0, 1.0);
-                        PlaybackManager.instance.setVolume(_volume);
-                      });
-                    },
-                    child: Column(
-                      children: [
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Container(
-                              width: 98 + (_volume * 18),
-                              height: 98 + (_volume * 18),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.transparent,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.tealAccent
-                                        .withOpacity(0.12 + _volume * 0.28),
-                                    blurRadius: 24 + _volume * 18,
-                                    spreadRadius: 8 + _volume * 6,
-                                  )
-                                ],
-                              ),
-                            ),
-                            Container(
-                              width: 98,
-                              height: 98,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                    colors: [
-                                      Colors.greenAccent.shade400.withOpacity(
-                                          0.9 * (_volume * 0.6 + 0.4)),
-                                      Colors.green.shade700.withOpacity(
-                                          0.9 * (_volume * 0.6 + 0.4))
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.green
-                                        .withOpacity(0.28 * (_volume + 0.1)),
-                                    blurRadius: 18 + _volume * 12,
-                                    spreadRadius: 1 + _volume * 3,
-                                  )
-                                ],
-                              ),
-                              child: const SizedBox.shrink(),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            trackHeight: 3,
-                            activeTrackColor: Colors.white,
-                            inactiveTrackColor: Colors.white.withOpacity(0.18),
-                            thumbColor: Colors.white,
-                            overlayColor: Colors.tealAccent.withOpacity(0.12),
-                          ),
-                          child: Slider(
-                            value: _volume,
-                            onChanged: (v) {
-                              setState(() {
-                                _volume = v;
-                                PlaybackManager.instance.setVolume(_volume);
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Show the quick play banner only when we have a real title
-                  if ((current['title'] ?? '').isNotEmpty)
-                    Container(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.06),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.play_arrow, color: Colors.black),
-                          ),
-                          const SizedBox(width: 10),
-                          Text("Let's Play ${current['title']}",
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    )
-                ],
-              ),
-            ),
+            // const SizedBox(height: 10),
+            // Padding(
+            //   padding:
+            //       const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
+            //   child: Column(
+            //     children: [
+            //       GestureDetector(
+            //         onPanUpdate: (details) {
+            //           setState(() {
+            //             _volume =
+            //                 (_volume - details.delta.dy / 300).clamp(0.0, 1.0);
+            //             PlaybackManager.instance.setVolume(_volume);
+            //           });
+            //         },
+            //         child: Column(
+            //           children: [
+            //             Stack(
+            //               alignment: Alignment.center,
+            //               children: [
+            //                 Container(
+            //                   width: 98 + (_volume * 18),
+            //                   height: 98 + (_volume * 18),
+            //                   decoration: BoxDecoration(
+            //                     shape: BoxShape.circle,
+            //                     color: Colors.transparent,
+            //                     boxShadow: [
+            //                       BoxShadow(
+            //                         color: Colors.tealAccent
+            //                             .withOpacity(0.12 + _volume * 0.28),
+            //                         blurRadius: 24 + _volume * 18,
+            //                         spreadRadius: 8 + _volume * 6,
+            //                       )
+            //                     ],
+            //                   ),
+            //                 ),
+            //                 Container(
+            //                   width: 98,
+            //                   height: 98,
+            //                   decoration: BoxDecoration(
+            //                     shape: BoxShape.circle,
+            //                     gradient: LinearGradient(
+            //                         colors: [
+            //                           Colors.greenAccent.shade400.withOpacity(
+            //                               0.9 * (_volume * 0.6 + 0.4)),
+            //                           Colors.green.shade700.withOpacity(
+            //                               0.9 * (_volume * 0.6 + 0.4))
+            //                         ],
+            //                         begin: Alignment.topLeft,
+            //                         end: Alignment.bottomRight),
+            //                     boxShadow: [
+            //                       BoxShadow(
+            //                         color: Colors.green
+            //                             .withOpacity(0.28 * (_volume + 0.1)),
+            //                         blurRadius: 18 + _volume * 12,
+            //                         spreadRadius: 1 + _volume * 3,
+            //                       )
+            //                     ],
+            //                   ),
+            //                   child: const SizedBox.shrink(),
+            //                 ),
+            //               ],
+            //             ),
+            //             const SizedBox(height: 12),
+            //             SliderTheme(
+            //               data: SliderTheme.of(context).copyWith(
+            //                 trackHeight: 3,
+            //                 activeTrackColor: Colors.white,
+            //                 inactiveTrackColor: Colors.white.withOpacity(0.18),
+            //                 thumbColor: Colors.white,
+            //                 overlayColor: Colors.tealAccent.withOpacity(0.12),
+            //               ),
+            //               child: Slider(
+            //                 value: _volume,
+            //                 onChanged: (v) {
+            //                   setState(() {
+            //                     _volume = v;
+            //                     PlaybackManager.instance.setVolume(_volume);
+            //                   });
+            //                 },
+            //               ),
+            //             ),
+            //           ],
+            //         ),
+            //       ),
+            //       const SizedBox(height: 8),
+            //       // Show the quick play banner only when we have a real title
+            //       if ((current['title'] ?? '').isNotEmpty)
+            //         Container(
+            //           margin: const EdgeInsets.symmetric(vertical: 8),
+            //           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            //           decoration: BoxDecoration(
+            //             color: Colors.white.withOpacity(0.06),
+            //             borderRadius: BorderRadius.circular(16),
+            //           ),
+            //           child: Row(
+            //             mainAxisSize: MainAxisSize.min,
+            //             children: [
+            //               Container(
+            //                 width: 36,
+            //                 height: 36,
+            //                 decoration: const BoxDecoration(
+            //                   color: Colors.white,
+            //                   shape: BoxShape.circle,
+            //                 ),
+            //                 child: const Icon(Icons.play_arrow, color: Colors.black),
+            //               ),
+            //               const SizedBox(width: 10),
+            //               Text("Let's Play ${current['title']}",
+            //                   style: const TextStyle(
+            //                       color: Colors.white,
+            //                       fontWeight: FontWeight.w600)),
+            //             ],
+            //           ),
+            //         )
+            //     ],
+              // ),
+            // ),
             const SizedBox(height: 40),
           ],
         ),

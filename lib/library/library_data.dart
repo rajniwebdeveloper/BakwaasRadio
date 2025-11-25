@@ -23,4 +23,8 @@ class LibraryData {
     {'title': 'Starred Songs', 'image': 'https://picsum.photos/200?image=15'},
     {'title': '#JioSaavnReplay', 'image': 'https://picsum.photos/200?image=16'},
   ]);
+
+  // Global filter set for Library page (keys: liked, albums, artists, downloads, playlists)
+  static final ValueNotifier<Set<String>> filters =
+      ValueNotifier<Set<String>>(<String>{});
 }

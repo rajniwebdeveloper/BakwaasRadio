@@ -3,12 +3,14 @@ import 'package:bakwaas_fm/api_service.dart';
 import 'package:bakwaas_fm/models/station.dart';
 import 'package:flutter/material.dart';
 import 'library/song_page.dart';
+import 'library/library_data.dart';
 import 'playback_manager.dart';
 import 'library/library_page.dart';
 import 'app_data.dart';
 import 'profile_page.dart';
 import 'library/playlist_detail_page.dart';
 import 'library/liked_songs_page.dart';
+import 'library/downloads_page.dart';
 import 'widgets/bakwaas_chrome.dart';
 import 'widgets/orbital_ring.dart';
 import 'stations_page.dart';
@@ -79,15 +81,15 @@ class _SplashPageState extends State<SplashPage> {
 
       // Navigate to home
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(MaterialPageRoute(
-          builder: (_) => const HomePage()));
+      Navigator.of(context)
+          .pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
     } catch (e) {
       // On unexpected failure, still proceed but show message briefly
       setState(() => _status = 'Initialization failed — continuing');
       await Future.delayed(const Duration(seconds: 1));
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(MaterialPageRoute(
-          builder: (_) => const HomePage()));
+      Navigator.of(context)
+          .pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
     }
   }
 
@@ -104,11 +106,13 @@ class _SplashPageState extends State<SplashPage> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: BakwaasTheme.glowGradient,
-              boxShadow: [BoxShadow(
-                color: BakwaasPalette.neonGreen.withOpacity(0.18),
-                blurRadius: 24,
-                spreadRadius: 4,
-              )],
+              boxShadow: [
+                BoxShadow(
+                  color: BakwaasPalette.neonGreen.withOpacity(0.18),
+                  blurRadius: 24,
+                  spreadRadius: 4,
+                )
+              ],
             ),
             child: Container(
               margin: const EdgeInsets.all(12),
@@ -122,7 +126,11 @@ class _SplashPageState extends State<SplashPage> {
             ),
           ),
           const SizedBox(height: 18),
-          Text('Bakwaas FM', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+          Text('Bakwaas FM',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -164,15 +172,18 @@ class _HomePageState extends State<HomePage>
       // Load persisted playback state, then resume if possible
       PlaybackManager.instance.loadPersisted().then((_) {
         final last = PlaybackManager.instance.lastSong;
-        if (last != null && (last['url']?.isNotEmpty == true) && !PlaybackManager.instance.isPlaying) {
+        if (last != null &&
+            (last['url']?.isNotEmpty == true) &&
+            !PlaybackManager.instance.isPlaying) {
           PlaybackManager.instance.play(last);
           // open the full player page so user sees what's playing
-          Navigator.of(context).push(MaterialPageRoute(builder: (_) => SongPage(
-            title: last['title'] ?? '',
-            subtitle: last['subtitle'] ?? '',
-            imageUrl: last['image'],
-            autoplay: true,
-          )));
+          Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => SongPage(
+                    title: last['title'] ?? '',
+                    subtitle: last['subtitle'] ?? '',
+                    imageUrl: last['image'],
+                    autoplay: true,
+                  )));
         }
       });
     });
@@ -230,36 +241,227 @@ class _HomePageState extends State<HomePage>
                   children: [
                     ListTile(
                       leading: const Icon(Icons.person, color: Colors.white),
-                      title: const Text('Profile', style: TextStyle(color: Colors.white)),
+                      title: const Text('Profile',
+                          style: TextStyle(color: Colors.white)),
                       onTap: () {
                         Navigator.of(context).pop();
-                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfilePage()));
+                        Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => const ProfilePage()));
                       },
                     ),
                     ListTile(
-                      leading: const Icon(Icons.settings, color: Colors.white),
-                      title: const Text('Settings', style: TextStyle(color: Colors.white)),
+                      leading: const Icon(Icons.download, color: Colors.white),
+                      title: const Text('Downloads',
+                          style: TextStyle(color: Colors.white)),
                       onTap: () {
                         Navigator.of(context).pop();
-                        showDialog(
+                        Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => const DownloadsPage()));
+                      },
+                    ),
+                    ListTile(
+                      leading:
+                          const Icon(Icons.filter_list, color: Colors.white),
+                      title: const Text('Filters',
+                          style: TextStyle(color: Colors.white)),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        showModalBottomSheet<void>(
                             context: context,
-                            builder: (_) => AlertDialog(
-                                  title: const Text('Settings'),
-                                  content: const Text('Settings not implemented yet.'),
-                                  actions: [
-                                    TextButton(
-                                        onPressed: () => Navigator.of(context).pop(),
-                                        child: const Text('OK'))
-                                  ],
-                                ));
+                            backgroundColor: Colors.transparent,
+                            builder: (_) {
+                              return SafeArea(
+                                child: Container(
+                                  width: double.infinity,
+                                  decoration: const BoxDecoration(
+                                      color: Colors.black87,
+                                      borderRadius: BorderRadius.only(
+                                          topLeft: Radius.circular(12),
+                                          topRight: Radius.circular(12))),
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text('Library Filters',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 12),
+                                      ValueListenableBuilder<Set<String>>(
+                                          valueListenable: LibraryData.filters,
+                                          builder: (ctx, active, __) {
+                                            bool has(String k) =>
+                                                active.contains(k);
+                                            return Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                CheckboxListTile(
+                                                  value: has('liked'),
+                                                  onChanged: (v) {
+                                                    final s = Set<String>.from(
+                                                        LibraryData
+                                                            .filters.value);
+                                                    if (v == true) {
+                                                      s.add('liked');
+                                                    } else {
+                                                      s.remove('liked');
+                                                    }
+                                                    LibraryData.filters.value =
+                                                        s;
+                                                  },
+                                                  title: const Text(
+                                                      'Liked Songs',
+                                                      style: TextStyle(
+                                                          color: Colors.white)),
+                                                  activeColor:
+                                                      BakwaasPalette.neonGreen,
+                                                  controlAffinity:
+                                                      ListTileControlAffinity
+                                                          .leading,
+                                                ),
+                                                CheckboxListTile(
+                                                  value: has('albums'),
+                                                  onChanged: (v) {
+                                                    final s = Set<String>.from(
+                                                        LibraryData
+                                                            .filters.value);
+                                                    if (v == true)
+                                                      s.add('albums');
+                                                    else
+                                                      s.remove('albums');
+                                                    LibraryData.filters.value =
+                                                        s;
+                                                  },
+                                                  title: const Text('Albums',
+                                                      style: TextStyle(
+                                                          color: Colors.white)),
+                                                  activeColor:
+                                                      BakwaasPalette.neonGreen,
+                                                  controlAffinity:
+                                                      ListTileControlAffinity
+                                                          .leading,
+                                                ),
+                                                CheckboxListTile(
+                                                  value: has('artists'),
+                                                  onChanged: (v) {
+                                                    final s = Set<String>.from(
+                                                        LibraryData
+                                                            .filters.value);
+                                                    if (v == true)
+                                                      s.add('artists');
+                                                    else
+                                                      s.remove('artists');
+                                                    LibraryData.filters.value =
+                                                        s;
+                                                  },
+                                                  title: const Text('Artists',
+                                                      style: TextStyle(
+                                                          color: Colors.white)),
+                                                  activeColor:
+                                                      BakwaasPalette.neonGreen,
+                                                  controlAffinity:
+                                                      ListTileControlAffinity
+                                                          .leading,
+                                                ),
+                                                CheckboxListTile(
+                                                  value: has('downloads'),
+                                                  onChanged: (v) {
+                                                    final s = Set<String>.from(
+                                                        LibraryData
+                                                            .filters.value);
+                                                    if (v == true)
+                                                      s.add('downloads');
+                                                    else
+                                                      s.remove('downloads');
+                                                    LibraryData.filters.value =
+                                                        s;
+                                                  },
+                                                  title: const Text('Downloads',
+                                                      style: TextStyle(
+                                                          color: Colors.white)),
+                                                  activeColor:
+                                                      BakwaasPalette.neonGreen,
+                                                  controlAffinity:
+                                                      ListTileControlAffinity
+                                                          .leading,
+                                                ),
+                                                CheckboxListTile(
+                                                  value: has('playlists'),
+                                                  onChanged: (v) {
+                                                    final s = Set<String>.from(
+                                                        LibraryData
+                                                            .filters.value);
+                                                    if (v == true)
+                                                      s.add('playlists');
+                                                    else
+                                                      s.remove('playlists');
+                                                    LibraryData.filters.value =
+                                                        s;
+                                                  },
+                                                  title: const Text('Playlists',
+                                                      style: TextStyle(
+                                                          color: Colors.white)),
+                                                  activeColor:
+                                                      BakwaasPalette.neonGreen,
+                                                  controlAffinity:
+                                                      ListTileControlAffinity
+                                                          .leading,
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.end,
+                                                  children: [
+                                                    TextButton(
+                                                        onPressed: () {
+                                                          LibraryData.filters
+                                                                  .value =
+                                                              <String>{};
+                                                          Navigator.of(ctx)
+                                                              .pop();
+                                                        },
+                                                        child: const Text(
+                                                            'Clear',
+                                                            style: TextStyle(
+                                                                color: Colors
+                                                                    .white70))),
+                                                    const SizedBox(width: 8),
+                                                    ElevatedButton(
+                                                      style: ElevatedButton
+                                                          .styleFrom(
+                                                              backgroundColor:
+                                                                  BakwaasPalette
+                                                                      .neonGreen),
+                                                      onPressed: () =>
+                                                          Navigator.of(ctx)
+                                                              .pop(),
+                                                      child: const Text('Done'),
+                                                    )
+                                                  ],
+                                                )
+                                              ],
+                                            );
+                                          }),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            });
                       },
                     ),
                     ListTile(
-                      leading: const Icon(Icons.play_circle_fill, color: Colors.white),
-                      title: const Text('Now Playing', style: TextStyle(color: Colors.white)),
+                      leading: const Icon(Icons.play_circle_fill,
+                          color: Colors.white),
+                      title: const Text('Now Playing',
+                          style: TextStyle(color: Colors.white)),
                       onTap: () {
                         Navigator.of(context).pop();
-                        final song = _heroSong ?? {'title': 'Dhaka FM', 'subtitle': 'Live Radio', 'image': ''};
+                        final song = _heroSong ??
+                            {
+                              'title': 'Dhaka FM',
+                              'subtitle': 'Live Radio',
+                              'image': ''
+                            };
                         Navigator.of(context).push(MaterialPageRoute(
                             builder: (_) => SongPage(
                                   title: song['title'] ?? 'Dhaka FM',
@@ -271,7 +473,8 @@ class _HomePageState extends State<HomePage>
                     ),
                     ListTile(
                       leading: const Icon(Icons.timer, color: Colors.white),
-                      title: const Text('Sleep Timer', style: TextStyle(color: Colors.white)),
+                      title: const Text('Sleep Timer',
+                          style: TextStyle(color: Colors.white)),
                       onTap: () {
                         Navigator.of(context).pop();
                         showModalBottomSheet<void>(
@@ -280,13 +483,26 @@ class _HomePageState extends State<HomePage>
                               return SafeArea(
                                   child: Container(
                                 padding: const EdgeInsets.all(12),
-                                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                                  const Text('Set Sleep Timer', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  const SizedBox(height: 12),
-                                  ListTile(title: const Text('15 minutes'), onTap: () => Navigator.of(context).pop()),
-                                  ListTile(title: const Text('30 minutes'), onTap: () => Navigator.of(context).pop()),
-                                  ListTile(title: const Text('60 minutes'), onTap: () => Navigator.of(context).pop()),
-                                ]),
+                                child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text('Set Sleep Timer',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 12),
+                                      ListTile(
+                                          title: const Text('15 minutes'),
+                                          onTap: () =>
+                                              Navigator.of(context).pop()),
+                                      ListTile(
+                                          title: const Text('30 minutes'),
+                                          onTap: () =>
+                                              Navigator.of(context).pop()),
+                                      ListTile(
+                                          title: const Text('60 minutes'),
+                                          onTap: () =>
+                                              Navigator.of(context).pop()),
+                                    ]),
                               ));
                             });
                       },
@@ -298,8 +514,8 @@ class _HomePageState extends State<HomePage>
             );
           }),
       onExitTap: () {
-        Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const ProfilePage()));
+        // Removed direct navigation to ProfilePage from the top-right icon.
+        // Previously this opened the profile; keep as a no-op now.
       },
       bodyPadding: EdgeInsets.zero,
       body: _activeTab == 0
@@ -311,11 +527,13 @@ class _HomePageState extends State<HomePage>
                 const SizedBox(height: 18),
                 // Quick access to Stations
                 GestureDetector(
-                  onTap: () => Navigator.of(context)
-                      .push(MaterialPageRoute(builder: (_) => const StationsPage())),
+                  onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const StationsPage())),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BakwaasTheme.glassDecoration(radius: 22, opacity: 0.06),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    decoration:
+                        BakwaasTheme.glassDecoration(radius: 22, opacity: 0.06),
                     child: const Row(
                       children: [
                         Icon(Icons.radio, color: Colors.white70),
@@ -323,7 +541,8 @@ class _HomePageState extends State<HomePage>
                         Expanded(
                             child: Text('Browse Stations',
                                 style: TextStyle(
-                                    color: Colors.white, fontWeight: FontWeight.w700))),
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700))),
                         Icon(Icons.chevron_right, color: Colors.white70)
                       ],
                     ),
@@ -332,17 +551,27 @@ class _HomePageState extends State<HomePage>
                 const SizedBox(height: 18),
               ],
             )
-          : const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 140),
-              child: LikedSongsContent(),
-            ),
+          : (_activeTab == 1)
+              ? Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+                  child: LikedSongsContent(),
+                )
+              : ListView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+                  children: [
+                    // fallback: show home content if unknown
+                    _buildHeroSection(heroSong),
+                    const SizedBox(height: 18),
+                  ],
+                ),
       onNavTap: (index) {
-          // index 0: Home, 1: Library (we removed the Liked tab from the bottom nav
-          // so Liked songs are accessible only from the Library or the hamburger menu)
-          if (index == 1) {
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LibraryPage()));
-            return;
-          }
+        // index 0: Home, 1: Liked (show inline), 2: Library (open page)
+        if (index == 2) {
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const LibraryPage()));
+          return;
+        }
         setState(() => _activeTab = index);
       },
     );
@@ -357,9 +586,6 @@ class _HomePageState extends State<HomePage>
         const SizedBox(height: 18),
         _buildControls(),
         const SizedBox(height: 16),
-        _buildProgress(),
-        const SizedBox(height: 20),
-        _buildVolumeAndBanner(song),
       ],
     );
   }
@@ -400,7 +626,7 @@ class _HomePageState extends State<HomePage>
                       ),
                     ],
                   ),
-                    child: Container(
+                  child: Container(
                     margin: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
@@ -449,7 +675,7 @@ class _HomePageState extends State<HomePage>
             ],
           ),
           const SizedBox(height: 12),
-            Text(song['title'] ?? '',
+          Text(song['title'] ?? '',
               textAlign: TextAlign.center,
               style: const TextStyle(
                   color: Colors.white,
@@ -457,7 +683,7 @@ class _HomePageState extends State<HomePage>
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5)),
           const SizedBox(height: 6),
-            Text(song['subtitle'] ?? '',
+          Text(song['subtitle'] ?? '',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white.withOpacity(0.78))),
         ],
@@ -516,111 +742,111 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget _buildProgress() {
-    final progress = _playback.progress.clamp(0.0, 1.0);
-    return Column(
-      children: [
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            trackHeight: 4,
-            activeTrackColor: BakwaasPalette.neonGreen,
-            inactiveTrackColor: Colors.white.withOpacity(0.15),
-            thumbColor: Colors.white,
-            overlayColor: BakwaasPalette.neonGreen.withOpacity(0.15),
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-          ),
-          child: Slider(
-            value: progress,
-            onChanged:
-                _playback.currentSong != null ? (v) => _playback.seek(v) : null,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(_playback.isPlaying ? 'Now Playing…' : "Let's Play…",
-                style: TextStyle(color: Colors.white.withOpacity(0.72))),
-            Text(_formatTime(progress * _playback.durationSeconds),
-                style: TextStyle(color: Colors.white.withOpacity(0.72))),
-          ],
-        ),
-      ],
-    );
-  }
+  // Widget _buildProgress() {
+  //   final progress = _playback.progress.clamp(0.0, 1.0);
+  //   return Column(
+  //     children: [
+  //       SliderTheme(
+  //         data: SliderTheme.of(context).copyWith(
+  //           trackHeight: 4,
+  //           activeTrackColor: BakwaasPalette.neonGreen,
+  //           inactiveTrackColor: Colors.white.withOpacity(0.15),
+  //           thumbColor: Colors.white,
+  //           overlayColor: BakwaasPalette.neonGreen.withOpacity(0.15),
+  //           thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+  //         ),
+  //         child: Slider(
+  //           value: progress,
+  //           onChanged:
+  //               _playback.currentSong != null ? (v) => _playback.seek(v) : null,
+  //         ),
+  //       ),
+  //       const SizedBox(height: 4),
+  //       Row(
+  //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //         children: [
+  //           Text(_playback.isPlaying ? 'Now Playing…' : "Let's Play…",
+  //               style: TextStyle(color: Colors.white.withOpacity(0.72))),
+  //           Text(_formatTime(progress * _playback.durationSeconds),
+  //               style: TextStyle(color: Colors.white.withOpacity(0.72))),
+  //         ],
+  //       ),
+  //     ],
+  //   );
+  // }
 
-  Widget _buildVolumeAndBanner(Map<String, String> song) {
-    final volume = _playback.volume;
-    return Column(
-      children: [
-        GestureDetector(
-          onPanUpdate: (details) {
-            final updated =
-                (_playback.volume - details.delta.dy / 300).clamp(0.0, 1.0);
-            _playback.setVolume(updated);
-          },
-          child: Column(
-            children: [
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 96 + (volume * 18),
-                    height: 96 + (volume * 18),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.transparent,
-                      boxShadow: [
-                        BoxShadow(
-                          color: BakwaasPalette.neonGreen
-                              .withOpacity(0.15 + volume * 0.25),
-                          blurRadius: 26 + volume * 18,
-                          spreadRadius: 7 + volume * 5,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: 98,
-                    height: 98,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: BakwaasTheme.glowGradient,
-                      boxShadow: [
-                        BoxShadow(
-                          color: BakwaasPalette.neonGreen
-                              .withOpacity(0.25 + volume * 0.25),
-                          blurRadius: 18 + volume * 12,
-                          spreadRadius: 2 + volume * 3,
-                        ),
-                      ],
-                    ),
-                    child: const SizedBox.shrink(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: 3,
-                  activeTrackColor: Colors.white,
-                  inactiveTrackColor: Colors.white.withOpacity(0.2),
-                  thumbColor: Colors.white,
-                  overlayColor: Colors.white.withOpacity(0.12),
-                ),
-                child: Slider(
-                  value: volume,
-                  onChanged: (v) => _playback.setVolume(v),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildLetsPlayBanner(song),
-      ],
-    );
-  }
+  // Widget _buildVolumeAndBanner(Map<String, String> song) {
+  //   final volume = _playback.volume;
+  //   return Column(
+  //     children: [
+  //       GestureDetector(
+  //         onPanUpdate: (details) {
+  //           final updated =
+  //               (_playback.volume - details.delta.dy / 300).clamp(0.0, 1.0);
+  //           _playback.setVolume(updated);
+  //         },
+  //         child: Column(
+  //           children: [
+  //             Stack(
+  //               alignment: Alignment.center,
+  //               children: [
+  //                 Container(
+  //                   width: 96 + (volume * 18),
+  //                   height: 96 + (volume * 18),
+  //                   decoration: BoxDecoration(
+  //                     shape: BoxShape.circle,
+  //                     color: Colors.transparent,
+  //                     boxShadow: [
+  //                       BoxShadow(
+  //                         color: BakwaasPalette.neonGreen
+  //                             .withOpacity(0.15 + volume * 0.25),
+  //                         blurRadius: 26 + volume * 18,
+  //                         spreadRadius: 7 + volume * 5,
+  //                       ),
+  //                     ],
+  //                   ),
+  //                 ),
+  //                 Container(
+  //                   width: 98,
+  //                   height: 98,
+  //                   decoration: BoxDecoration(
+  //                     shape: BoxShape.circle,
+  //                     gradient: BakwaasTheme.glowGradient,
+  //                     boxShadow: [
+  //                       BoxShadow(
+  //                         color: BakwaasPalette.neonGreen
+  //                             .withOpacity(0.25 + volume * 0.25),
+  //                         blurRadius: 18 + volume * 12,
+  //                         spreadRadius: 2 + volume * 3,
+  //                       ),
+  //                     ],
+  //                   ),
+  //                   child: const SizedBox.shrink(),
+  //                 ),
+  //               ],
+  //             ),
+  //             const SizedBox(height: 12),
+  //             SliderTheme(
+  //               data: SliderTheme.of(context).copyWith(
+  //                 trackHeight: 3,
+  //                 activeTrackColor: Colors.white,
+  //                 inactiveTrackColor: Colors.white.withOpacity(0.2),
+  //                 thumbColor: Colors.white,
+  //                 overlayColor: Colors.white.withOpacity(0.12),
+  //               ),
+  //               child: Slider(
+  //                 value: volume,
+  //                 onChanged: (v) => _playback.setVolume(v),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //       const SizedBox(height: 12),
+  //       _buildLetsPlayBanner(song),
+  //     ],
+  //   );
+  // }
 
   Widget _buildLetsPlayBanner(Map<String, String> song) {
     return Container(
@@ -1072,9 +1298,11 @@ class AllSongsPage extends StatelessWidget {
                       children: [
                         CircleAvatar(
                             radius: 28,
-                            backgroundImage: s['image'] != null && s['image']!.isNotEmpty
-                                ? NetworkImage(s['image']!)
-                                : const AssetImage('assets/logo.png') as ImageProvider,
+                            backgroundImage:
+                                s['image'] != null && s['image']!.isNotEmpty
+                                    ? NetworkImage(s['image']!)
+                                    : const AssetImage('assets/logo.png')
+                                        as ImageProvider,
                             backgroundColor: Colors.white.withOpacity(0.08)),
                         const SizedBox(width: 14),
                         Expanded(

@@ -458,7 +458,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 trailing: Switch(
                     value: _notifications,
                     onChanged: (v) => setState(() => _notifications = v),
-                    activeThumbColor: Colors.tealAccent),
+                    thumbColor: MaterialStateProperty.resolveWith<Color?>(
+                        (Set<MaterialState> states) {
+                      if (states.contains(MaterialState.selected)) {
+                        return Colors.tealAccent;
+                      }
+                      return null;
+                    })),
               ),
 
               const SizedBox(height: 6),

@@ -208,13 +208,15 @@ class BakwaasBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = [
       const _NavItem(Icons.home, 'Home'),
+      const _NavItem(Icons.favorite, 'Liked'),
       const _NavItem(Icons.library_music, 'Library'),
     ];
     return SafeArea(
       top: false,
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        // reduce vertical padding to make the nav a bit shorter
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.04),
           borderRadius: BorderRadius.circular(40),
@@ -239,14 +241,15 @@ class BakwaasBottomNav extends StatelessWidget {
                   // Render a flat icon (no circular background). Active state
                   // shows a subtle underline to indicate selection.
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6.0),
+                    // slightly smaller vertical padding for a more compact look
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
                     child: Icon(item.icon,
                         color: isActive
                             ? BakwaasPalette.softYellow
                             : Colors.white.withOpacity(0.88),
-                        size: 22),
+                        size: 20),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Text(
                     item.label,
                     style: TextStyle(
@@ -262,7 +265,9 @@ class BakwaasBottomNav extends StatelessWidget {
                     width: isActive ? 20 : 0,
                     height: 3,
                     decoration: BoxDecoration(
-                      color: isActive ? BakwaasPalette.softYellow : Colors.transparent,
+                      color: isActive
+                          ? BakwaasPalette.softYellow
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
