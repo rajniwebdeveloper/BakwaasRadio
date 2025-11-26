@@ -69,11 +69,40 @@ class _SplashPageState extends State<SplashPage> {
       await PlaybackManager.instance.loadPersisted();
 
       setState(() => _status = 'Checking backend...');
-      // Try a quick stations call to verify backend is reachable. Ignore errors.
+      // Try a quick stations call to verify backend is reachable and fetch
+      // stations so we can optionally auto-start playback if nothing is
+      // persisted.
+      List<Station>? stations;
       try {
-        await ApiService.getStations();
+        final fetched = await ApiService.getStations();
+        stations = fetched;
+        // populate library stations cache so LibraryPage shows live data
+        LibraryData.stations.value = fetched;
       } catch (_) {
-        // ignore - we'll still continue to app; UI will show errors where needed
+        stations = null;
+      }
+
+      // If there's no persisted lastSong, try to auto-play the first station
+      // we received from the backend. Prefer `playerUrl`, then `streamURL`,
+      // then `mp3Url` as the playback source.
+      try {
+        final last = PlaybackManager.instance.lastSong;
+        final needAuto = last == null || (last['url']?.isEmpty == true);
+        if (needAuto && stations != null && stations.isNotEmpty) {
+          final s = stations.first;
+          final url = s.playerUrl ?? s.streamURL ?? s.mp3Url ?? '';
+          if (url.isNotEmpty) {
+            setState(() => _status = 'Starting ${s.name}...');
+            PlaybackManager.instance.play({
+              'title': s.name,
+              'subtitle': s.description ?? '',
+              'image': s.profilepic ?? '',
+              'url': url
+            });
+          }
+        }
+      } catch (_) {
+        // don't block startup on playback errors
       }
 
       // Small delay so splash is visible briefly
@@ -126,8 +155,8 @@ class _SplashPageState extends State<SplashPage> {
             ),
           ),
           const SizedBox(height: 18),
-          Text('Bakwaas FM',
-              style: const TextStyle(
+          const Text('Bakwaas FM',
+              style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.w600)),
@@ -167,6 +196,8 @@ class _HomePageState extends State<HomePage>
         AnimationController(vsync: this, duration: const Duration(seconds: 12))
           ..repeat();
     _playback.addListener(_handlePlayback);
+    // Ensure library live data is loaded so UI can react in real-time.
+    LibraryData.load();
     // Auto-play and open last known song if it has a valid URL (after build)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Load persisted playback state, then resume if possible
@@ -325,10 +356,11 @@ class _HomePageState extends State<HomePage>
                                                     final s = Set<String>.from(
                                                         LibraryData
                                                             .filters.value);
-                                                    if (v == true)
+                                                    if (v == true) {
                                                       s.add('albums');
-                                                    else
+                                                    } else {
                                                       s.remove('albums');
+                                                    }
                                                     LibraryData.filters.value =
                                                         s;
                                                   },
@@ -347,10 +379,11 @@ class _HomePageState extends State<HomePage>
                                                     final s = Set<String>.from(
                                                         LibraryData
                                                             .filters.value);
-                                                    if (v == true)
+                                                    if (v == true) {
                                                       s.add('artists');
-                                                    else
+                                                    } else {
                                                       s.remove('artists');
+                                                    }
                                                     LibraryData.filters.value =
                                                         s;
                                                   },
@@ -369,10 +402,11 @@ class _HomePageState extends State<HomePage>
                                                     final s = Set<String>.from(
                                                         LibraryData
                                                             .filters.value);
-                                                    if (v == true)
+                                                    if (v == true) {
                                                       s.add('downloads');
-                                                    else
+                                                    } else {
                                                       s.remove('downloads');
+                                                    }
                                                     LibraryData.filters.value =
                                                         s;
                                                   },
@@ -391,10 +425,11 @@ class _HomePageState extends State<HomePage>
                                                     final s = Set<String>.from(
                                                         LibraryData
                                                             .filters.value);
-                                                    if (v == true)
+                                                    if (v == true) {
                                                       s.add('playlists');
-                                                    else
+                                                    } else {
                                                       s.remove('playlists');
+                                                    }
                                                     LibraryData.filters.value =
                                                         s;
                                                   },
@@ -552,8 +587,8 @@ class _HomePageState extends State<HomePage>
               ],
             )
           : (_activeTab == 1)
-              ? Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+              ? const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, 140),
                   child: LikedSongsContent(),
                 )
               : ListView(
@@ -848,58 +883,7 @@ class _HomePageState extends State<HomePage>
   //   );
   // }
 
-  Widget _buildLetsPlayBanner(Map<String, String> song) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.35),
-            blurRadius: 22,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Let's Play",
-                    style: TextStyle(
-                        color: Colors.white.withOpacity(0.7), fontSize: 12)),
-                const SizedBox(height: 4),
-                Text(song['title'] ?? 'Dhaka FM',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700)),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: _openFullPlayer,
-            icon: Icon(
-              _playback.isPlaying ? Icons.pause : Icons.play_arrow,
-              color: Colors.white,
-            ),
-            tooltip: 'Now Playing',
-          )
-        ],
-      ),
-    );
-  }
-
-  String _formatTime(double seconds) {
-    final total = seconds.round();
-    final minutes = (total ~/ 60).toString();
-    final secs = (total % 60).toString().padLeft(2, '0');
-    return '$minutes:$secs';
-  }
+  // (Removed unused helper banner and format functions)
 }
 
 class TabsRow extends StatelessWidget {
@@ -973,11 +957,10 @@ class Section extends StatelessWidget {
         SizedBox(
           height: cardType == CardType.station ? 220 : 190,
           child: cardType == CardType.station
-              ? FutureBuilder<List<Station>>(
-                  future: ApiService.getStations(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData) {
-                      final stations = snapshot.data!;
+              ? ValueListenableBuilder<List<Station>>(
+                  valueListenable: LibraryData.stations,
+                  builder: (context, stations, __) {
+                    if (stations.isNotEmpty) {
                       return ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: stations.length,
@@ -1054,12 +1037,8 @@ class Section extends StatelessWidget {
                           );
                         },
                       );
-                    } else if (snapshot.hasError) {
-                      return Center(
-                          child: Text('Failed to load data',
-                              style: TextStyle(
-                                  color: Colors.white.withOpacity(0.7))));
                     }
+                    // Show loader while empty (attempting to fetch)
                     return const Center(
                         child: CircularProgressIndicator(
                             color: BakwaasPalette.neonGreen));

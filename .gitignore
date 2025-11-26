@@ -131,7 +131,7 @@ Thumbs.db
 
 # Image files (if too large)
 *.jpg
-*.jpeg
+*.jpeg 
 # *.png
 *.gif
 *.bmp

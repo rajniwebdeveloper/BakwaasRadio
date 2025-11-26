@@ -80,7 +80,7 @@ class ApiService {
     final base = await _baseUrl();
     final uri = Uri.parse('$base/api/health');
     try {
-      final response = await http.get(uri).timeout(Duration(seconds: 3));
+      final response = await http.get(uri).timeout(const Duration(seconds: 3));
       return response.statusCode == 200;
     } catch (_) {
       return false;

@@ -11,6 +11,7 @@ import 'liked_songs_manager.dart';
 import '../playback_manager.dart';
 import '../widgets/bakwaas_chrome.dart';
 import '../app_data.dart';
+import '../stations_page.dart';
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
@@ -157,6 +158,23 @@ class _LibraryPageState extends State<LibraryPage> {
                           onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(
                                   builder: (_) => const PlaylistsPage())),
+                        ),
+                      
+                      if (filters.contains('stations'))
+                        ValueListenableBuilder<List<dynamic>>(
+                          valueListenable: LibraryData.stations,
+                          builder: (context, list, __) {
+                            return _buildTile(
+                              context,
+                              bg: bg,
+                              icon: Icons.rss_feed,
+                              title: 'Stations',
+                              count: list.length,
+                              onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) => const StationsPage())),
+                            );
+                          },
                         ),
                     ],
                   );
@@ -435,6 +453,18 @@ class _LibraryPageState extends State<LibraryPage> {
                       current.add('playlists');
                     } else {
                       current.remove('playlists');
+                    }
+                    LibraryData.filters.value = current;
+                  },
+                ),
+                CheckboxListTile(
+                  value: current.contains('stations'),
+                  title: const Text('Stations', style: TextStyle(color: Colors.white)),
+                  onChanged: (v) {
+                    if (v == true) {
+                      current.add('stations');
+                    } else {
+                      current.remove('stations');
                     }
                     LibraryData.filters.value = current;
                   },

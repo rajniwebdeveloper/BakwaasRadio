@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../api_service.dart';
+import '../models/station.dart';
 
 class LibraryData {
   static final ValueNotifier<List<Map<String, String>>> albums = ValueNotifier([
@@ -24,7 +26,21 @@ class LibraryData {
     {'title': '#JioSaavnReplay', 'image': 'https://picsum.photos/200?image=16'},
   ]);
 
+  // Live stations fetched from backend
+  static final ValueNotifier<List<Station>> stations = ValueNotifier(<Station>[]);
+
+  /// Load live library data from backend. Currently fetches stations.
+  static Future<void> load() async {
+    try {
+      final s = await ApiService.getStations();
+      stations.value = s;
+    } catch (_) {
+      // ignore - leave empty list
+    }
+  }
+
   // Global filter set for Library page (keys: liked, albums, artists, downloads, playlists)
-  static final ValueNotifier<Set<String>> filters =
-      ValueNotifier<Set<String>>(<String>{});
+    // Default to show common sections including stations so users see live data
+    static final ValueNotifier<Set<String>> filters =
+      ValueNotifier<Set<String>>(<String>{'albums', 'artists', 'playlists', 'downloads', 'liked', 'stations'});
 }

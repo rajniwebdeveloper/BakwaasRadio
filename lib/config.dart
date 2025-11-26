@@ -13,19 +13,25 @@ class AppConfig {
   /// If the probe fails, it falls back to `https://radio.rajnikantmahato.me`.
   static Future<String> resolveApiBaseUrl({Duration timeout = const Duration(seconds: 3)}) async {
     if (_cachedBaseUrl != null) return _cachedBaseUrl!;
+    // Prefer a local backend during development. Try multiple local host
+    // variants so simulators and devices can connect more reliably.
+    final List<String> candidates = Platform.isAndroid
+        ? ['http://10.0.2.2:3222', 'http://127.0.0.1:3222', 'http://localhost:3222']
+        : ['http://127.0.0.1:3222', 'http://localhost:3222'];
+    const fallback = 'https://radio.rajnikantmahato.me';
+    final probeTimeout = timeout.inSeconds < 5 ? const Duration(seconds: 5) : timeout;
 
-    final local = Platform.isAndroid ? 'http://10.0.2.2:3222' : 'http://localhost:3222';
-    final fallback = 'https://radio.rajnikantmahato.me';
-
-    try {
-      final uri = Uri.parse('$local/api/health');
-      final resp = await http.get(uri).timeout(timeout);
-      if (resp.statusCode == 200) {
-        _cachedBaseUrl = local;
-        return _cachedBaseUrl!;
+    for (final local in candidates) {
+      try {
+        final uri = Uri.parse('$local/api/health');
+        final resp = await http.get(uri).timeout(probeTimeout);
+        if (resp.statusCode == 200) {
+          _cachedBaseUrl = local;
+          return _cachedBaseUrl!;
+        }
+      } catch (_) {
+        // try next candidate
       }
-    } catch (_) {
-      // ignore - we'll fall back to public host
     }
 
     _cachedBaseUrl = fallback;
