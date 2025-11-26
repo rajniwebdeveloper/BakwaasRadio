@@ -12,13 +12,15 @@ class SongPage extends StatefulWidget {
   final String subtitle;
   final String? imageUrl; // optional image to show inside the CD
   final bool autoplay; // whether to auto-start playback when opened
+  final bool showBottomNav;
   const SongPage(
       {super.key,
       this.station,
       required this.title,
       required this.subtitle,
       this.imageUrl,
-      this.autoplay = false});
+      this.autoplay = false,
+      this.showBottomNav = false});
 
   @override
   State<SongPage> createState() => _SongPageState();
@@ -165,14 +167,15 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    const double albumSize = 260.0;
+  final double screenWidth = MediaQuery.of(context).size.width;
+  final double albumSize = (screenWidth * 0.55).clamp(160.0, 360.0);
     final current = _songs[_currentIndex];
     final imageUrl = current['image'];
 
     return BakwaasScaffold(
       backgroundImage: imageUrl,
       activeTab: 2,
-      showBottomNav: false,
+      showBottomNav: widget.showBottomNav,
       onMenuTap: () => Navigator.of(context).maybePop(),
       onExitTap: () => Navigator.of(context).maybePop(),
       bodyPadding: const EdgeInsets.fromLTRB(12, 0, 12, 120),
@@ -201,30 +204,34 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                         builder: (context, child) => Transform.rotate(
                             angle: _rotationController.value * 2 * math.pi,
                             child: child),
-                        child: Container(
-                          width: albumSize,
-                          height: albumSize,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                                colors: [
-                                  Colors.grey.shade900,
-                                  Colors.grey.shade800,
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight),
-                            boxShadow: const [
-                              BoxShadow(
-                                  color: Colors.black54,
-                                  blurRadius: 16,
-                                  offset: Offset(0, 10)),
-                            ],
-                          ),
+                        child: InteractiveViewer(
+                          // allow pinch-to-zoom on the album artwork; keep pan/scale limits reasonable
+                          minScale: 1.0,
+                          maxScale: 3.5,
                           child: Container(
-                            margin: const EdgeInsets.all(12),
+                            width: albumSize,
+                            height: albumSize,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              image: imageUrl != null && imageUrl.isNotEmpty
+                              gradient: LinearGradient(
+                                  colors: [
+                                    Colors.grey.shade900,
+                                    Colors.grey.shade800,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight),
+                              boxShadow: const [
+                                BoxShadow(
+                                    color: Colors.black54,
+                                    blurRadius: 16,
+                                    offset: Offset(0, 10)),
+                              ],
+                            ),
+                            child: Container(
+                              margin: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                image: imageUrl != null && imageUrl.isNotEmpty
                                     ? DecorationImage(
                                         image: NetworkImage(imageUrl),
                                         fit: BoxFit.cover,
@@ -233,10 +240,11 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                                         image: AssetImage('assets/logo.png'),
                                         fit: BoxFit.cover,
                                       ),
-                              color: Colors.black,
+                                color: Colors.black,
+                              ),
+                              // Do not show fallback radio icon — prefer an empty thumbnail.
+                              child: null,
                             ),
-                            // Do not show fallback radio icon — prefer an empty thumbnail.
-                            child: null,
                           ),
                         ),
                       ),

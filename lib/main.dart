@@ -14,6 +14,7 @@ import 'library/downloads_page.dart';
 import 'widgets/bakwaas_chrome.dart';
 import 'widgets/orbital_ring.dart';
 import 'stations_page.dart';
+import 'deep_link_handler.dart';
 
 // Demo/sample songs removed. App will show live data or empty states.
 
@@ -231,12 +232,16 @@ class _HomePageState extends State<HomePage>
                   subtitle: last['subtitle'] ?? '',
                   imageUrl: last['image'],
                   autoplay: true,
+                  // when auto-opening from Home on startup, keep the bottom nav visible
+                  showBottomNav: true,
                 )));
       } else {
         print('Home: no persisted song to resume');
       }
     });
     });
+    // Start listening for deep links and share intents (incoming URLs)
+    DeepLinkHandler.instance.startListening(context);
   }
 
   @override
@@ -694,7 +699,8 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildOrbit(String? imageUrl) {
-    const double size = 220.0;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double size = (screenWidth * 0.45).clamp(140.0, 260.0);
     return SizedBox(
       width: size + 48,
       height: size + 48,

@@ -1,7 +1,7 @@
-// Deprecated MainActivity left for historical reasons.
-// The active MainActivity is under the new package `com.bakwaas.fm`.
+// Deprecated placeholder adjusted to remove 'com.example' references.
+// This file is intentionally left minimal.
 
-package com.example.bakwaas_fm
+package com.bakwaas.fm
 
-// Intentionally empty to avoid duplicate MainActivity definitions.
+// Keep an empty placeholder class to avoid build issues in unusual setups.
 class MainActivity {}

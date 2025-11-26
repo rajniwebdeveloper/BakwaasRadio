@@ -1,7 +1,7 @@
 name: bakwaas_fm
 description: A simple mockup app
 publish_to: 'none'
-version: 1.0.0+1
+version: 6.0.0+6
 
 environment:
   # Allow newer Dart versions (Dart 3+ with recent Flutter). Updated to avoid

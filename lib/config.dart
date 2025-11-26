@@ -57,3 +57,11 @@ class AppConfig {
   /// public fallback. Prefer `resolveApiBaseUrl()` for reliable results.
   static String get apiBaseUrlSync => _cachedBaseUrl ?? 'https://radio.rajnikantmahato.me';
 }
+
+/// Basic app identity constants used in UI (app name, package id, logo asset).
+class AppInfo {
+  static const String appName = 'Bakwaas FM';
+  // package identifier (application id)
+  static const String packageName = 'com.bakwaas.fm';
+  static const String logoAsset = 'assets/logo.png';
+}

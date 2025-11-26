@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../app_data.dart';
 import '../playback_manager.dart';
+import '../config.dart';
 
 class BakwaasPalette {
   static const Color navy = Color(0xFF040812);
@@ -142,7 +143,9 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
               ),
             ),
             SafeArea(
-              bottom: false,
+              // ensure the body doesn't extend under system/navigation bars
+              // so bottom controls (and hit testing) work correctly on open
+              bottom: true,
               child: Column(
                 children: [
                   const SizedBox(height: 6),
@@ -216,7 +219,26 @@ class BakwaasTopBar extends StatelessWidget {
                 ),
               ],
             ),
-            Text('BAKWAAS FM', style: BakwaasTheme.headingStyle),
+            // show app logo and name (with package id subtitle) centered
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(AppInfo.logoAsset, width: 26, height: 26),
+                const SizedBox(width: 8),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(AppInfo.appName, style: BakwaasTheme.headingStyle),
+                    Text(AppInfo.packageName,
+                        style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ],
+            ),
           ],
         ),
       ),
