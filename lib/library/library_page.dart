@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 
 import 'song_page.dart';
-import 'liked_songs_page.dart';
-import 'albums_page.dart';
-import 'artists_page.dart';
 import 'downloads_page.dart';
-import 'playlists_page.dart';
 import 'library_data.dart';
 import 'liked_songs_manager.dart';
+import '../app_data.dart';
+import '../models/station.dart';
 import '../playback_manager.dart';
 import '../widgets/bakwaas_chrome.dart';
-import '../app_data.dart';
-import '../stations_page.dart';
 
+// LibraryPage: a focused, simple library overview. The clickable
+// section tiles were intentionally removed from the main content —
+// users should open the top-left menu → Filters to enable sections.
 class LibraryPage extends StatefulWidget {
-  const LibraryPage({super.key});
+  final bool useScaffold;
+  const LibraryPage({super.key, this.useScaffold = true});
 
   @override
   State<LibraryPage> createState() => _LibraryPageState();
@@ -22,6 +22,28 @@ class LibraryPage extends StatefulWidget {
 
 class _LibraryPageState extends State<LibraryPage> {
   final List<Map<String, String>> _history = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Load library stations on first build so Library shows live data.
+    LibraryData.load().catchError((e) {
+      // ignore: avoid_print
+      print('LibraryPage.initState: failed to load stations: $e');
+    });
+    // Keep recent history in sync with PlaybackManager persisted history.
+    PlaybackManager.instance.loadPersisted();
+    PlaybackManager.instance.addListener(_playbackListenerForHistory);
+  }
+
+  void _playbackListenerForHistory() {
+    setState(() {
+      _history.clear();
+      for (final s in PlaybackManager.instance.history) {
+        _history.add({'title': s['title'] ?? '', 'subtitle': s['subtitle'] ?? '', 'image': s['image'] ?? ''});
+      }
+    });
+  }
 
   Widget _sectionHeader(String title, {VoidCallback? onSortToggle}) {
     return Row(
@@ -40,311 +62,253 @@ class _LibraryPageState extends State<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bg = Colors.white.withOpacity(0.04);
+    final content = SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          const Text('Library',
+              style: TextStyle(
+                  fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+          const SizedBox(height: 18),
 
-    return BakwaasScaffold(
-      activeTab: 2,
-      onMenuTap: () => showModalBottomSheet(
-        context: context,
-        backgroundColor: Colors.transparent,
-        builder: (_) => _buildMenuSheet(context),
-      ),
-      onExitTap: () => Navigator.of(context).maybePop(),
-      bodyPadding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 8),
-            const Text('Library',
-                style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white)),
-            const SizedBox(height: 18),
+          // Hint pointing to Filters menu
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 0),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12.0),
+              child: Text(
+                'Use the top-left menu → Filters to show library sections (Liked, Albums, Stations, etc.).',
+                style: TextStyle(color: Colors.white.withOpacity(0.7)),
+              ),
+            ),
+          ),
 
-            // Filters-driven menu tiles
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 0),
-              child: ValueListenableBuilder<Set<String>>(
-                valueListenable: LibraryData.filters,
-                builder: (context, filters, _) {
-                  if (filters.isEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12.0),
-                      child: Text('No sections enabled. Use menu → Filters to show.',
-                          style: TextStyle(color: Colors.white.withOpacity(0.7))),
-                    );
-                  }
+          const SizedBox(height: 20),
 
+          // Recently Playing (visible only when 'recent' filter enabled)
+          ValueListenableBuilder<Set<String>>(
+            valueListenable: LibraryData.filters,
+            builder: (context, filters, _) {
+              if (!filters.contains('recent')) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _sectionHeader('Recently Playing'),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 120,
+                      child: _history.isEmpty
+                          ? Center(
+                              child: Text('No recently played items',
+                                  style: TextStyle(
+                                      color: Colors.white.withOpacity(0.7))),
+                            )
+                          : ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _history.length,
+                              itemBuilder: (context, idx) {
+                                final s = _history[idx];
+                                return SizedBox(
+                                  width: 220,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () => Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                            builder: (_) => SongPage(
+                                                  title: s['title'] ?? '',
+                                                  subtitle: s['subtitle'] ?? '',
+                                                  imageUrl: s['image'],
+                                                ))),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BakwaasTheme.glassDecoration(
+                                          radius: 14, opacity: 0.08),
+                                      child: Row(
+                                        children: [
+                                          CircleAvatar(
+                                              radius: 36,
+                                              backgroundImage: s['image'] != null && s['image']!.isNotEmpty
+                                                  ? NetworkImage(s['image']!)
+                                                  : const AssetImage('assets/logo.png') as ImageProvider,
+                                              backgroundColor: Colors.white.withOpacity(0.04)),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Text(s['title'] ?? '',
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontWeight: FontWeight.w700)),
+                                                const SizedBox(height: 6),
+                                                Text(s['subtitle'] ?? '',
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                        color: Colors.white.withOpacity(0.75)))
+                                              ],
+                                            ),
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 20),
+
+          // Stations (live data from backend) — shown only if filters include 'stations'
+          ValueListenableBuilder<Set<String>>(
+            valueListenable: LibraryData.filters,
+            builder: (context, filters, _) {
+              if (!filters.contains('stations')) return const SizedBox.shrink();
+              return ValueListenableBuilder<List<Station>>(
+                valueListenable: LibraryData.stations,
+                builder: (context, stations, __) {
                   return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (filters.contains('liked'))
-                        ValueListenableBuilder<List<Map<String, String>>>(
-                          valueListenable: LikedSongsManager.liked,
-                          builder: (context, likedList, __) {
-                            return _buildTile(
-                              context,
-                              bg: bg,
-                              icon: Icons.favorite_border,
-                              title: 'Liked Songs',
-                              count: likedList.length,
-                              onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => const LikedSongsPage())),
-                            );
-                          },
+                      _sectionHeader('Stations'),
+                      const SizedBox(height: 12),
+                      if (LibraryData.stationsError.value != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                                color: Colors.redAccent.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(12)),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                    child: Text(LibraryData.stationsError.value ?? '',
+                                        style: TextStyle(color: Colors.redAccent.withOpacity(0.9)))),
+                                TextButton(
+                                    onPressed: () => LibraryData.load(forceRefresh: true),
+                                    child: const Text('Retry'))
+                              ],
+                            ),
+                          ),
                         ),
-
-                      if (filters.contains('albums'))
-                        ValueListenableBuilder<List<Map<String, String>>>(
-                          valueListenable: LibraryData.albums,
-                          builder: (context, list, __) {
-                            return _buildTile(
-                              context,
-                              bg: bg,
-                              icon: Icons.album,
-                              title: 'Albums',
-                              count: list.length,
-                              onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => const AlbumsPage())),
-                            );
-                          },
-                        ),
-
-                      if (filters.contains('artists'))
-                        ValueListenableBuilder<List<Map<String, String>>>(
-                          valueListenable: LibraryData.artists,
-                          builder: (context, list, __) {
-                            return _buildTile(
-                              context,
-                              bg: bg,
-                              icon: Icons.person,
-                              title: 'Artists',
-                              count: list.length,
-                              onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => const ArtistsPage())),
-                            );
-                          },
-                        ),
-
-                      if (filters.contains('downloads'))
-                        ValueListenableBuilder<List<Map<String, String>>>(
-                          valueListenable: LibraryData.downloads,
-                          builder: (context, list, __) {
-                            return _buildTile(
-                              context,
-                              bg: bg,
-                              icon: Icons.download,
-                              title: 'Downloads',
-                              count: list.length,
-                              onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => const DownloadsPage())),
-                            );
-                          },
-                        ),
-
-                      if (filters.contains('playlists'))
-                        _buildTile(
-                          context,
-                          bg: bg,
-                          icon: Icons.queue_music,
-                          title: 'Playlists',
-                          count: AppData.playlists.length,
-                          onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) => const PlaylistsPage())),
-                        ),
-                      
-                      if (filters.contains('stations'))
-                        ValueListenableBuilder<List<dynamic>>(
-                          valueListenable: LibraryData.stations,
-                          builder: (context, list, __) {
-                            return _buildTile(
-                              context,
-                              bg: bg,
-                              icon: Icons.rss_feed,
-                              title: 'Stations',
-                              count: list.length,
-                              onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => const StationsPage())),
-                            );
-                          },
-                        ),
+                      if (stations.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12.0),
+                            child: Column(
+                              children: [
+                                const SizedBox(height: 8),
+                                const Text('No stations available', style: TextStyle(color: Colors.white70)),
+                                const SizedBox(height: 8),
+                                ElevatedButton(onPressed: () => LibraryData.load(forceRefresh: true), child: const Text('Reload'))
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        Column(
+                          children: stations.map((s) => _buildStationTile(context, s)).toList(),
+                        )
                     ],
                   );
                 },
-              ),
-            ),
+              );
+            },
+          ),
 
-            const SizedBox(height: 20),
-
-            // Recently Playing (simple placeholder)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _sectionHeader('Recently Playing'),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 120,
-                    child: _history.isEmpty
-                        ? Center(
-                            child: Text('No recently played items',
-                                style: TextStyle(
-                                    color: Colors.white.withOpacity(0.7))),
-                          )
-                        : ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _history.length,
-                            itemBuilder: (context, idx) {
-                              final s = _history[idx];
-                              return SizedBox(
-                                width: 220,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
-                                  onTap: () => Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                          builder: (_) => SongPage(
-                                                title: s['title'] ?? '',
-                                                subtitle: s['subtitle'] ?? '',
-                                                imageUrl: s['image'],
-                                              ))),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BakwaasTheme.glassDecoration(
-                                        radius: 14, opacity: 0.08),
-                                    child: Row(
-                                      children: [
-                                        CircleAvatar(
-                                            radius: 36,
-                                            backgroundImage: s['image'] != null && s['image']!.isNotEmpty
-                                                ? NetworkImage(s['image']!)
-                                                : const AssetImage('assets/logo.png') as ImageProvider,
-                                            backgroundColor: Colors.white.withOpacity(0.04)),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Text(s['title'] ?? '',
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontWeight: FontWeight.w700)),
-                                              const SizedBox(height: 6),
-                                              Text(s['subtitle'] ?? '',
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                      color: Colors.white.withOpacity(0.75)))
-                                            ],
-                                          ),
-                                        )
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Shuffle & play (disabled when no history)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 0),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: _history.isNotEmpty
-                    ? () {
-                        _history.shuffle();
-                        final s = _history.first;
-                        final songMap = {
-                          'title': s['title'] ?? '',
-                          'subtitle': s['subtitle'] ?? '',
-                          'image': s['image'] ?? ''
-                        };
-                        PlaybackManager.instance.play(songMap, duration: 191);
-                        Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => SongPage(
-                                  title: songMap['title']!,
-                                  subtitle: songMap['subtitle']!,
-                                  imageUrl: songMap['image'],
-                                  autoplay: true,
-                                )));
-                      }
-                    : null,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [Colors.deepPurple.shade600, Colors.tealAccent]),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(10)),
-                        child: const Icon(Icons.shuffle, color: Colors.black),
+          // Shuffle & play (disabled when no history)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: _history.isNotEmpty
+                  ? () {
+                      _history.shuffle();
+                      final s = _history.first;
+                      final songMap = {
+                        'title': s['title'] ?? '',
+                        'subtitle': s['subtitle'] ?? '',
+                        'image': s['image'] ?? ''
+                      };
+                      PlaybackManager.instance.play(songMap, duration: 191);
+                      Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => SongPage(
+                                title: songMap['title']!,
+                                subtitle: songMap['subtitle']!,
+                                imageUrl: songMap['image'],
+                                autoplay: true,
+                              )));
+                    }
+                  : null,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [Colors.deepPurple.shade600, Colors.tealAccent]),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(Icons.shuffle, color: Colors.black),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Shuffle & Play', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w700)),
+                          SizedBox(height: 2),
+                          Text('Shuffle your library and start playing', style: TextStyle(color: Colors.black87, fontSize: 12)),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Shuffle & Play', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w700)),
-                            SizedBox(height: 2),
-                            Text('Shuffle your library and start playing', style: TextStyle(color: Colors.black87, fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.play_arrow, color: Colors.black87)
-                    ],
-                  ),
+                    ),
+                    const Icon(Icons.play_arrow, color: Colors.black87)
+                  ],
                 ),
               ),
             ),
+          ),
 
-            const SizedBox(height: 120),
-          ],
+          const SizedBox(height: 120),
+        ],
+      ),
+    );
+
+    if (widget.useScaffold) {
+      return BakwaasScaffold(
+        activeTab: 2,
+        showBottomNav: false,
+        onMenuTap: () => showModalBottomSheet(
+          context: context,
+          backgroundColor: Colors.transparent,
+          builder: (_) => _buildMenuSheet(context),
         ),
-      ),
-    );
-  }
+        onExitTap: () => Navigator.of(context).maybePop(),
+        bodyPadding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+        body: content,
+      );
+    }
 
-  Widget _buildTile(BuildContext context,
-      {required Color bg, required IconData icon, required String title, required int count, VoidCallback? onTap}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        tileColor: bg,
-        leading: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, color: Colors.black87)),
-        title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-        trailing: Row(mainAxisSize: MainAxisSize.min, children: [Padding(padding: const EdgeInsets.only(right: 8.0), child: Text('$count', style: const TextStyle(color: Colors.black87))), const Icon(Icons.chevron_right, color: Colors.black87)]),
-        onTap: onTap,
-      ),
-    );
+    return content;
   }
 
   Widget _buildMenuSheet(BuildContext context) {
@@ -358,8 +322,14 @@ class _LibraryPageState extends State<LibraryPage> {
             leading: const Icon(Icons.favorite, color: Colors.white),
             title: const Text('Liked', style: TextStyle(color: Colors.white)),
             onTap: () {
+              // Close the menu sheet and request the app to switch to the
+              // Liked tab so the bottom nav remains visible and behavior is
+              // consistent across places.
               Navigator.of(context).pop();
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LikedSongsPage()));
+              // If this LibraryPage was shown as a standalone page, also
+              // pop back to the root so the main HomePage is visible.
+              Navigator.of(context).popUntil((r) => r.isFirst);
+              AppData.rootTab.value = 1;
             },
           ),
           ListTile(
@@ -458,6 +428,18 @@ class _LibraryPageState extends State<LibraryPage> {
                   },
                 ),
                 CheckboxListTile(
+                  value: current.contains('recent'),
+                  title: const Text('Recently Playing', style: TextStyle(color: Colors.white)),
+                  onChanged: (v) {
+                    if (v == true) {
+                      current.add('recent');
+                    } else {
+                      current.remove('recent');
+                    }
+                    LibraryData.filters.value = current;
+                  },
+                ),
+                CheckboxListTile(
                   value: current.contains('stations'),
                   title: const Text('Stations', style: TextStyle(color: Colors.white)),
                   onChanged: (v) {
@@ -475,5 +457,96 @@ class _LibraryPageState extends State<LibraryPage> {
             ),
           );
         });
+  }
+
+  Widget _buildStationTile(BuildContext context, Station s) {
+    final url = s.playerUrl ?? s.streamURL ?? s.mp3Url ?? '';
+    final image = s.profilepic ?? s.banner ?? '';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: url.isNotEmpty
+            ? () {
+                // Start playback and open SongPage with station details
+                PlaybackManager.instance.play({
+                  'title': s.name,
+                  'subtitle': s.description ?? '',
+                  'image': image,
+                  'url': url
+                });
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => SongPage(
+                          station: s,
+                          title: s.name,
+                          subtitle: s.description ?? '',
+                          imageUrl: image,
+                          autoplay: true,
+                        )));
+              }
+            : null,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BakwaasTheme.glassDecoration(radius: 12, opacity: 0.06),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundImage: image.isNotEmpty ? NetworkImage(image) : const AssetImage('assets/logo.png') as ImageProvider,
+                backgroundColor: Colors.white.withOpacity(0.04),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(s.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    Text(s.description ?? '', style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: url.isNotEmpty
+                    ? () {
+                        PlaybackManager.instance.play({
+                          'title': s.name,
+                          'subtitle': s.description ?? '',
+                          'image': image,
+                          'url': url
+                        });
+                      }
+                    : null,
+                icon: Icon(url.isNotEmpty ? Icons.play_arrow : Icons.block, color: url.isNotEmpty ? Colors.tealAccent : Colors.white30),
+              )
+              ,
+              IconButton(
+                onPressed: () {
+                  final songMap = {'title': s.name, 'subtitle': s.description ?? '', 'image': image, 'url': url};
+                  if (LikedSongsManager.contains(songMap)) {
+                    LikedSongsManager.remove(songMap);
+                  } else {
+                    LikedSongsManager.add(songMap);
+                  }
+                },
+                icon: Icon(
+                  LikedSongsManager.contains({'title': s.name, 'subtitle': s.description ?? ''})
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  color: Colors.pinkAccent,
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    PlaybackManager.instance.removeListener(_playbackListenerForHistory);
+    super.dispose();
   }
 }

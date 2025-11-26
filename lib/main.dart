@@ -74,11 +74,17 @@ class _SplashPageState extends State<SplashPage> {
       // persisted.
       List<Station>? stations;
       try {
+        print('Splash: calling ApiService.getStations()');
         final fetched = await ApiService.getStations();
         stations = fetched;
         // populate library stations cache so LibraryPage shows live data
         LibraryData.stations.value = fetched;
-      } catch (_) {
+        print('Splash: fetched ${fetched.length} stations');
+      } catch (e, st) {
+        print('Splash: getStations failed: $e');
+        // ignore stack in release but helpful in DevTools
+        // ignore: avoid_print
+        print(st);
         stations = null;
       }
 
@@ -188,6 +194,7 @@ class _HomePageState extends State<HomePage>
   final PlaybackManager _playback = PlaybackManager.instance;
   late final AnimationController _ringController;
   int _activeTab = 0;
+  // Navigation now uses inline tabs; no nav lock required.
 
   @override
   void initState() {
@@ -198,25 +205,37 @@ class _HomePageState extends State<HomePage>
     _playback.addListener(_handlePlayback);
     // Ensure library live data is loaded so UI can react in real-time.
     LibraryData.load();
+    // Initialize active tab from global state so initial rendering matches
+    // any previous tab requests (prevents first-frame mismatch).
+    _activeTab = AppData.rootTab.value.clamp(0, 2);
+    // Listen for global tab changes requested by other pages
+    AppData.rootTab.addListener(() {
+      if (!mounted) return;
+      setState(() => _activeTab = AppData.rootTab.value.clamp(0, 2));
+    });
     // Auto-play and open last known song if it has a valid URL (after build)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Load persisted playback state, then resume if possible
-      PlaybackManager.instance.loadPersisted().then((_) {
-        final last = PlaybackManager.instance.lastSong;
-        if (last != null &&
-            (last['url']?.isNotEmpty == true) &&
-            !PlaybackManager.instance.isPlaying) {
-          PlaybackManager.instance.play(last);
-          // open the full player page so user sees what's playing
-          Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => SongPage(
-                    title: last['title'] ?? '',
-                    subtitle: last['subtitle'] ?? '',
-                    imageUrl: last['image'],
-                    autoplay: true,
-                  )));
-        }
-      });
+    PlaybackManager.instance.loadPersisted().then((_) {
+      print('Home: loadPersisted completed');
+      final last = PlaybackManager.instance.lastSong;
+      if (last != null &&
+          (last['url']?.isNotEmpty == true) &&
+          !PlaybackManager.instance.isPlaying) {
+        print('Home: resuming last song ${last['title']}');
+        PlaybackManager.instance.play(last);
+        // open the full player page so user sees what's playing
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => SongPage(
+                  title: last['title'] ?? '',
+                  subtitle: last['subtitle'] ?? '',
+                  imageUrl: last['image'],
+                  autoplay: true,
+                )));
+      } else {
+        print('Home: no persisted song to resume');
+      }
+    });
     });
   }
 
@@ -442,6 +461,49 @@ class _HomePageState extends State<HomePage>
                                                       ListTileControlAffinity
                                                           .leading,
                                                 ),
+                                                  CheckboxListTile(
+                                                    value: has('stations'),
+                                                    onChanged: (v) {
+                                                      final s = Set<String>.from(
+                                                          LibraryData
+                                                              .filters.value);
+                                                      if (v == true) {
+                                                        s.add('stations');
+                                                      } else {
+                                                        s.remove('stations');
+                                                      }
+                                                      LibraryData.filters.value =
+                                                          s;
+                                                    },
+                                                    title: const Text('Stations',
+                                                        style: TextStyle(
+                                                            color: Colors.white)),
+                                                    activeColor:
+                                                        BakwaasPalette.neonGreen,
+                                                    controlAffinity:
+                                                        ListTileControlAffinity
+                                                            .leading,
+                                                  ),
+                                                CheckboxListTile(
+                                                  value: has('recent'),
+                                                  onChanged: (v) {
+                                                    final s = Set<String>.from(
+                                                        LibraryData.filters.value);
+                                                    if (v == true) {
+                                                      s.add('recent');
+                                                    } else {
+                                                      s.remove('recent');
+                                                    }
+                                                    LibraryData.filters.value = s;
+                                                  },
+                                                  title: const Text('Recently Played',
+                                                      style: TextStyle(
+                                                          color: Colors.white)),
+                                                  activeColor:
+                                                      BakwaasPalette.neonGreen,
+                                                  controlAffinity:
+                                                      ListTileControlAffinity.leading,
+                                                ),
                                                 const SizedBox(height: 8),
                                                 Row(
                                                   mainAxisAlignment:
@@ -591,23 +653,29 @@ class _HomePageState extends State<HomePage>
                   padding: EdgeInsets.fromLTRB(20, 0, 20, 140),
                   child: LikedSongsContent(),
                 )
-              : ListView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
-                  children: [
-                    // fallback: show home content if unknown
-                    _buildHeroSection(heroSong),
-                    const SizedBox(height: 18),
-                  ],
-                ),
+              : (_activeTab == 2)
+                  // Render Library inline using the same LibraryPage content
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+                      child: LibraryPage(useScaffold: false),
+                    )
+                  : ListView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+                      children: [
+                        // fallback: show home content if unknown
+                        _buildHeroSection(heroSong),
+                        const SizedBox(height: 18),
+                      ],
+                    ),
       onNavTap: (index) {
-        // index 0: Home, 1: Liked (show inline), 2: Library (open page)
-        if (index == 2) {
-          Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const LibraryPage()));
-          return;
-        }
-        setState(() => _activeTab = index);
+        // Use inline tabs for all primary sections so the bottom nav stays
+        // visible and Home is the default.
+        final idx = index.clamp(0, 2);
+        setState(() => _activeTab = idx);
+        // Keep global tab state in sync so other widgets/pages can request
+        // tab switches through `AppData.rootTab` as well.
+        AppData.rootTab.value = idx;
       },
     );
   }
@@ -1242,6 +1310,7 @@ class AllSongsPage extends StatelessWidget {
     return BakwaasScaffold(
       backgroundImage: cover,
       activeTab: 0,
+      showBottomNav: false,
       onMenuTap: () => Navigator.of(context).maybePop(),
       onExitTap: () => Navigator.of(context).maybePop(),
       bodyPadding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
@@ -1328,6 +1397,7 @@ class TrendingGridPage extends StatelessWidget {
     return BakwaasScaffold(
       backgroundImage: cover,
       activeTab: 2,
+      showBottomNav: false,
       onMenuTap: () => Navigator.of(context).maybePop(),
       onExitTap: () => Navigator.of(context).maybePop(),
       bodyPadding: const EdgeInsets.fromLTRB(20, 0, 20, 140),

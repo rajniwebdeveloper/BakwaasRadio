@@ -1,6 +1,8 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import '../app_data.dart';
+import '../playback_manager.dart';
 
 class BakwaasPalette {
   static const Color navy = Color(0xFF040812);
@@ -61,7 +63,7 @@ class BakwaasTheme {
   }
 }
 
-class BakwaasScaffold extends StatelessWidget {
+class BakwaasScaffold extends StatefulWidget {
   final Widget body;
   final EdgeInsetsGeometry bodyPadding;
   final String? backgroundImage;
@@ -69,6 +71,7 @@ class BakwaasScaffold extends StatelessWidget {
   final ValueChanged<int>? onNavTap;
   final VoidCallback? onMenuTap;
   final VoidCallback? onExitTap;
+  final bool showBottomNav;
 
   const BakwaasScaffold({
     super.key,
@@ -79,10 +82,44 @@ class BakwaasScaffold extends StatelessWidget {
     this.onNavTap,
     this.onMenuTap,
     this.onExitTap,
+    this.showBottomNav = true,
   });
 
   @override
+  State<BakwaasScaffold> createState() => _BakwaasScaffoldState();
+}
+
+class _BakwaasScaffoldState extends State<BakwaasScaffold> {
+  String? _liveBackground;
+
+  @override
+  void initState() {
+    super.initState();
+    PlaybackManager.instance.addListener(_playbackChanged);
+    _updateFromPlayback();
+  }
+
+  void _playbackChanged() => _updateFromPlayback();
+
+  void _updateFromPlayback() {
+    final image = PlaybackManager.instance.currentSong?['image'];
+    if (mounted) {
+      setState(() {
+        _liveBackground = (image != null && image.isNotEmpty) ? image : null;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    PlaybackManager.instance.removeListener(_playbackChanged);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final effectiveBg = widget.backgroundImage ?? _liveBackground;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Container(
@@ -90,9 +127,9 @@ class BakwaasScaffold extends StatelessWidget {
             const BoxDecoration(gradient: BakwaasTheme.backgroundGradient),
         child: Stack(
           children: [
-            if (backgroundImage != null && backgroundImage!.isNotEmpty)
+            if (effectiveBg != null && effectiveBg.isNotEmpty)
               Positioned.fill(
-                  child: _BlurredAlbumBackground(imageUrl: backgroundImage!)),
+                  child: _BlurredAlbumBackground(imageUrl: effectiveBg)),
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
@@ -110,26 +147,40 @@ class BakwaasScaffold extends StatelessWidget {
                 children: [
                   const SizedBox(height: 6),
                   BakwaasTopBar(
-                    onMenuTap: onMenuTap,
-                    onExitTap: onExitTap,
+                    onMenuTap: widget.onMenuTap,
+                    onExitTap: widget.onExitTap,
                   ),
                   const SizedBox(height: 10),
                   Expanded(
                     child: Padding(
-                      padding: bodyPadding,
-                      child: body,
+                      padding: widget.bodyPadding,
+                      child: widget.body,
                     ),
                   ),
                 ],
               ),
             ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: BakwaasBottomNav(
-                activeIndex: activeTab,
-                onTap: onNavTap,
+            if (widget.showBottomNav)
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: BakwaasBottomNav(
+                  activeIndex: widget.activeTab,
+                  onTap: widget.onNavTap ?? (index) {
+                    // Default navigation when parent doesn't provide a handler.
+                    // Instead of pushing new pages for primary tabs, update
+                    // the global `AppData.rootTab` and return to the root route
+                    // so the main HomePage can show the selected tab. This
+                    // prevents stacking multiple `BakwaasScaffold`s and
+                    // duplicate bottom nav bars.
+                    if (index == widget.activeTab) return;
+                    // Pop back to root then set the global tab value so the
+                    // HomePage (if present) will switch its content.
+                    Navigator.of(context).popUntil((r) => r.isFirst);
+                    AppData.rootTab.value = index.clamp(0, 2);
+                    return;
+                  },
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -233,45 +284,55 @@ class BakwaasBottomNav extends StatelessWidget {
           children: List.generate(items.length, (index) {
             final item = items[index];
             final isActive = index == activeIndex;
-            return GestureDetector(
-              onTap: () => onTap?.call(index),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Render a flat icon (no circular background). Active state
-                  // shows a subtle underline to indicate selection.
-                  Padding(
-                    // slightly smaller vertical padding for a more compact look
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Icon(item.icon,
-                        color: isActive
-                            ? BakwaasPalette.softYellow
-                            : Colors.white.withOpacity(0.88),
-                        size: 20),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.label,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(isActive ? 0.95 : 0.7),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+            return Expanded(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => onTap?.call(index),
+                  borderRadius: BorderRadius.circular(24),
+                  splashColor: Colors.white24,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Render a flat icon (no circular background). Active state
+                        // shows a subtle underline to indicate selection.
+                        Padding(
+                          // slightly smaller vertical padding for a more compact look
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: Icon(item.icon,
+                              color: isActive
+                                  ? BakwaasPalette.softYellow
+                                  : Colors.white.withOpacity(0.88),
+                              size: 20),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.label,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(isActive ? 0.95 : 0.7),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        // small indicator
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: isActive ? 20 : 0,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? BakwaasPalette.softYellow
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  // small indicator
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: isActive ? 20 : 0,
-                    height: 3,
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? BakwaasPalette.softYellow
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ],
+                ),
               ),
             );
           }),

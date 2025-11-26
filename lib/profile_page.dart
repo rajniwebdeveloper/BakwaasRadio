@@ -9,77 +9,21 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final bg = Colors.white;
-  String _name = 'User Name';
-  String _email = 'user@bakwaas.fm';
-  String _phone = '+91 98765 43210';
-  String _selectedLanguage = 'English';
+  // start with empty user data so profile shows a clean state when no
+  // persisted/profile info is available.
+  String _name = '';
+  String _email = '';
+  String _phone = '';
+  String _selectedLanguage = '';
   bool _notifications = true;
 
-  final List<Map<String, String>> _languages = [
-    {
-      'code': 'hi',
-      'name': 'Hindi (Uttar Pradesh, MP)',
-      'image': 'https://picsum.photos/200?image=101'
-    },
-    {
-      'code': 'bn',
-      'name': 'Bengali (West Bengal)',
-      'image': 'https://picsum.photos/200?image=102'
-    },
-    {
-      'code': 'ta',
-      'name': 'Tamil (Tamil Nadu)',
-      'image': 'https://picsum.photos/200?image=103'
-    },
-    {
-      'code': 'te',
-      'name': 'Telugu (Andhra/Telangana)',
-      'image': 'https://picsum.photos/200?image=104'
-    },
-    {
-      'code': 'mr',
-      'name': 'Marathi (Maharashtra)',
-      'image': 'https://picsum.photos/200?image=105'
-    },
-    {
-      'code': 'gu',
-      'name': 'Gujarati (Gujarat)',
-      'image': 'https://picsum.photos/200?image=106'
-    },
-    {
-      'code': 'kn',
-      'name': 'Kannada (Karnataka)',
-      'image': 'https://picsum.photos/200?image=107'
-    },
-    {
-      'code': 'ml',
-      'name': 'Malayalam (Kerala)',
-      'image': 'https://picsum.photos/200?image=108'
-    },
-    {
-      'code': 'pa',
-      'name': 'Punjabi (Punjab)',
-      'image': 'https://picsum.photos/200?image=109'
-    },
-    {
-      'code': 'or',
-      'name': 'Odia (Odisha)',
-      'image': 'https://picsum.photos/200?image=110'
-    },
-    {
-      'code': 'as',
-      'name': 'Assamese (Assam)',
-      'image': 'https://picsum.photos/200?image=111'
-    },
-  ];
-
-  final List<Map<String, String>> _singers = [
-    {'name': 'Arijit Singh', 'image': 'https://picsum.photos/100?image=201'},
-    {'name': 'A. R. Rahman', 'image': 'https://picsum.photos/100?image=202'},
-    {'name': 'Taylor Swift', 'image': 'https://picsum.photos/100?image=203'},
-  ];
+  // No dummy languages or singers by default — show sections only when
+  // there is real data to render.
+  final List<Map<String, String>> _languages = <Map<String, String>>[];
+  final List<Map<String, String>> _singers = <Map<String, String>>[];
 
   void _showLanguagePicker() async {
+    if (_languages.isEmpty) return;
     final chosen = await showDialog<String>(
         context: context,
         builder: (ctx) {
@@ -267,20 +211,20 @@ class _ProfilePageState extends State<ProfilePage> {
               TextButton(
                   onPressed: () => Navigator.of(ctx).pop(false),
                   child: const Text('Cancel')),
-              TextButton(
-                  onPressed: () {
-                    final nm = nameCtrl.text.trim();
-                    final em = emailCtrl.text.trim();
-                    final ph = phoneCtrl.text.trim();
-                    if (nm.isEmpty) return; // require name
-                    setState(() {
-                      _name = nm;
-                      _email = em.isEmpty ? _email : em;
-                      _phone = ph.isEmpty ? _phone : ph;
-                    });
-                    Navigator.of(ctx).pop(true);
-                  },
-                  child: const Text('Save'))
+                TextButton(
+                    onPressed: () {
+                      final nm = nameCtrl.text.trim();
+                      final em = emailCtrl.text.trim();
+                      final ph = phoneCtrl.text.trim();
+                      // Allow empty fields — store whatever user provided.
+                      setState(() {
+                        _name = nm;
+                        _email = em.isEmpty ? '' : em;
+                        _phone = ph.isEmpty ? '' : ph;
+                      });
+                      Navigator.of(ctx).pop(true);
+                    },
+                    child: const Text('Save'))
             ],
           );
         });
@@ -372,82 +316,85 @@ class _ProfilePageState extends State<ProfilePage> {
               const Divider(color: Color.fromARGB(255, 230, 228, 228)),
               const SizedBox(height: 8),
 
-              // Languages header + small horizontal list of language thumbnails
-              const Text('Languages',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 120,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _languages.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, i) {
-                    final lang = _languages[i];
-                    final selected = lang['name'] == _selectedLanguage;
-                    final display = lang['name']!.contains('(')
-                        ? lang['name']!.split('(')[0].trim()
-                        : lang['name']!;
-                    return InkWell(
-                      onTap: _showLanguagePicker,
-                      child: Container(
-                        width: 110,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          image: DecorationImage(
-                              image: NetworkImage(lang['image']!),
-                              fit: BoxFit.cover),
-                        ),
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                                child: Container(
-                                    decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(10),
-                                        color: Colors.black26))),
-                            Center(
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8.0),
-                                child: Text(display,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700)),
+              // Languages: only show when we have language options
+              if (_languages.isNotEmpty) ...[
+                const Text('Languages',
+                    style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 120,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _languages.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, i) {
+                      final lang = _languages[i];
+                      final selected = lang['name'] == _selectedLanguage;
+                      final display = lang['name']!.contains('(')
+                          ? lang['name']!.split('(')[0].trim()
+                          : lang['name']!;
+                      return InkWell(
+                        onTap: _showLanguagePicker,
+                        child: Container(
+                          width: 110,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            image: DecorationImage(
+                                image: NetworkImage(lang['image']!),
+                                fit: BoxFit.cover),
+                          ),
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                  child: Container(
+                                      decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                              10),
+                                          color: Colors.black26))),
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8.0),
+                                  child: Text(display,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700)),
+                                ),
                               ),
-                            ),
-                            if (selected)
-                              const Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: Icon(Icons.check_circle,
-                                      color: Colors.tealAccent, size: 18))
-                          ],
+                              if (selected)
+                                const Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: Icon(Icons.check_circle,
+                                        color: Colors.tealAccent, size: 18))
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.translate, color: Colors.black87),
-                title: const Text('App language'),
-                subtitle: Text(_selectedLanguage,
-                    style: const TextStyle(color: Colors.black87)),
-                trailing: TextButton(
-                    onPressed: _showLanguagePicker,
-                    child: const Text('Change',
-                        style: TextStyle(color: Colors.tealAccent))),
-              ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.translate, color: Colors.black87),
+                  title: const Text('App language'),
+                  subtitle: Text(_selectedLanguage.isNotEmpty ? _selectedLanguage : 'Not set',
+                      style: const TextStyle(color: Colors.black87)),
+                  trailing: TextButton(
+                      onPressed: _showLanguagePicker,
+                      child: const Text('Change',
+                          style: TextStyle(color: Colors.tealAccent))),
+                ),
+              ],
 
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -471,78 +418,81 @@ class _ProfilePageState extends State<ProfilePage> {
               const Divider(color: Color.fromARGB(255, 236, 235, 235)),
               const SizedBox(height: 8),
 
-              // Singers section
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                const Text('Favorite singers',
-                    style: TextStyle(
-                        color: Colors.black, fontWeight: FontWeight.w600)),
-                TextButton(
-                    onPressed: _showAddSingerDialog,
-                    child: const Text('Add',
-                        style: TextStyle(color: Colors.tealAccent)))
-              ]),
-              const SizedBox(height: 6),
-              SizedBox(
-                height: 90,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _singers.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, i) {
-                    final s = _singers[i];
-                    return Stack(
-                      children: [
-                        Container(
-                          width: 100,
-                          decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(10),
-                              color: Colors.grey.shade200),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircleAvatar(
-                                  radius: 22,
-                                  backgroundColor: Colors.grey.shade200,
-                                  backgroundImage: (s['image'] != null &&
-                                          s['image']!.isNotEmpty)
-                                      ? NetworkImage(s['image']!)
-                                      : null,
-                                  child: (s['image'] == null ||
-                                          s['image']!.isEmpty)
-                                      ? const Icon(Icons.person,
-                                          color: Colors.black54)
-                                      : null),
-                              const SizedBox(height: 8),
-                              Text(s['name'] ?? '',
-                                  style: const TextStyle(color: Colors.black87),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis)
-                            ],
-                          ),
-                        ),
-                        Positioned(
-                          right: 2,
-                          top: 2,
-                          child: InkWell(
-                            onTap: () {
-                              setState(() {
-                                _singers.removeAt(i);
-                              });
-                            },
-                            child: Container(
-                              decoration: const BoxDecoration(
-                                  color: Colors.black26,
-                                  shape: BoxShape.circle),
-                              child: const Icon(Icons.close,
-                                  size: 18, color: Colors.black87),
+              // Favorite singers: show only when there are any
+              if (_singers.isNotEmpty) ...[
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  const Text('Favorite singers',
+                      style: TextStyle(
+                          color: Colors.black, fontWeight: FontWeight.w600)),
+                  TextButton(
+                      onPressed: _showAddSingerDialog,
+                      child: const Text('Add',
+                          style: TextStyle(color: Colors.tealAccent)))
+                ]),
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: 90,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _singers.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, i) {
+                      final s = _singers[i];
+                      return Stack(
+                        children: [
+                          Container(
+                            width: 100,
+                            decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                                color: Colors.grey.shade200),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircleAvatar(
+                                    radius: 22,
+                                    backgroundColor: Colors.grey.shade200,
+                                    backgroundImage: (s['image'] != null &&
+                                            s['image']!.isNotEmpty)
+                                        ? NetworkImage(s['image']!)
+                                        : null,
+                                    child: (s['image'] == null ||
+                                            s['image']!.isEmpty)
+                                        ? const Icon(Icons.person,
+                                            color: Colors.black54)
+                                        : null),
+                                const SizedBox(height: 8),
+                                Text(s['name'] ?? '',
+                                    style:
+                                        const TextStyle(color: Colors.black87),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis)
+                              ],
                             ),
                           ),
-                        )
-                      ],
-                    );
-                  },
+                          Positioned(
+                            right: 2,
+                            top: 2,
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _singers.removeAt(i);
+                                });
+                              },
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                    color: Colors.black26,
+                                    shape: BoxShape.circle),
+                                child: const Icon(Icons.close,
+                                    size: 18, color: Colors.black87),
+                              ),
+                            ),
+                          )
+                        ],
+                      );
+                    },
+                  ),
                 ),
-              ),
+              ],
 
               const Spacer(),
 

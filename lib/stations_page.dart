@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'api_service.dart';
 import 'models/station.dart';
 import 'library/song_page.dart';
+import 'library/liked_songs_manager.dart';
 import 'widgets/bakwaas_chrome.dart';
 
 class StationsPage extends StatelessWidget {
@@ -12,6 +13,7 @@ class StationsPage extends StatelessWidget {
     return BakwaasScaffold(
       backgroundImage: null,
       activeTab: 0,
+      showBottomNav: false,
       onMenuTap: () => Navigator.of(context).maybePop(),
       onExitTap: () => Navigator.of(context).maybePop(),
       bodyPadding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
@@ -80,7 +82,33 @@ class StationsPage extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              const Icon(Icons.chevron_right, color: Colors.white70)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(
+                                      LikedSongsManager.contains({'title': station.name, 'subtitle': station.description ?? ''})
+                                          ? Icons.favorite
+                                          : Icons.favorite_border,
+                                      color: Colors.pinkAccent,
+                                    ),
+                                    onPressed: () {
+                                      final songMap = {
+                                        'title': station.name,
+                                        'subtitle': station.description ?? '',
+                                        'image': station.profilepic ?? '',
+                                        'url': station.playerUrl ?? station.streamURL ?? station.mp3Url ?? ''
+                                      };
+                                      if (LikedSongsManager.contains(songMap)) {
+                                        LikedSongsManager.remove(songMap);
+                                      } else {
+                                        LikedSongsManager.add(songMap);
+                                      }
+                                    },
+                                  ),
+                                  const Icon(Icons.chevron_right, color: Colors.white70)
+                                ],
+                              )
                             ],
                           ),
                         ),

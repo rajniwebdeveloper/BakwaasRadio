@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:bakwaas_fm/models/station.dart';
 import 'package:flutter/material.dart';
 import '../playback_manager.dart';
+import 'liked_songs_manager.dart';
 import '../widgets/bakwaas_chrome.dart';
 import '../widgets/orbital_ring.dart';
 
@@ -28,7 +29,6 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
   late final AnimationController _ringController;
   bool _isPlaying = false;
   double _progress = 0.0;
-  double _volume = 1.0;
 
   // Songs list starts empty; we'll populate from `station` or passed title only.
   final List<Map<String, String>> _songs = [];
@@ -45,7 +45,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
         vsync: this, duration: const Duration(milliseconds: 1800))
       ..repeat();
 
-    _volume = PlaybackManager.instance.volume;
+
 
     // listen to global playback manager
     PlaybackManager.instance.addListener(_playbackListener);
@@ -143,7 +143,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
     setState(() {
       _isPlaying = mgr.isPlaying;
       _progress = mgr.progress;
-      _volume = mgr.volume;
+      
       if (_isPlaying) {
         if (!_rotationController.isAnimating) _rotationController.repeat();
       } else {
@@ -172,6 +172,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
     return BakwaasScaffold(
       backgroundImage: imageUrl,
       activeTab: 2,
+      showBottomNav: false,
       onMenuTap: () => Navigator.of(context).maybePop(),
       onExitTap: () => Navigator.of(context).maybePop(),
       bodyPadding: const EdgeInsets.fromLTRB(12, 0, 12, 120),
@@ -261,24 +262,47 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
               ),
               child: Column(
                 children: [
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text('♪',
                           style: TextStyle(
                               color: Colors.tealAccent,
                               fontWeight: FontWeight.bold)),
-                      SizedBox(width: 6),
-                      Text('NOW PLAYING',
+                      const SizedBox(width: 6),
+                      const Text('NOW PLAYING',
                           style: TextStyle(
                               color: Colors.white70,
                               letterSpacing: 2,
                               fontSize: 12)),
-                      SizedBox(width: 6),
+                      const SizedBox(width: 6),
                       Text('♪',
                           style: TextStyle(
                               color: Colors.tealAccent,
                               fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 8),
+                      // Like/unlike current item
+                      Builder(builder: (context) {
+                        final cur = current;
+                        final songMap = {
+                          'title': cur['title'] ?? '',
+                          'subtitle': cur['subtitle'] ?? '',
+                          'image': cur['image'] ?? '',
+                          'url': cur['url'] ?? ''
+                        };
+                        final liked = LikedSongsManager.contains(songMap);
+                        return IconButton(
+                          onPressed: () {
+                            if (liked) {
+                              LikedSongsManager.remove(songMap);
+                            } else {
+                              LikedSongsManager.add(songMap);
+                            }
+                            setState(() {});
+                          },
+                          icon: Icon(liked ? Icons.favorite : Icons.favorite_border, color: Colors.pinkAccent),
+                        );
+                      })
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -377,15 +401,9 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                   ),
                 ),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Text(
-                          _isPlaying ? "Now Playing..." : "Let's Play...",
-                          style:
-                              TextStyle(color: Colors.white.withOpacity(0.75))),
-                    ),
+                    // Left side intentionally left empty to avoid duplicate "Now Playing" label
+                    const Expanded(child: SizedBox()),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Text(
