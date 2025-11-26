@@ -69,7 +69,7 @@ class _ImportLinkPageState extends State<ImportLinkPage> {
     for (final i in toDownload) {
       final u = _items[i].url;
       try {
-        await launchUrlString(u, mode: LaunchMode.externalApplication);
+        await launchUrlString(u);
       } catch (_) {}
     }
   }

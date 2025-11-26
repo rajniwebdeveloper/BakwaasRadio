@@ -66,6 +66,7 @@ app.use('/api/streams', require('./routes/streams'));
 app.use('/api/radio', require('./routes/radio'));
 app.use('/api', require('./routes/api')); // Add the main API routes
 app.use('/api/search', require('./routes/search')); // Add the search route
+app.use('/api/update', require('./routes/update'));
 
 
 // Add player proxy route

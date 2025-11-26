@@ -64,4 +64,9 @@ class AppInfo {
   // package identifier (application id)
   static const String packageName = 'com.bakwaas.fm';
   static const String logoAsset = 'assets/logo.png';
+
+  // App version and build code (keep in sync with pubspec.yaml `version:`)
+  // Example pubspec version: 6.0.0+6 -> version: "6.0.0", build: 6
+  static const String version = '6.0.0';
+  static const int buildNumber = 6;
 }

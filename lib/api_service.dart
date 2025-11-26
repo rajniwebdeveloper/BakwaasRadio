@@ -128,4 +128,25 @@ class ApiService {
       return false;
     }
   }
+
+  /// Fetch update metadata. Endpoint: /api/update
+  /// Returns a decoded JSON map on success.
+  /// Throws on non-200 responses.
+  static Future<dynamic> getUpdateInfo({Duration timeout = const Duration(seconds: 4), String? v, String? ts, String? platform}) async {
+    final base = await _baseUrl();
+    var uriStr = '$base/api/update';
+    final params = <String>[];
+    if (platform != null && platform.isNotEmpty) params.add('platform=${Uri.encodeQueryComponent(platform)}');
+    if (v != null && v.isNotEmpty) params.add('v=${Uri.encodeQueryComponent(v)}');
+    if (ts != null && ts.isNotEmpty) params.add('ts=${Uri.encodeQueryComponent(ts)}');
+    if (params.isNotEmpty) uriStr = '$uriStr?${params.join('&')}';
+    final uri = Uri.parse(uriStr);
+    final response = await http.get(uri).timeout(timeout);
+    // ignore: avoid_print
+    print('GET $uri -> ${response.statusCode}');
+    if (response.statusCode == 200) return json.decode(response.body);
+    // ignore: avoid_print
+    print('getUpdateInfo failed body: ${response.body}');
+    throw Exception('Failed to load update info: ${response.statusCode} ${response.body}');
+  }
 }

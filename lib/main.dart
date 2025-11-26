@@ -1,4 +1,9 @@
 import 'dart:math' as math;
+import 'dart:io' as io;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart' show SystemNavigator;
+import 'package:url_launcher/url_launcher_string.dart';
+import 'package:http/http.dart' as http;
 import 'package:bakwaas_fm/api_service.dart';
 import 'package:bakwaas_fm/models/station.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +20,8 @@ import 'widgets/bakwaas_chrome.dart';
 import 'widgets/orbital_ring.dart';
 import 'stations_page.dart';
 import 'deep_link_handler.dart';
+import 'config.dart';
+// ApiService already imported via package import at top
 
 // Demo/sample songs removed. App will show live data or empty states.
 
@@ -115,6 +122,144 @@ class _SplashPageState extends State<SplashPage> {
       // Small delay so splash is visible briefly
       await Future.delayed(const Duration(milliseconds: 700));
 
+      // Check update metadata from backend. If the request fails or times out
+      // we intentionally do not show any update popup (per requirement).
+      try {
+        print('Splash: checking update info');
+        final nowTs = DateTime.now().toUtc().toIso8601String();
+        final info = await ApiService.getUpdateInfo(v: AppInfo.version, ts: nowTs);
+        if (info != null && info is Map<String, dynamic>) {
+          // Determine platform key used by server
+          String key;
+          if (kIsWeb) {
+            key = 'web';
+          } else if (io.Platform.isIOS) {
+            key = 'iso';
+          } else if (io.Platform.isAndroid) {
+            key = 'android';
+          } else if (io.Platform.isMacOS) {
+            key = 'macos';
+          } else if (io.Platform.isWindows) {
+            key = 'windows';
+          } else {
+            key = 'web';
+          }
+
+          final platformInfo = info[key];
+          if (platformInfo is Map<String, dynamic>) {
+            final serverVersion = (platformInfo['version'] ?? '') as String;
+            final serverBuild = (platformInfo['build'] ?? platformInfo['code'] ?? null);
+
+            bool shouldShow = false;
+
+            // Compare version (semver) first
+            if (serverVersion.isNotEmpty) {
+              if (_compareVersions(serverVersion, AppInfo.version) > 0) {
+                shouldShow = true;
+              }
+            }
+
+            // If server provided build/code as integer compare it too
+            if (!shouldShow && serverBuild != null) {
+              try {
+                final int serverBuildInt = int.parse(serverBuild.toString());
+                if (serverBuildInt > AppInfo.buildNumber) shouldShow = true;
+              } catch (_) {
+                // ignore parse errors
+              }
+            }
+
+            if (shouldShow && mounted) {
+              final releaseNotes = (platformInfo['releaseNotes'] ?? '') as String;
+              final url = (platformInfo['url'] ?? '') as String;
+              final force = (platformInfo['force'] ?? false) as bool;
+
+              // Validate URL: if empty or http(s) not reachable, ignore update per requirement.
+              var urlValid = false;
+              if (url.isNotEmpty) {
+                final uri = Uri.tryParse(url);
+                if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+                  try {
+                    final head = await http.head(uri).timeout(const Duration(seconds: 2));
+                    if (head.statusCode >= 200 && head.statusCode < 400) {
+                      urlValid = true;
+                    } else {
+                      // unreachable status (404/500/etc) -> ignore update
+                      // ignore: avoid_print
+                      print('Splash: update URL returned status ${head.statusCode}, ignoring update');
+                      urlValid = false;
+                    }
+                  } catch (e) {
+                    // network error or timeout -> ignore update
+                    // ignore: avoid_print
+                    print('Splash: failed to verify update URL: $e');
+                    urlValid = false;
+                  }
+                } else {
+                  // non-http(s) schemes (market:, itms-apps:, etc.) — assume valid
+                  urlValid = true;
+                }
+              }
+
+              if (!urlValid) {
+                // Do not show update popup if URL is invalid/unreachable
+                // ignore: avoid_print
+                print('Splash: Ignoring update because update URL is missing or unreachable');
+              } else {
+                // Show blocking dialog on top of splash
+                await showDialog<void>(
+                  context: context,
+                  barrierDismissible: !force,
+                  builder: (ctx) {
+                    return WillPopScope(
+                      onWillPop: () async => !force,
+                      child: AlertDialog(
+                        title: const Text('Update Available'),
+                        content: SingleChildScrollView(
+                          child: Text(releaseNotes.isNotEmpty ? releaseNotes : 'A new version is available.'),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () async {
+                              // Close app when user clicks Close (per requirement)
+                              Navigator.of(ctx).pop();
+                              // Give the dialog pop time to close then exit
+                              await Future.delayed(const Duration(milliseconds: 200));
+                              try {
+                                SystemNavigator.pop();
+                              } catch (_) {
+                                io.exit(0);
+                              }
+                            },
+                            child: const Text('Close'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              Navigator.of(ctx).pop();
+                              if (url.isNotEmpty) {
+                                try {
+                                  await launchUrlString(url);
+                                } catch (_) {
+                                  // ignore launch errors
+                                }
+                              }
+                            },
+                            child: const Text('Update Now'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // Per requirement: if we don't get a response or it fails, do NOT show update popup.
+        print('Splash: update check failed or timed out: $e');
+      }
+
       // Navigate to home
       if (!mounted) return;
       Navigator.of(context)
@@ -127,7 +272,28 @@ class _SplashPageState extends State<SplashPage> {
       Navigator.of(context)
           .pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
     }
+
   }
+
+  /// Compare two semantic version strings `a` and `b`.
+  /// Returns 1 if `a` > `b`, -1 if `a` < `b`, 0 if equal.
+  int _compareVersions(String a, String b) {
+    try {
+      final pa = a.split('.').map((s) => int.tryParse(s) ?? 0).toList();
+      final pb = b.split('.').map((s) => int.tryParse(s) ?? 0).toList();
+      final len = pa.length > pb.length ? pa.length : pb.length;
+      for (var i = 0; i < len; i++) {
+        final va = i < pa.length ? pa[i] : 0;
+        final vb = i < pb.length ? pb[i] : 0;
+        if (va > vb) return 1;
+        if (va < vb) return -1;
+      }
+      return 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+  
 
   @override
   Widget build(BuildContext context) {
