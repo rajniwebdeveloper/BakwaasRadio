@@ -241,6 +241,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _showLoginDialog() async {
     final emailCtrl = TextEditingController();
     final passCtrl = TextEditingController();
+    bool keepSigned = false;
     final result = await showDialog<bool>(
         context: context,
         builder: (ctx) {
@@ -252,6 +253,16 @@ class _ProfilePageState extends State<ProfilePage> {
                 TextField(controller: emailCtrl, decoration: const InputDecoration(hintText: 'Email')),
                 const SizedBox(height: 8),
                 TextField(controller: passCtrl, decoration: const InputDecoration(hintText: 'Password'), obscureText: true),
+                const SizedBox(height: 8),
+                StatefulBuilder(builder: (ctx2, setState2) {
+                  return CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: keepSigned,
+                    onChanged: (v) => setState2(() => keepSigned = v ?? false),
+                    title: const Text('Keep me signed in (1 year)'),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  );
+                }),
               ],
             ),
             actions: [
@@ -264,10 +275,16 @@ class _ProfilePageState extends State<ProfilePage> {
       final email = emailCtrl.text.trim();
       final pwd = passCtrl.text;
       try {
-        final resp = await ApiService.login(email, pwd);
+        final deviceInfo = {'mode': 'web'}; // minimal device info; native platforms may add better details
+        final resp = await ApiService.login(email, pwd, oneYear: keepSigned, device: deviceInfo);
         if (resp != null && resp['ok'] == true) {
           AppData.currentUser.value = resp['user'] as Map<String, dynamic>;
           if (resp.containsKey('token')) AppData.currentUser.value['token'] = resp['token'];
+          if (resp.containsKey('tokenExpiresAt')) AppData.currentUser.value['tokenExpiresAt'] = resp['tokenExpiresAt'];
+          // persist auth
+          if (resp.containsKey('token')) {
+            await AppData.saveAuthToPrefs(token: resp['token'] as String, tokenExpiresAt: resp['tokenExpiresAt'] as String?, user: resp['user'] as Map<String, dynamic>);
+          }
           AppData.isLoggedIn.value = true;
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logged in')));
         } else {
@@ -282,6 +299,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _showSignupDialog() async {
     final emailCtrl = TextEditingController();
     final passCtrl = TextEditingController();
+    bool keepSigned = false;
     final result = await showDialog<bool>(
         context: context,
         builder: (ctx) {
@@ -293,6 +311,16 @@ class _ProfilePageState extends State<ProfilePage> {
                 TextField(controller: emailCtrl, decoration: const InputDecoration(hintText: 'Email')),
                 const SizedBox(height: 8),
                 TextField(controller: passCtrl, decoration: const InputDecoration(hintText: 'Password'), obscureText: true),
+                const SizedBox(height: 8),
+                StatefulBuilder(builder: (ctx2, setState2) {
+                  return CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: keepSigned,
+                    onChanged: (v) => setState2(() => keepSigned = v ?? false),
+                    title: const Text('Keep me signed in (1 year)'),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  );
+                }),
               ],
             ),
             actions: [
@@ -305,10 +333,15 @@ class _ProfilePageState extends State<ProfilePage> {
       final email = emailCtrl.text.trim();
       final pwd = passCtrl.text;
       try {
-        final resp = await ApiService.signup(email, pwd);
+        final deviceInfo = {'mode': 'web'};
+        final resp = await ApiService.signup(email, pwd, oneYear: keepSigned, device: deviceInfo);
         if (resp != null && resp['ok'] == true) {
           AppData.currentUser.value = resp['user'] as Map<String, dynamic>;
           if (resp.containsKey('token')) AppData.currentUser.value['token'] = resp['token'];
+          if (resp.containsKey('tokenExpiresAt')) AppData.currentUser.value['tokenExpiresAt'] = resp['tokenExpiresAt'];
+          if (resp.containsKey('token')) {
+            await AppData.saveAuthToPrefs(token: resp['token'] as String, tokenExpiresAt: resp['tokenExpiresAt'] as String?, user: resp['user'] as Map<String, dynamic>);
+          }
           AppData.isLoggedIn.value = true;
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account created and logged in')));
         } else {
@@ -592,6 +625,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         onPressed: () {
                           AppData.currentUser.value = <String, dynamic>{};
                           AppData.isLoggedIn.value = false;
+                          AppData.clearAuthPrefs();
                           Navigator.of(context).popUntil((route) => route.isFirst);
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Signed out')));
                         },
@@ -603,6 +637,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     }
 
                     // Not logged in: show Login / Sign up actions
+                    // Not logged in: show Login / Sign up actions only when backend
+                    // ui-config allows it (feature flag `show_login_button`).
+                    final showLogin = AppData.featureEnabled('show_login_button');
+                    if (!showLogin) return const SizedBox.shrink();
                     return Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

@@ -656,14 +656,15 @@ router.get('/ui-config', (req, res) => {
             import_play: 'Play Now',
                 import_download: 'Download Now'
         },
-        features: {
-            // Default: downloads disabled. Set to `true` only if you
-            // have a proper licensed download flow and user auth.
-            enable_downloads: false
-                ,
-                // If false the app should hide any explicit "Login" or "Sign up" buttons
-                show_login_button: true
-        }
+            features: {
+                // Default: downloads disabled. Set to `true` only if you
+                // have a proper licensed download flow and user auth.
+                enable_downloads: false,
+                // Default: hide login/signup UI until explicitly enabled.
+                // This prevents the app from advertising login when backend
+                // operators want to keep the app in a non-auth state.
+                show_login_button: false
+            }
     };
     res.json(payload);
 });

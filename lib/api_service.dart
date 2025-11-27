@@ -175,10 +175,13 @@ class ApiService {
   }
 
   /// Signup with email/password. Returns decoded JSON which contains `token` on success.
-  static Future<dynamic> signup(String email, String password) async {
+  static Future<dynamic> signup(String email, String password, {bool oneYear = false, Map<String, dynamic>? device}) async {
     final base = await _baseUrl();
     final uri = Uri.parse('$base/api/auth/signup');
-    final response = await http.post(uri, body: json.encode({'email': email, 'password': password}), headers: {'Content-Type': 'application/json'});
+    final Map<String, dynamic> body = {'email': email, 'password': password};
+    if (oneYear) body['oneYear'] = true;
+    if (device != null) body['device'] = device;
+    final response = await http.post(uri, body: json.encode(body), headers: {'Content-Type': 'application/json'});
     // ignore: avoid_print
     print('POST $uri -> ${response.statusCode}');
     if (response.statusCode == 200) return json.decode(response.body);
@@ -188,10 +191,13 @@ class ApiService {
   }
 
   /// Login with email/password. Returns decoded JSON which contains `token` on success.
-  static Future<dynamic> login(String email, String password) async {
+  static Future<dynamic> login(String email, String password, {bool oneYear = false, Map<String, dynamic>? device}) async {
     final base = await _baseUrl();
     final uri = Uri.parse('$base/api/auth/login');
-    final response = await http.post(uri, body: json.encode({'email': email, 'password': password}), headers: {'Content-Type': 'application/json'});
+    final Map<String, dynamic> body = {'email': email, 'password': password};
+    if (oneYear) body['oneYear'] = true;
+    if (device != null) body['device'] = device;
+    final response = await http.post(uri, body: json.encode(body), headers: {'Content-Type': 'application/json'});
     // ignore: avoid_print
     print('POST $uri -> ${response.statusCode}');
     if (response.statusCode == 200) return json.decode(response.body);

@@ -105,6 +105,35 @@ class _SplashPageState extends State<SplashPage> {
         print('Splash: ui-config not available or failed: $e');
       }
 
+      // Restore persisted auth (if any) and validate token with /auth/me
+      try {
+        await AppData.loadAuthFromPrefs();
+        if (AppData.isLoggedIn.value) {
+          final token = AppData.currentUser.value['token'] as String?;
+          if (token != null) {
+            try {
+              final me = await ApiService.me(token);
+              if (me != null && me['ok'] == true) {
+                final user = me['user'] as Map<String, dynamic>;
+                AppData.currentUser.value = user;
+                AppData.currentUser.value['token'] = token;
+                AppData.isLoggedIn.value = true;
+              } else {
+                // invalid token -> clear
+                AppData.currentUser.value = <String, dynamic>{};
+                AppData.isLoggedIn.value = false;
+                await AppData.clearAuthPrefs();
+              }
+            } catch (_) {
+              // If validation fails, clear to avoid inconsistency
+              AppData.currentUser.value = <String, dynamic>{};
+              AppData.isLoggedIn.value = false;
+              await AppData.clearAuthPrefs();
+            }
+          }
+        }
+      } catch (_) {}
+
       // If there's no persisted lastSong, try to auto-play the first station
       // we received from the backend. Prefer `playerUrl`, then `streamURL`,
       // then `mp3Url` as the playback source.

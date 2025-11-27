@@ -1,4 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+
+const _kAuthTokenKey = 'auth_token';
+const _kAuthTokenExpiresKey = 'auth_token_expires';
+const _kAuthUserKey = 'auth_user_json';
 
 class AppData {
   // Demo playlists removed. Keep an empty list so UI can handle "no data".
@@ -36,6 +42,8 @@ class AppData {
         // Backend can set this to true to expose download-related flows.
         // Default false to be safe for App Store compliance.
         'enable_downloads': false,
+        // Default to false: hide login/signup buttons until backend enables them
+        'show_login_button': false,
       }
     }
   );
@@ -63,4 +71,61 @@ class AppData {
 
   /// Optional current user data (empty when not logged in).
   static final ValueNotifier<Map<String, dynamic>> currentUser = ValueNotifier<Map<String, dynamic>>(<String, dynamic>{});
+
+  /// Load persisted auth token and user (if any) from `SharedPreferences`.
+  /// If a valid token is found, sets `isLoggedIn` and populates `currentUser`.
+  static Future<void> loadAuthFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(_kAuthTokenKey);
+      final expires = prefs.getString(_kAuthTokenExpiresKey);
+      final userJson = prefs.getString(_kAuthUserKey);
+      if (token != null) {
+        currentUser.value = <String, dynamic>{'token': token};
+        if (userJson != null) {
+          try {
+            final decoded = userJson.isNotEmpty ? (jsonDecode(userJson) as Map<String, dynamic>) : <String, dynamic>{};
+            currentUser.value.addAll(decoded);
+          } catch (_) {}
+        }
+        // Validate expiry if present
+        if (expires != null && expires.isNotEmpty) {
+          final dt = DateTime.tryParse(expires);
+          if (dt != null && dt.isAfter(DateTime.now().toUtc())) {
+            isLoggedIn.value = true;
+          } else {
+            // expired
+            currentUser.value = <String, dynamic>{};
+            await clearAuthPrefs();
+          }
+        } else {
+          // no expiry recorded -> consider logged out for safety
+          currentUser.value = <String, dynamic>{};
+          await clearAuthPrefs();
+        }
+      }
+    } catch (e) {
+      // ignore errors reading prefs
+    }
+  }
+
+  /// Persist current auth token, expiry and user to prefs.
+  static Future<void> saveAuthToPrefs({required String token, String? tokenExpiresAt, Map<String, dynamic>? user}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kAuthTokenKey, token);
+    if (tokenExpiresAt != null) await prefs.setString(_kAuthTokenExpiresKey, tokenExpiresAt);
+    if (user != null) {
+      try {
+        await prefs.setString(_kAuthUserKey, jsonEncode(user));
+      } catch (_) {}
+    }
+  }
+
+  /// Clear persisted auth info
+  static Future<void> clearAuthPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kAuthTokenKey);
+    await prefs.remove(_kAuthTokenExpiresKey);
+    await prefs.remove(_kAuthUserKey);
+  }
 }
