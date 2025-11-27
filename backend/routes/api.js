@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const crypto = require('crypto');
 const ytdl = require('@distube/ytdl-core'); // Updated to @distube/ytdl-core
 const { URL } = require('url');
 const bcrypt = require('bcryptjs');
@@ -10,6 +11,9 @@ const User = require('../models/User');
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret';
 const JWT_EXPIRY = process.env.JWT_EXPIRY || '14d';
 const JWT_LONG_EXPIRY = process.env.JWT_LONG_EXPIRY || '365d';
+
+// Image encryption key (32 bytes for AES-256). Set via env var in production.
+const IMAGE_SECRET = process.env.IMAGE_SECRET || '0123456789abcdef0123456789abcdef';
 
 // Helper to compute an expiry Date from a jwt-style expiry string like '14d' or '365d' or '12h' or '1y'
 function computeExpiryDate(expiryStr) {
@@ -29,6 +33,57 @@ function computeExpiryDate(expiryStr) {
     const asNum = Number(expiryStr);
     if (!isNaN(asNum)) return new Date(now + asNum);
     return null;
+}
+
+// Return a proxied image URL for client consumption to avoid CORS issues.
+function encryptUrl(url) {
+    if (!url) return null;
+    try {
+        const key = Buffer.from(IMAGE_SECRET, 'utf8');
+        // IV 12 bytes for GCM
+        const iv = crypto.randomBytes(12);
+        const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+        const encrypted = Buffer.concat([cipher.update(url, 'utf8'), cipher.final()]);
+        const tag = cipher.getAuthTag();
+        // concat iv + tag + encrypted
+        const out = Buffer.concat([iv, tag, encrypted]).toString('base64');
+        return out;
+    } catch (e) {
+        console.error('encryptUrl error', e.message);
+        return null;
+    }
+}
+
+function decryptUrl(token) {
+    if (!token) return null;
+    try {
+        const key = Buffer.from(IMAGE_SECRET, 'utf8');
+        const buf = Buffer.from(token, 'base64');
+        // iv (12) + tag (16) + ciphertext
+        const iv = buf.slice(0, 12);
+        const tag = buf.slice(12, 28);
+        const data = buf.slice(28);
+        const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+        decipher.setAuthTag(tag);
+        const decrypted = Buffer.concat([decipher.update(data), decipher.final()]);
+        return decrypted.toString('utf8');
+    } catch (e) {
+        console.error('decryptUrl error', e.message);
+        return null;
+    }
+}
+
+// Return a proxied image URL tokenized with AES-GCM into `c` parameter
+function proxiedImage(u) {
+    if (!u) return null;
+    try {
+        if (typeof u !== 'string') return null;
+        // If already proxied (legacy), return as-is
+        if (u.startsWith('/api/image') || u.startsWith('/api/')) return u;
+        const token = encryptUrl(u);
+        if (!token) return null;
+        return `/api/image?c=${encodeURIComponent(token)}`;
+    } catch (_) { return u; }
 }
 
 /**
@@ -108,7 +163,7 @@ router.post('/process-url', async (req, res) => {
                             audioUrl: ytdlUrls.audioUrl,
                             name: `${videoDetails.title} (Audio)`,
                             quality: "High Quality Audio",
-                            thumbnail: videoDetails.thumbnails[0].url,
+                            thumbnail: proxiedImage(videoDetails.thumbnails[0].url),
                             isPaid: false,
                             directPlayUrl: `/api/youtube/audio/${videoId}`
                         });
@@ -126,7 +181,7 @@ router.post('/process-url', async (req, res) => {
                             audioUrl: null,
                             name: `${videoDetails.title} (Video)`,
                             quality: "High Quality Video",
-                            thumbnail: videoDetails.thumbnails[0].url,
+                            thumbnail: proxiedImage(videoDetails.thumbnails[0].url),
                             isPaid: false
                         });
                     }
@@ -143,7 +198,7 @@ router.post('/process-url', async (req, res) => {
                             audioUrl: ytdlUrls.optimalUrl,
                             name: `${videoDetails.title} (Audio & Video)`,
                             quality: "Combined Audio & Video",
-                            thumbnail: videoDetails.thumbnails[0].url,
+                            thumbnail: proxiedImage(videoDetails.thumbnails[0].url),
                             isPaid: false
                         });
                     }
@@ -172,8 +227,8 @@ router.post('/process-url', async (req, res) => {
                         mediaUrl: bestUrl, // For backward compatibility
                         name: videoDetails.title,
                         mediaName: videoDetails.title, // For backward compatibility
-                        thumbnail: videoDetails.thumbnails[videoDetails.thumbnails.length - 1].url,
-                        image: videoDetails.thumbnails[videoDetails.thumbnails.length - 1].url,
+                        thumbnail: proxiedImage(videoDetails.thumbnails[videoDetails.thumbnails.length - 1].url),
+                        image: proxiedImage(videoDetails.thumbnails[videoDetails.thumbnails.length - 1].url),
                         isPaid: videoDetails.isPrivate || false,
                         description: videoDetails.description || '',
                         mediaUrls: mediaUrls,
@@ -211,8 +266,8 @@ router.post('/process-url', async (req, res) => {
                         directAudioUrl: `/api/youtube/audio/${videoId}`,
                         autoPlay: true,
                         // Include fallback thumbnail
-                        thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-                        image: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+                        thumbnail: proxiedImage(`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`),
+                        image: proxiedImage(`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`)
                     }));
                 }
             } catch (error) {
@@ -231,8 +286,8 @@ router.post('/process-url', async (req, res) => {
                     ...(videoId && {
                         directAudioUrl: `/api/youtube/audio/${videoId}`,
                         autoPlay: true,
-                        thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-                        image: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+                        thumbnail: proxiedImage(`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`),
+                        image: proxiedImage(`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`)
                     })
                 }));
             }
@@ -495,6 +550,38 @@ router.get('/youtube/audio/:videoId', async (req, res) => {
 });
 
 /**
+ * Image endpoint that accepts an encrypted token and streams the underlying
+ * image. Usage: GET /api/image?c=<base64-token>
+ * For compatibility this also accepts `u=<plain-url>` but prefer `c`.
+ */
+router.get('/image', async (req, res) => {
+    try {
+        const code = req.query.c || req.query.code;
+        let url = null;
+        if (code && typeof code === 'string') {
+            url = decryptUrl(code);
+        }
+        // Fallback to plain url if provided (legacy)
+        if (!url) {
+            const plain = req.query.u || req.query.url;
+            if (plain && typeof plain === 'string') url = plain;
+        }
+        if (!url) return res.status(400).send('Missing url');
+        const parsed = new URL(url);
+        if (!['http:', 'https:'].includes(parsed.protocol)) return res.status(400).send('Invalid protocol');
+
+        const resp = await axios.get(url, { responseType: 'stream', timeout: 8000, maxRedirects: 5 });
+        const contentType = resp.headers['content-type'] || 'application/octet-stream';
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        resp.data.pipe(res);
+    } catch (e) {
+        console.error('image endpoint error', e.message);
+        res.status(502).send('Failed to fetch image');
+    }
+});
+
+/**
  * Extract video ID from YouTube URL with improved validation
  */
 function extractVideoId(url) {
@@ -585,6 +672,16 @@ async function getYtdlHighQualityUrls(videoId) {
  * Ensures all responses follow the same format even on errors
  */
 function createStandardResponse(options) {
+    const proxy = (u) => {
+        if (!u) return null;
+        try {
+            // If already proxied, return as-is
+            if (u.startsWith('/api/image') || u.startsWith('/api/')) return u;
+            const token = encryptUrl(u);
+            if (!token) return u;
+            return `/api/image?c=${encodeURIComponent(token)}`;
+        } catch (_) { return u; }
+    };
     return {
         download: options.download || false,
         playback: options.playback || false,
@@ -595,11 +692,15 @@ function createStandardResponse(options) {
         mediaUrl: options.mediaUrl || null, // For backward compatibility
         name: options.mediaName || options.name || "Unknown Media",
         mediaName: options.mediaName || options.name || "Unknown Media", // For backward compatibility
-        thumbnail: options.thumbnail || null,
-        image: options.image || options.thumbnail || null,
+        thumbnail: proxiedImage(options.thumbnail) || null,
+        image: proxiedImage(options.image) || proxiedImage(options.thumbnail) || null,
         isPaid: options.isPaid || false,
         error: options.error || null,
-        mediaUrls: options.mediaUrls || []
+        mediaUrls: (options.mediaUrls || []).map(m => {
+            const out = Object.assign({}, m);
+            if (out.thumbnail) out.thumbnail = proxiedImage(out.thumbnail);
+            return out;
+        })
     };
 }
 
