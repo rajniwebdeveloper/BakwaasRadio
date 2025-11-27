@@ -3,6 +3,33 @@ const router = express.Router();
 const axios = require('axios');
 const ytdl = require('@distube/ytdl-core'); // Updated to @distube/ytdl-core
 const { URL } = require('url');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret';
+const JWT_EXPIRY = process.env.JWT_EXPIRY || '14d';
+const JWT_LONG_EXPIRY = process.env.JWT_LONG_EXPIRY || '365d';
+
+// Helper to compute an expiry Date from a jwt-style expiry string like '14d' or '365d' or '12h' or '1y'
+function computeExpiryDate(expiryStr) {
+    if (!expiryStr || typeof expiryStr !== 'string') return null;
+    const now = Date.now();
+    const num = parseInt(expiryStr, 10);
+    if (expiryStr.endsWith('d')) {
+        return new Date(now + (num * 24 * 60 * 60 * 1000));
+    }
+    if (expiryStr.endsWith('h')) {
+        return new Date(now + (num * 60 * 60 * 1000));
+    }
+    if (expiryStr.endsWith('y')) {
+        return new Date(now + (num * 365 * 24 * 60 * 60 * 1000));
+    }
+    // fallback: try parse as milliseconds
+    const asNum = Number(expiryStr);
+    if (!isNaN(asNum)) return new Date(now + asNum);
+    return null;
+}
 
 /**
  * Process external URL to determine if it can be played or downloaded
@@ -592,10 +619,264 @@ router.get('/', (req, res) => {
             "/api/youtube/audio/:videoId - Stream YouTube audio",
             "/api/youtube/info/:videoId - Get YouTube video info",
             "/api/youtube/download/:videoId - Download YouTube audio",
+            "/api/ui-config - UI labels and feature flags",
             "/api/direct-url - Direct URL processing"
         ],
         documentation: "Contact developer for API documentation"
     });
 });
 
+/**
+ * UI configuration endpoint
+ * Returns a small JSON payload containing UI labels and feature flags.
+ * Keep downloads disabled by default for App Store safety; the app will
+ * only show download UI when the backend sets `features.enable_downloads`
+ * to true AND the user is logged in.
+ */
+router.get('/ui-config', (req, res) => {
+    console.log('📣 ui-config requested');
+    const payload = {
+        labels: {
+                menu_profile: 'Profile',
+                menu_downloads: 'Downloads',
+            menu_filters: 'Filters',
+            menu_now_playing: 'Now Playing',
+            menu_sleep_timer: 'Sleep Timer',
+            filters_title: 'Library Filters',
+            filter_liked: 'Liked Songs',
+            filter_albums: 'Albums',
+            filter_artists: 'Artists',
+                filter_downloads: 'Downloads',
+            filter_playlists: 'Playlists',
+            filter_stations: 'Stations',
+            filter_recent: 'Recently Played',
+            filters_clear: 'Clear',
+            filters_done: 'Done',
+            import_title: 'Import link',
+            import_play: 'Play Now',
+                import_download: 'Download Now'
+        },
+        features: {
+            // Default: downloads disabled. Set to `true` only if you
+            // have a proper licensed download flow and user auth.
+            enable_downloads: false
+                ,
+                // If false the app should hide any explicit "Login" or "Sign up" buttons
+                show_login_button: true
+        }
+    };
+    res.json(payload);
+});
+
+/**
+ * Simple authentication endpoints (signup/login/me) for demo purposes.
+ * This is a minimal implementation backed by `backend/users.json` and
+ * should be replaced by a real auth flow for production.
+ */
+
+router.post('/auth/signup', async (req, res) => {
+    try {
+        const { email, password } = req.body || {};
+        if (!email || !password) return res.status(400).json({ error: 'Missing email or password' });
+
+        const existing = await User.findOne({ email: email.toLowerCase() }).exec();
+        if (existing) return res.status(400).json({ error: 'User already exists' });
+
+        const saltRounds = 10;
+        const passwordHash = await bcrypt.hash(password, saltRounds);
+        const user = new User({ email: email.toLowerCase(), passwordHash });
+
+        // Optional device info from signup payload
+        const device = req.body.device;
+        if (device && typeof device === 'object') {
+            user.devices.push({
+                deviceId: device.deviceId || device.id || null,
+                deviceName: device.deviceName || device.name || null,
+                userAgent: req.headers['user-agent'] || device.userAgent || null,
+                ip: req.ip || req.connection?.remoteAddress || null,
+                mode: device.mode || (req.headers['user-agent'] ? 'web' : null),
+                lastSeen: new Date()
+            });
+        }
+
+        await user.save();
+
+        // Support optional long-lived (one-year) token when client requests it
+        const oneYear = !!req.body.oneYear;
+        const expiry = oneYear ? JWT_LONG_EXPIRY : JWT_EXPIRY;
+        const token = jwt.sign({ email: user.email, id: user._id }, JWT_SECRET, { expiresIn: expiry });
+        const expiresAt = computeExpiryDate(expiry);
+        return res.json({ ok: true, user: { id: user._id.toString(), email: user.email }, token, tokenExpiresAt: expiresAt ? expiresAt.toISOString() : null });
+    } catch (e) {
+        console.error('Signup error:', e.message);
+        return res.status(500).json({ error: 'Signup failed' });
+    }
+});
+
+router.post('/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body || {};
+        if (!email || !password) return res.status(400).json({ error: 'Missing email or password' });
+
+        const user = await User.findOne({ email: email.toLowerCase() }).exec();
+        if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+
+        const match = await bcrypt.compare(password, user.passwordHash);
+        if (!match) return res.status(400).json({ error: 'Invalid credentials' });
+
+        // Update or add device info if provided
+        const device = req.body.device;
+        if (device && typeof device === 'object') {
+            const dId = device.deviceId || device.id || null;
+            const existingIndex = user.devices.findIndex(d => d.deviceId === dId && d.deviceId != null);
+            const deviceRecord = {
+                deviceId: dId,
+                deviceName: device.deviceName || device.name || null,
+                userAgent: req.headers['user-agent'] || device.userAgent || null,
+                ip: req.ip || req.connection?.remoteAddress || null,
+                mode: device.mode || (req.headers['user-agent'] ? 'web' : null),
+                lastSeen: new Date()
+            };
+            if (existingIndex >= 0) {
+                user.devices[existingIndex] = Object.assign(user.devices[existingIndex].toObject ? user.devices[existingIndex].toObject() : user.devices[existingIndex], deviceRecord);
+            } else {
+                user.devices.push(deviceRecord);
+            }
+            // update device lastSeen but defer lastLogin update until after credential checks
+            await user.save();
+        }
+
+        // set lastLogin as an object containing full datetime and device info
+        const now = new Date();
+        const lastLoginRecord = {
+            dateTime: now,
+            mode: (device && device.mode) ? device.mode : (req.headers['user-agent'] ? 'web' : null),
+            deviceId: (device && (device.deviceId || device.id)) ? (device.deviceId || device.id) : null,
+            deviceName: (device && (device.deviceName || device.name)) ? (device.deviceName || device.name) : null,
+            ip: req.ip || req.connection?.remoteAddress || null
+        };
+        user.lastLogin = lastLoginRecord;
+        await user.save();
+        // Support optional long-lived (one-year) token when client requests it
+        const oneYear = !!req.body.oneYear;
+        const expiry = oneYear ? JWT_LONG_EXPIRY : JWT_EXPIRY;
+        const token = jwt.sign({ email: user.email, id: user._id }, JWT_SECRET, { expiresIn: expiry });
+        const expiresAt = computeExpiryDate(expiry);
+        return res.json({ ok: true, user: { id: user._id.toString(), email: user.email, plan: user.plan, devices: user.devices, lastLogin: user.lastLogin }, token, tokenExpiresAt: expiresAt ? expiresAt.toISOString() : null });
+    } catch (e) {
+        console.error('Login error:', e.message);
+        return res.status(500).json({ error: 'Login failed' });
+    }
+});
+
+router.get('/auth/me', async (req, res) => {
+    try {
+        const auth = req.headers.authorization || '';
+        if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Missing token' });
+        const token = auth.substring(7);
+        let payload;
+        try {
+            payload = jwt.verify(token, JWT_SECRET);
+        } catch (e) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        const user = await User.findOne({ email: payload.email.toLowerCase() }).exec();
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        return res.json({ ok: true, user: { id: user._id.toString(), email: user.email, plan: user.plan, devices: user.devices, lastLogin: user.lastLogin } });
+    } catch (e) {
+        console.error('Me error:', e.message);
+        return res.status(500).json({ error: 'Failed to verify token' });
+    }
+});
+
+/**
+ * Middleware to authenticate Bearer token and attach user object to req.user
+ */
+async function authMiddleware(req, res, next) {
+    try {
+        const auth = req.headers.authorization || '';
+        if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Missing token' });
+        const token = auth.substring(7);
+        let payload;
+        try {
+            payload = jwt.verify(token, JWT_SECRET);
+        } catch (e) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        const user = await User.findOne({ email: payload.email.toLowerCase() }).exec();
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        req.user = user;
+        next();
+    } catch (e) {
+        console.error('authMiddleware error:', e.message);
+        return res.status(500).json({ error: 'Auth error' });
+    }
+}
+
+/**
+ * Register or update a device for the authenticated user.
+ * POST body: { device: { deviceId, deviceName, mode, userAgent } }
+ */
+router.post('/user/device', authMiddleware, async (req, res) => {
+    try {
+        const device = req.body.device;
+        if (!device || typeof device !== 'object') return res.status(400).json({ error: 'Missing device object' });
+        const user = req.user;
+        const dId = device.deviceId || device.id || null;
+        const existingIndex = user.devices.findIndex(d => d.deviceId === dId && d.deviceId != null);
+        const deviceRecord = {
+            deviceId: dId,
+            deviceName: device.deviceName || device.name || null,
+            userAgent: req.headers['user-agent'] || device.userAgent || null,
+            ip: req.ip || req.connection?.remoteAddress || null,
+            mode: device.mode || (req.headers['user-agent'] ? 'web' : null),
+            lastSeen: new Date()
+        };
+        if (existingIndex >= 0) {
+            user.devices[existingIndex] = Object.assign(user.devices[existingIndex].toObject ? user.devices[existingIndex].toObject() : user.devices[existingIndex], deviceRecord);
+        } else {
+            user.devices.push(deviceRecord);
+        }
+        await user.save();
+        return res.json({ ok: true, devices: user.devices });
+    } catch (e) {
+        console.error('user/device error:', e.message);
+        return res.status(500).json({ error: 'Failed to register device' });
+    }
+});
+
+/**
+ * Get or update the user's plan. POST requires body { plan: { name, planType, adsEnabled, expiresAt } }
+ * This endpoint is intentionally permissive for testing — in production require admin rights.
+ */
+router.get('/user/plan', authMiddleware, async (req, res) => {
+    try {
+        const user = req.user;
+        return res.json({ ok: true, plan: user.plan || {} });
+    } catch (e) {
+        console.error('user/plan get error:', e.message);
+        return res.status(500).json({ error: 'Failed to fetch plan' });
+    }
+});
+
+router.post('/user/plan', authMiddleware, async (req, res) => {
+    try {
+        const plan = req.body.plan;
+        if (!plan || typeof plan !== 'object') return res.status(400).json({ error: 'Missing plan object' });
+        const user = req.user;
+        user.plan = {
+            name: plan.name || user.plan.name || null,
+            planType: plan.planType || user.plan.planType || null,
+            adsEnabled: (typeof plan.adsEnabled === 'boolean') ? plan.adsEnabled : (user.plan.adsEnabled !== undefined ? user.plan.adsEnabled : true),
+            expiresAt: plan.expiresAt ? new Date(plan.expiresAt) : user.plan.expiresAt || null
+        };
+        await user.save();
+        return res.json({ ok: true, plan: user.plan });
+    } catch (e) {
+        console.error('user/plan post error:', e.message);
+        return res.status(500).json({ error: 'Failed to update plan' });
+    }
+});
+
 module.exports = router;
+

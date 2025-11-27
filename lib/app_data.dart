@@ -6,4 +6,61 @@ class AppData {
   // Global root tab notifier so independent pages can request switching
   // the main bottom navigation (0: Home, 1: Liked, 2: Library).
   static final ValueNotifier<int> rootTab = ValueNotifier<int>(0);
+
+  // UI labels/config coming from backend (optional). This map may contain
+  // nested `labels` and `features` keys. Initialize with safe defaults so
+  // UI can use these synchronously before the network call completes.
+  static final ValueNotifier<Map<String, dynamic>> uiConfig = ValueNotifier<Map<String, dynamic>>(
+    <String, dynamic>{
+      'labels': {
+        'menu_profile': 'Profile',
+        'menu_downloads': 'Downloads',
+        'menu_filters': 'Filters',
+        'menu_now_playing': 'Now Playing',
+        'menu_sleep_timer': 'Sleep Timer',
+        'filters_title': 'Library Filters',
+        'filter_liked': 'Liked Songs',
+        'filter_albums': 'Albums',
+        'filter_artists': 'Artists',
+        'filter_downloads': 'Downloads',
+        'filter_playlists': 'Playlists',
+        'filter_stations': 'Stations',
+        'filter_recent': 'Recently Played',
+        'filters_clear': 'Clear',
+        'filters_done': 'Done',
+        'import_title': 'Import link',
+        'import_play': 'Play Now',
+        'import_download': 'Download Now',
+      },
+      'features': {
+        // Backend can set this to true to expose download-related flows.
+        // Default false to be safe for App Store compliance.
+        'enable_downloads': false,
+      }
+    }
+  );
+
+  /// Convenience accessor for UI labels. Returns `key` from `uiConfig['labels']`
+  /// or `fallback` if not found.
+  static String label(String key, {String? fallback}) {
+    final labels = uiConfig.value['labels'] as Map<String, dynamic>?;
+    if (labels != null && labels.containsKey(key)) return labels[key] as String;
+    return fallback ?? key;
+  }
+
+  /// Check feature flag presence in `uiConfig['features']`.
+  static bool featureEnabled(String key) {
+    final feats = uiConfig.value['features'] as Map<String, dynamic>?;
+    if (feats == null) return false;
+    final val = feats[key];
+    if (val is bool) return val;
+    return false;
+  }
+
+  /// Logged-in state. UI can listen to this to conditionally expose
+  /// features like downloads which should require authentication.
+  static final ValueNotifier<bool> isLoggedIn = ValueNotifier<bool>(false);
+
+  /// Optional current user data (empty when not logged in).
+  static final ValueNotifier<Map<String, dynamic>> currentUser = ValueNotifier<Map<String, dynamic>>(<String, dynamic>{});
 }

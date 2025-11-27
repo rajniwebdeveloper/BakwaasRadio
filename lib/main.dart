@@ -96,23 +96,36 @@ class _SplashPageState extends State<SplashPage> {
         stations = null;
       }
 
+      // Fetch UI labels/config from backend (optional). Failures are non-fatal.
+      try {
+        final ui = await ApiService.getUiConfig();
+        AppData.uiConfig.value = ui;
+      } catch (e) {
+        // ignore: avoid_print
+        print('Splash: ui-config not available or failed: $e');
+      }
+
       // If there's no persisted lastSong, try to auto-play the first station
       // we received from the backend. Prefer `playerUrl`, then `streamURL`,
       // then `mp3Url` as the playback source.
       try {
         final last = PlaybackManager.instance.lastSong;
         final needAuto = last == null || (last['url']?.isEmpty == true);
-        if (needAuto && stations != null && stations.isNotEmpty) {
+          if (needAuto && stations != null && stations.isNotEmpty) {
           final s = stations.first;
           final url = s.playerUrl ?? s.streamURL ?? s.mp3Url ?? '';
           if (url.isNotEmpty) {
-            setState(() => _status = 'Starting ${s.name}...');
-            PlaybackManager.instance.play({
-              'title': s.name,
-              'subtitle': s.description ?? '',
-              'image': s.profilepic ?? '',
-              'url': url
-            });
+              // On web, avoid auto-playing audio to prevent browser `NotAllowedError`.
+              // Auto-play is allowed on native platforms; for web require user interaction.
+              if (!kIsWeb) {
+                setState(() => _status = 'Starting ${s.name}...');
+                PlaybackManager.instance.play({
+                  'title': s.name,
+                  'subtitle': s.description ?? '',
+                  'image': s.profilepic ?? '',
+                  'url': url
+                });
+              }
           }
         }
       } catch (_) {
@@ -391,7 +404,8 @@ class _HomePageState extends State<HomePage>
           !PlaybackManager.instance.isPlaying) {
         print('Home: resuming last song ${last['title']}');
         PlaybackManager.instance.play(last);
-        // open the full player page so user sees what's playing
+        // open the full player page so user sees what's playing (guard mounted)
+        if (!mounted) return;
         Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => SongPage(
                   title: last['title'] ?? '',
@@ -449,335 +463,277 @@ class _HomePageState extends State<HomePage>
           backgroundColor: Colors.transparent,
           builder: (_) {
             return SafeArea(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                    color: Colors.black87,
-                    borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12))),
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.person, color: Colors.white),
-                      title: const Text('Profile',
-                          style: TextStyle(color: Colors.white)),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => const ProfilePage()));
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.download, color: Colors.white),
-                      title: const Text('Downloads',
-                          style: TextStyle(color: Colors.white)),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => const DownloadsPage()));
-                      },
-                    ),
-                    ListTile(
-                      leading:
-                          const Icon(Icons.filter_list, color: Colors.white),
-                      title: const Text('Filters',
-                          style: TextStyle(color: Colors.white)),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        showModalBottomSheet<void>(
-                            context: context,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) {
-                              return SafeArea(
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: const BoxDecoration(
-                                      color: Colors.black87,
-                                      borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(12),
-                                          topRight: Radius.circular(12))),
-                                  padding: const EdgeInsets.all(12),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Text('Library Filters',
-                                          style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold)),
-                                      const SizedBox(height: 12),
-                                      ValueListenableBuilder<Set<String>>(
-                                          valueListenable: LibraryData.filters,
-                                          builder: (ctx, active, __) {
-                                            bool has(String k) =>
-                                                active.contains(k);
-                                            return Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                CheckboxListTile(
-                                                  value: has('liked'),
-                                                  onChanged: (v) {
-                                                    final s = Set<String>.from(
-                                                        LibraryData
-                                                            .filters.value);
-                                                    if (v == true) {
-                                                      s.add('liked');
-                                                    } else {
-                                                      s.remove('liked');
-                                                    }
-                                                    LibraryData.filters.value =
-                                                        s;
-                                                  },
-                                                  title: const Text(
-                                                      'Liked Songs',
-                                                      style: TextStyle(
-                                                          color: Colors.white)),
-                                                  activeColor:
-                                                      BakwaasPalette.neonGreen,
-                                                  controlAffinity:
-                                                      ListTileControlAffinity
-                                                          .leading,
-                                                ),
-                                                CheckboxListTile(
-                                                  value: has('albums'),
-                                                  onChanged: (v) {
-                                                    final s = Set<String>.from(
-                                                        LibraryData
-                                                            .filters.value);
-                                                    if (v == true) {
-                                                      s.add('albums');
-                                                    } else {
-                                                      s.remove('albums');
-                                                    }
-                                                    LibraryData.filters.value =
-                                                        s;
-                                                  },
-                                                  title: const Text('Albums',
-                                                      style: TextStyle(
-                                                          color: Colors.white)),
-                                                  activeColor:
-                                                      BakwaasPalette.neonGreen,
-                                                  controlAffinity:
-                                                      ListTileControlAffinity
-                                                          .leading,
-                                                ),
-                                                CheckboxListTile(
-                                                  value: has('artists'),
-                                                  onChanged: (v) {
-                                                    final s = Set<String>.from(
-                                                        LibraryData
-                                                            .filters.value);
-                                                    if (v == true) {
-                                                      s.add('artists');
-                                                    } else {
-                                                      s.remove('artists');
-                                                    }
-                                                    LibraryData.filters.value =
-                                                        s;
-                                                  },
-                                                  title: const Text('Artists',
-                                                      style: TextStyle(
-                                                          color: Colors.white)),
-                                                  activeColor:
-                                                      BakwaasPalette.neonGreen,
-                                                  controlAffinity:
-                                                      ListTileControlAffinity
-                                                          .leading,
-                                                ),
-                                                CheckboxListTile(
-                                                  value: has('downloads'),
-                                                  onChanged: (v) {
-                                                    final s = Set<String>.from(
-                                                        LibraryData
-                                                            .filters.value);
-                                                    if (v == true) {
-                                                      s.add('downloads');
-                                                    } else {
-                                                      s.remove('downloads');
-                                                    }
-                                                    LibraryData.filters.value =
-                                                        s;
-                                                  },
-                                                  title: const Text('Downloads',
-                                                      style: TextStyle(
-                                                          color: Colors.white)),
-                                                  activeColor:
-                                                      BakwaasPalette.neonGreen,
-                                                  controlAffinity:
-                                                      ListTileControlAffinity
-                                                          .leading,
-                                                ),
-                                                CheckboxListTile(
-                                                  value: has('playlists'),
-                                                  onChanged: (v) {
-                                                    final s = Set<String>.from(
-                                                        LibraryData
-                                                            .filters.value);
-                                                    if (v == true) {
-                                                      s.add('playlists');
-                                                    } else {
-                                                      s.remove('playlists');
-                                                    }
-                                                    LibraryData.filters.value =
-                                                        s;
-                                                  },
-                                                  title: const Text('Playlists',
-                                                      style: TextStyle(
-                                                          color: Colors.white)),
-                                                  activeColor:
-                                                      BakwaasPalette.neonGreen,
-                                                  controlAffinity:
-                                                      ListTileControlAffinity
-                                                          .leading,
-                                                ),
-                                                  CheckboxListTile(
-                                                    value: has('stations'),
-                                                    onChanged: (v) {
-                                                      final s = Set<String>.from(
-                                                          LibraryData
-                                                              .filters.value);
-                                                      if (v == true) {
-                                                        s.add('stations');
-                                                      } else {
-                                                        s.remove('stations');
-                                                      }
-                                                      LibraryData.filters.value =
-                                                          s;
-                                                    },
-                                                    title: const Text('Stations',
-                                                        style: TextStyle(
-                                                            color: Colors.white)),
-                                                    activeColor:
-                                                        BakwaasPalette.neonGreen,
-                                                    controlAffinity:
-                                                        ListTileControlAffinity
-                                                            .leading,
-                                                  ),
-                                                CheckboxListTile(
-                                                  value: has('recent'),
-                                                  onChanged: (v) {
-                                                    final s = Set<String>.from(
-                                                        LibraryData.filters.value);
-                                                    if (v == true) {
-                                                      s.add('recent');
-                                                    } else {
-                                                      s.remove('recent');
-                                                    }
-                                                    LibraryData.filters.value = s;
-                                                  },
-                                                  title: const Text('Recently Played',
-                                                      style: TextStyle(
-                                                          color: Colors.white)),
-                                                  activeColor:
-                                                      BakwaasPalette.neonGreen,
-                                                  controlAffinity:
-                                                      ListTileControlAffinity.leading,
-                                                ),
-                                                const SizedBox(height: 8),
-                                                Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.end,
+              child: ValueListenableBuilder<Map<String, dynamic>>(
+                valueListenable: AppData.uiConfig,
+                builder: (ctx, ui, __) {
+                  String lab(String key, String fallback) {
+                    final labels = ui['labels'] as Map<String, dynamic>?;
+                    return (labels != null && labels.containsKey(key)) ? (labels[key] as String) : fallback;
+                  }
+
+                  final enableDownloads = (ui['features'] is Map<String, dynamic>)
+                      ? ((ui['features'] as Map<String, dynamic>)['enable_downloads'] as bool? ?? false)
+                      : false;
+
+                  return Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                        color: Colors.black87,
+                        borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(12),
+                            topRight: Radius.circular(12))),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.person, color: Colors.white),
+                          title: Text(lab('menu_profile', 'Profile'),
+                              style: const TextStyle(color: Colors.white)),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => const ProfilePage()));
+                          },
+                        ),
+                        // Downloads menu should be visible only when backend
+                        // feature flag is enabled AND user is logged in.
+                        ValueListenableBuilder<bool>(
+                          valueListenable: AppData.isLoggedIn,
+                          builder: (ctx2, loggedIn, __2) {
+                            if (enableDownloads && loggedIn) {
+                              return ListTile(
+                                leading: const Icon(Icons.download, color: Colors.white),
+                                title: Text(lab('menu_downloads', 'Downloads'), style: const TextStyle(color: Colors.white)),
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DownloadsPage()));
+                                },
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.filter_list, color: Colors.white),
+                          title: Text(lab('menu_filters', 'Filters'),
+                              style: const TextStyle(color: Colors.white)),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            showModalBottomSheet<void>(
+                                context: context,
+                                backgroundColor: Colors.transparent,
+                                builder: (_) {
+                                  return SafeArea(
+                                    child: Container(
+                                      width: double.infinity,
+                                      decoration: const BoxDecoration(
+                                          color: Colors.black87,
+                                          borderRadius: BorderRadius.only(
+                                              topLeft: Radius.circular(12),
+                                              topRight: Radius.circular(12))),
+                                      padding: const EdgeInsets.all(12),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(lab('filters_title', 'Library Filters'),
+                                              style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold)),
+                                          const SizedBox(height: 12),
+                                          ValueListenableBuilder<Set<String>>(
+                                              valueListenable: LibraryData.filters,
+                                              builder: (ctx, active, __) {
+                                                bool has(String k) => active.contains(k);
+                                                return Column(
+                                                  mainAxisSize: MainAxisSize.min,
                                                   children: [
-                                                    TextButton(
-                                                        onPressed: () {
-                                                          LibraryData.filters
-                                                                  .value =
-                                                              <String>{};
-                                                          Navigator.of(ctx)
-                                                              .pop();
-                                                        },
-                                                        child: const Text(
-                                                            'Clear',
-                                                            style: TextStyle(
-                                                                color: Colors
-                                                                    .white70))),
-                                                    const SizedBox(width: 8),
-                                                    ElevatedButton(
-                                                      style: ElevatedButton
-                                                          .styleFrom(
-                                                              backgroundColor:
-                                                                  BakwaasPalette
-                                                                      .neonGreen),
-                                                      onPressed: () =>
-                                                          Navigator.of(ctx)
-                                                              .pop(),
-                                                      child: const Text('Done'),
+                                                    CheckboxListTile(
+                                                      value: has('liked'),
+                                                      onChanged: (v) {
+                                                        final s = Set<String>.from(LibraryData.filters.value);
+                                                        if (v == true) {
+                                                          s.add('liked');
+                                                        } else {
+                                                          s.remove('liked');
+                                                        }
+                                                        LibraryData.filters.value = s;
+                                                      },
+                                                      title: Text(lab('filter_liked', 'Liked Songs'), style: const TextStyle(color: Colors.white)),
+                                                      activeColor: BakwaasPalette.neonGreen,
+                                                      controlAffinity: ListTileControlAffinity.leading,
+                                                    ),
+                                                    CheckboxListTile(
+                                                      value: has('albums'),
+                                                      onChanged: (v) {
+                                                        final s = Set<String>.from(LibraryData.filters.value);
+                                                        if (v == true) {
+                                                          s.add('albums');
+                                                        } else {
+                                                          s.remove('albums');
+                                                        }
+                                                        LibraryData.filters.value = s;
+                                                      },
+                                                      title: Text(lab('filter_albums', 'Albums'), style: const TextStyle(color: Colors.white)),
+                                                      activeColor: BakwaasPalette.neonGreen,
+                                                      controlAffinity: ListTileControlAffinity.leading,
+                                                    ),
+                                                    CheckboxListTile(
+                                                      value: has('artists'),
+                                                      onChanged: (v) {
+                                                        final s = Set<String>.from(LibraryData.filters.value);
+                                                        if (v == true) {
+                                                          s.add('artists');
+                                                        } else {
+                                                          s.remove('artists');
+                                                        }
+                                                        LibraryData.filters.value = s;
+                                                      },
+                                                      title: Text(lab('filter_artists', 'Artists'), style: const TextStyle(color: Colors.white)),
+                                                      activeColor: BakwaasPalette.neonGreen,
+                                                      controlAffinity: ListTileControlAffinity.leading,
+                                                    ),
+                                                      // Show the Downloads filter only when the backend
+                                                      // feature flag is enabled AND the user is logged in.
+                                                      // This prevents the UI from advertising download
+                                                      // functionality when it's not available.
+                                                      if (enableDownloads)
+                                                        ValueListenableBuilder<bool>(
+                                                          valueListenable: AppData.isLoggedIn,
+                                                          builder: (ctx3, loggedIn, __3) {
+                                                            if (!loggedIn) return const SizedBox.shrink();
+                                                            return CheckboxListTile(
+                                                              value: has('downloads'),
+                                                              onChanged: (v) {
+                                                                final s = Set<String>.from(LibraryData.filters.value);
+                                                                if (v == true) {
+                                                                  s.add('downloads');
+                                                                } else {
+                                                                  s.remove('downloads');
+                                                                }
+                                                                LibraryData.filters.value = s;
+                                                              },
+                                                              title: Text(lab('filter_downloads', 'Downloads'), style: const TextStyle(color: Colors.white)),
+                                                              activeColor: BakwaasPalette.neonGreen,
+                                                              controlAffinity: ListTileControlAffinity.leading,
+                                                            );
+                                                          },
+                                                        ),
+                                                    CheckboxListTile(
+                                                      value: has('playlists'),
+                                                      onChanged: (v) {
+                                                        final s = Set<String>.from(LibraryData.filters.value);
+                                                        if (v == true) {
+                                                          s.add('playlists');
+                                                        } else {
+                                                          s.remove('playlists');
+                                                        }
+                                                        LibraryData.filters.value = s;
+                                                      },
+                                                      title: Text(lab('filter_playlists', 'Playlists'), style: const TextStyle(color: Colors.white)),
+                                                      activeColor: BakwaasPalette.neonGreen,
+                                                      controlAffinity: ListTileControlAffinity.leading,
+                                                    ),
+                                                    CheckboxListTile(
+                                                      value: has('stations'),
+                                                      onChanged: (v) {
+                                                        final s = Set<String>.from(LibraryData.filters.value);
+                                                        if (v == true) {
+                                                          s.add('stations');
+                                                        } else {
+                                                          s.remove('stations');
+                                                        }
+                                                        LibraryData.filters.value = s;
+                                                      },
+                                                      title: Text(lab('filter_stations', 'Stations'), style: const TextStyle(color: Colors.white)),
+                                                      activeColor: BakwaasPalette.neonGreen,
+                                                      controlAffinity: ListTileControlAffinity.leading,
+                                                    ),
+                                                    CheckboxListTile(
+                                                      value: has('recent'),
+                                                      onChanged: (v) {
+                                                        final s = Set<String>.from(LibraryData.filters.value);
+                                                        if (v == true) {
+                                                          s.add('recent');
+                                                        } else {
+                                                          s.remove('recent');
+                                                        }
+                                                        LibraryData.filters.value = s;
+                                                      },
+                                                      title: Text(lab('filter_recent', 'Recently Played'), style: const TextStyle(color: Colors.white)),
+                                                      activeColor: BakwaasPalette.neonGreen,
+                                                      controlAffinity: ListTileControlAffinity.leading,
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Row(
+                                                      mainAxisAlignment: MainAxisAlignment.end,
+                                                      children: [
+                                                        TextButton(
+                                                            onPressed: () {
+                                                              LibraryData.filters.value = <String>{};
+                                                              Navigator.of(ctx).pop();
+                                                            },
+                                                            child: Text(lab('filters_clear', 'Clear'), style: const TextStyle(color: Colors.white70))),
+                                                        const SizedBox(width: 8),
+                                                        ElevatedButton(
+                                                          style: ElevatedButton.styleFrom(backgroundColor: BakwaasPalette.neonGreen),
+                                                          onPressed: () => Navigator.of(ctx).pop(),
+                                                          child: Text(lab('filters_done', 'Done')),
+                                                        )
+                                                      ],
                                                     )
                                                   ],
-                                                )
-                                              ],
-                                            );
-                                          }),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            });
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.play_circle_fill,
-                          color: Colors.white),
-                      title: const Text('Now Playing',
-                          style: TextStyle(color: Colors.white)),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        final song = _heroSong ??
-                            {
-                              'title': 'Dhaka FM',
-                              'subtitle': 'Live Radio',
-                              'image': ''
-                            };
-                        Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => SongPage(
-                                  title: song['title'] ?? 'Dhaka FM',
-                                  subtitle: song['subtitle'] ?? 'Live Radio',
-                                  imageUrl: song['image'],
-                                  autoplay: _playback.isPlaying,
-                                )));
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.timer, color: Colors.white),
-                      title: const Text('Sleep Timer',
-                          style: TextStyle(color: Colors.white)),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        showModalBottomSheet<void>(
-                            context: context,
-                            builder: (_) {
-                              return SafeArea(
-                                  child: Container(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Text('Set Sleep Timer',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold)),
+                                                );
+                                              }),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                });
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.play_circle_fill, color: Colors.white),
+                          title: Text(lab('menu_now_playing', 'Now Playing'), style: const TextStyle(color: Colors.white)),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            final song = _heroSong ?? {'title': 'Dhaka FM', 'subtitle': 'Live Radio', 'image': ''};
+                            Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => SongPage(
+                                      title: song['title'] ?? 'Dhaka FM',
+                                      subtitle: song['subtitle'] ?? 'Live Radio',
+                                      imageUrl: song['image'],
+                                      autoplay: _playback.isPlaying,
+                                    )));
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.timer, color: Colors.white),
+                          title: Text(lab('menu_sleep_timer', 'Sleep Timer'), style: const TextStyle(color: Colors.white)),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            showModalBottomSheet<void>(
+                                context: context,
+                                builder: (_) {
+                                  return SafeArea(
+                                      child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                      const Text('Set Sleep Timer', style: TextStyle(fontWeight: FontWeight.bold)),
                                       const SizedBox(height: 12),
-                                      ListTile(
-                                          title: const Text('15 minutes'),
-                                          onTap: () =>
-                                              Navigator.of(context).pop()),
-                                      ListTile(
-                                          title: const Text('30 minutes'),
-                                          onTap: () =>
-                                              Navigator.of(context).pop()),
-                                      ListTile(
-                                          title: const Text('60 minutes'),
-                                          onTap: () =>
-                                              Navigator.of(context).pop()),
+                                      ListTile(title: const Text('15 minutes'), onTap: () => Navigator.of(context).pop()),
+                                      ListTile(title: const Text('30 minutes'), onTap: () => Navigator.of(context).pop()),
+                                      ListTile(title: const Text('60 minutes'), onTap: () => Navigator.of(context).pop()),
                                     ]),
-                              ));
-                            });
-                      },
+                                  ));
+                                });
+                          },
+                        ),
+                        const SizedBox(height: 6),
+                      ],
                     ),
-                    const SizedBox(height: 6),
-                  ],
-                ),
+                  );
+                },
               ),
             );
           }),

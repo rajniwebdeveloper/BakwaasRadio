@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:uni_links/uni_links.dart';
 
@@ -14,20 +15,41 @@ class DeepLinkHandler {
   StreamSubscription? _shareSubs;
 
   void startListening(BuildContext context) {
-    // Listen for app link URIs (cold start is handled elsewhere via initialUri)
-    _sub ??= uriLinkStream.listen((uri) {
-      if (uri == null) return;
-      _handleIncoming(context, uri.toString());
-    }, onError: (err) {
-      // ignore errors
-    });
+    // On web the `uriLinkStream` implementation is not supported (can't change
+    // the page URL without a reload) so avoid subscribing to the stream there.
+    if (!kIsWeb) {
+      // Listen for app link URIs (cold start is handled elsewhere via initialUri)
+      _sub ??= uriLinkStream.listen((uri) {
+        if (uri == null) return;
+        _handleIncoming(context, uri.toString());
+      }, onError: (err) {
+        // ignore errors
+      });
 
-    // Note: share-intent package removed for now — only handle app links via uni_links.
-
-    // Also handle initial uri if app opened via link
-    getInitialUri().then((uri) {
-      if (uri != null) _handleIncoming(context, uri.toString());
-    }).catchError((_) {});
+      // Also handle initial uri if app opened via link (native platforms)
+      getInitialUri().then((uri) {
+        if (uri != null) _handleIncoming(context, uri.toString());
+      }).catchError((_) {});
+    } else {
+      // For web, check current page URL once (e.g. when the app is opened with
+      // a query/path) and navigate if it contains a link. Avoid trying to
+      // subscribe to streams which are unimplemented on web.
+      try {
+        final current = Uri.base.toString();
+        if (current.isNotEmpty) {
+          final urls = _extractUrls(current);
+          if (urls.isNotEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              try {
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => ImportLinkPage(urls: urls),
+                ));
+              } catch (_) {}
+            });
+          }
+        }
+      } catch (_) {}
+    }
   }
 
   void dispose() {

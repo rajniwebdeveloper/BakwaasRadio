@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'app_data.dart';
+import 'api_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -229,8 +231,92 @@ class _ProfilePageState extends State<ProfilePage> {
           );
         });
     if (saved == true) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Profile updated')));
+      // Update local profile info. Do NOT automatically mark as logged in
+      // unless the user completed an auth flow.
+      AppData.currentUser.value = {'name': _name, 'email': _email, 'phone': _phone};
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated')));
+    }
+  }
+
+  Future<void> _showLoginDialog() async {
+    final emailCtrl = TextEditingController();
+    final passCtrl = TextEditingController();
+    final result = await showDialog<bool>(
+        context: context,
+        builder: (ctx) {
+          return AlertDialog(
+            title: const Text('Login'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: emailCtrl, decoration: const InputDecoration(hintText: 'Email')),
+                const SizedBox(height: 8),
+                TextField(controller: passCtrl, decoration: const InputDecoration(hintText: 'Password'), obscureText: true),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Login'))
+            ],
+          );
+        });
+    if (result == true) {
+      final email = emailCtrl.text.trim();
+      final pwd = passCtrl.text;
+      try {
+        final resp = await ApiService.login(email, pwd);
+        if (resp != null && resp['ok'] == true) {
+          AppData.currentUser.value = resp['user'] as Map<String, dynamic>;
+          if (resp.containsKey('token')) AppData.currentUser.value['token'] = resp['token'];
+          AppData.isLoggedIn.value = true;
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logged in')));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(resp['error'] ?? 'Login failed')));
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login error: $e')));
+      }
+    }
+  }
+
+  Future<void> _showSignupDialog() async {
+    final emailCtrl = TextEditingController();
+    final passCtrl = TextEditingController();
+    final result = await showDialog<bool>(
+        context: context,
+        builder: (ctx) {
+          return AlertDialog(
+            title: const Text('Sign up'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: emailCtrl, decoration: const InputDecoration(hintText: 'Email')),
+                const SizedBox(height: 8),
+                TextField(controller: passCtrl, decoration: const InputDecoration(hintText: 'Password'), obscureText: true),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Sign up'))
+            ],
+          );
+        });
+    if (result == true) {
+      final email = emailCtrl.text.trim();
+      final pwd = passCtrl.text;
+      try {
+        final resp = await ApiService.signup(email, pwd);
+        if (resp != null && resp['ok'] == true) {
+          AppData.currentUser.value = resp['user'] as Map<String, dynamic>;
+          if (resp.containsKey('token')) AppData.currentUser.value['token'] = resp['token'];
+          AppData.isLoggedIn.value = true;
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account created and logged in')));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(resp['error'] ?? 'Signup failed')));
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Signup error: $e')));
+      }
     }
   }
 
@@ -497,19 +583,48 @@ class _ProfilePageState extends State<ProfilePage> {
               const Spacer(),
 
               Center(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent),
-                  onPressed: () {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Signed out')));
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: AppData.isLoggedIn,
+                  builder: (ctx, loggedIn, __) {
+                    if (loggedIn) {
+                      return ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                        onPressed: () {
+                          AppData.currentUser.value = <String, dynamic>{};
+                          AppData.isLoggedIn.value = false;
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Signed out')));
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12),
+                          child: Text('Sign out'),
+                        ),
+                      );
+                    }
+
+                    // Not logged in: show Login / Sign up actions
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ElevatedButton(
+                          onPressed: _showLoginDialog,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 18.0, vertical: 12),
+                            child: Text('Login'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+                          onPressed: _showSignupDialog,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 14.0, vertical: 12),
+                            child: Text('Sign up'),
+                          ),
+                        )
+                      ],
+                    );
                   },
-                  child: const Padding(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 20.0, vertical: 12),
-                    child: Text('Sign out'),
-                  ),
                 ),
               ),
               const SizedBox(height: 12),

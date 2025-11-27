@@ -149,4 +149,67 @@ class ApiService {
     print('getUpdateInfo failed body: ${response.body}');
     throw Exception('Failed to load update info: ${response.statusCode} ${response.body}');
   }
+
+  /// Fetch UI configuration (labels/features) from backend.
+  /// Endpoint: /api/ui-config (optional). If server does not provide this
+  /// endpoint the caller should handle errors and fall back to defaults.
+  static Future<Map<String, dynamic>> getUiConfig() async {
+    final base = await _baseUrl();
+    final uri = Uri.parse('$base/api/ui-config');
+    final response = await http.get(uri);
+    // ignore: avoid_print
+    print('GET $uri -> ${response.statusCode}');
+    if (response.statusCode == 200) {
+      try {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        return data;
+      } catch (e, st) {
+        // ignore: avoid_print
+        print('ApiService.getUiConfig decode error: $e');
+        // ignore: avoid_print
+        print(st);
+        rethrow;
+      }
+    }
+    throw Exception('Failed to load ui-config: ${response.statusCode} ${response.body}');
+  }
+
+  /// Signup with email/password. Returns decoded JSON which contains `token` on success.
+  static Future<dynamic> signup(String email, String password) async {
+    final base = await _baseUrl();
+    final uri = Uri.parse('$base/api/auth/signup');
+    final response = await http.post(uri, body: json.encode({'email': email, 'password': password}), headers: {'Content-Type': 'application/json'});
+    // ignore: avoid_print
+    print('POST $uri -> ${response.statusCode}');
+    if (response.statusCode == 200) return json.decode(response.body);
+    // ignore: avoid_print
+    print('signup failed body: ${response.body}');
+    throw Exception('Signup failed: ${response.statusCode} ${response.body}');
+  }
+
+  /// Login with email/password. Returns decoded JSON which contains `token` on success.
+  static Future<dynamic> login(String email, String password) async {
+    final base = await _baseUrl();
+    final uri = Uri.parse('$base/api/auth/login');
+    final response = await http.post(uri, body: json.encode({'email': email, 'password': password}), headers: {'Content-Type': 'application/json'});
+    // ignore: avoid_print
+    print('POST $uri -> ${response.statusCode}');
+    if (response.statusCode == 200) return json.decode(response.body);
+    // ignore: avoid_print
+    print('login failed body: ${response.body}');
+    throw Exception('Login failed: ${response.statusCode} ${response.body}');
+  }
+
+  /// Verify token and return user info.
+  static Future<dynamic> me(String token) async {
+    final base = await _baseUrl();
+    final uri = Uri.parse('$base/api/auth/me');
+    final response = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
+    // ignore: avoid_print
+    print('GET $uri -> ${response.statusCode}');
+    if (response.statusCode == 200) return json.decode(response.body);
+    // ignore: avoid_print
+    print('me failed body: ${response.body}');
+    throw Exception('Me failed: ${response.statusCode} ${response.body}');
+  }
 }
