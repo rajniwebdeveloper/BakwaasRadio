@@ -5,4 +5,6 @@
   "display": "standalone",
   "background_color": "#22252B",
   "theme_color": "#22252B"
+  ,
+  "version": "10.0.0"
 }

@@ -7,8 +7,11 @@ plugins {
 
 android {
     namespace = "com.bakwaas.fm"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // Target Android SDK 36 and explicit build-tools (use installed 36.1.0)
+    compileSdk = 36
+    buildToolsVersion = "36.1.0"
+    // Use the installed Android NDK version 29 to match local SDK installation.
+    ndkVersion = "29.0.14206865"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

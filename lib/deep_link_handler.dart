@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:uni_links/uni_links.dart';
+import 'package:app_links/app_links.dart';
 
 import 'import_link_page.dart';
 
@@ -11,23 +11,22 @@ class DeepLinkHandler {
   DeepLinkHandler._private();
   static final DeepLinkHandler instance = DeepLinkHandler._private();
 
-  StreamSubscription? _sub;
   StreamSubscription? _shareSubs;
+  AppLinks? _appLinks;
 
   void startListening(BuildContext context) {
     // On web the `uriLinkStream` implementation is not supported (can't change
     // the page URL without a reload) so avoid subscribing to the stream there.
     if (!kIsWeb) {
-      // Listen for app link URIs (cold start is handled elsewhere via initialUri)
-      _sub ??= uriLinkStream.listen((uri) {
-        if (uri == null) return;
-        _handleIncoming(context, uri.toString());
-      }, onError: (err) {
-        // ignore errors
+      // Use AppLinks package for deep-linking (supports new embedding)
+      _appLinks ??= AppLinks(onAppLink: (uri, stringUri) {
+        try {
+          _handleIncoming(context, uri.toString());
+        } catch (_) {}
       });
 
       // Also handle initial uri if app opened via link (native platforms)
-      getInitialUri().then((uri) {
+      _appLinks!.getInitialAppLink().then((uri) {
         if (uri != null) _handleIncoming(context, uri.toString());
       }).catchError((_) {});
     } else {
@@ -53,8 +52,7 @@ class DeepLinkHandler {
   }
 
   void dispose() {
-    _sub?.cancel();
-    _sub = null;
+    _appLinks = null;
     _shareSubs?.cancel();
     _shareSubs = null;
   }

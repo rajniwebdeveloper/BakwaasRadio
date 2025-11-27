@@ -15,33 +15,33 @@ const router = express.Router();
 // You can later change these values to read from DB or environment variables
 const updateMetadata = {
   iso: {
-    version: '1.4.0',
-    build: '140',
+    version: '10.0.0',
+    build: '10',
     releaseNotes: 'Bug fixes and performance improvements',
     url: 'https://apps.apple.com/app/idYOUR_APP_ID',
     force: false
   },
   android: {
-    version: '1.4.2',
-    code: 142,
+    version: '10.0.0',
+    code: 10,
     releaseNotes: 'Small fixes, improved playback',
     url: 'https://play.google.com/store/apps/details?id=your.package.name',
     force: false
   },
   web: {
-    version: '1.0.5',
+    version: '10.0.0',
     releaseNotes: 'Web UI improvements',
     url: 'https://radio.rajnikantmahato.me',
     force: false
   },
   windows: {
-    version: '1.0.0',
+    version: '10.0.0',
     releaseNotes: 'Initial desktop build',
     url: '',
     force: false
   },
   macos: {
-    version: '1.0.0',
+    version: '10.0.0',
     releaseNotes: 'Initial desktop build',
     url: '',
     force: false

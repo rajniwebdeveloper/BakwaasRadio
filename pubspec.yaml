@@ -1,7 +1,7 @@
 name: bakwaas_fm
 description: A simple mockup app
 publish_to: 'none'
-version: 6.0.0+6
+version: 10.0.0+10
 
 environment:
   # Allow newer Dart versions (Dart 3+ with recent Flutter). Updated to avoid
@@ -12,11 +12,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  uni_links: ^0.5.1
+  app_links: ^2.0.4
   http: ^1.2.1
   audioplayers: ^6.0.0
   url_launcher: ^6.1.5
   shared_preferences: ^2.1.1
+  msix: ^3.16.12
 
 dev_dependencies:
   flutter_test:
