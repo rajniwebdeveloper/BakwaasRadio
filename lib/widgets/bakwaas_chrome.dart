@@ -230,8 +230,8 @@ class BakwaasTopBar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(AppInfo.appName, style: BakwaasTheme.headingStyle),
-                    Text(AppInfo.packageName,
-                        style: const TextStyle(
+                    const Text(AppInfo.packageName,
+                        style: TextStyle(
                             color: Colors.white70,
                             fontSize: 10,
                             fontWeight: FontWeight.w600)),

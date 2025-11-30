@@ -5,7 +5,14 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "dev:radioindia": "node dev_server_radioindia.js",
+    "fetch:radioindia": "node lib/radioindia.in.js",
+    "test:radioindia-first-url": "node scripts/test_first_url.js",
+    "extract:radioindia": "node scripts/extract_radioindia_data.js",
+    "extract:radioindia-bycategory": "node scripts/extract_radioindia_bycategory.js",
+    "augment:radioindia-cats": "node scripts/augment_categories.js",
+    "fetch:radioindia-stations": "node scripts/fetch_station_details.js"
   },
   "dependencies": {
     "@distube/ytdl-core": "^4.16.12",
@@ -18,7 +25,8 @@
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "youtubei.js": "^14.0.0",
-    "ytdl-core": "latest"
+    "ytdl-core": "latest",
+    "cheerio": "^1.0.0-rc.12"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

@@ -273,7 +273,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('♪',
+                      const Text('♪',
                           style: TextStyle(
                               color: Colors.tealAccent,
                               fontWeight: FontWeight.bold)),
@@ -284,7 +284,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                               letterSpacing: 2,
                               fontSize: 12)),
                       const SizedBox(width: 6),
-                      Text('♪',
+                      const Text('♪',
                           style: TextStyle(
                               color: Colors.tealAccent,
                               fontWeight: FontWeight.bold)),

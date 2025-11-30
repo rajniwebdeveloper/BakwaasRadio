@@ -1,0 +1,117 @@
+{
+  "generatedAt": "2025-11-29T03:37:03.907Z",
+  "category": "Kerala",
+  "count": 10,
+  "stations": [
+    {
+      "name": "Vismaya Kerala Malayalam Internet Radio",
+      "slug": "vismaya-kerala-malayalam-internet-radio",
+      "playerUrl": "https://www.radioindia.in/vismaya-kerala-malayalam-internet-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/hEmhQxAZh4.png",
+      "description": "Listen to Vismaya Kerala Malayalam Internet Radio online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Kerala"
+      ]
+    },
+    {
+      "name": "Radio Kerala",
+      "slug": "kerala-radio",
+      "playerUrl": "https://www.radioindia.in/kerala-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/f6Q2nRUhad.png",
+      "description": "Listen to Radio Kerala online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Kerala"
+      ]
+    },
+    {
+      "name": "Kerala Malabar Islamic Radio",
+      "slug": "kerala-malabar-islamic-radio",
+      "playerUrl": "https://www.radioindia.in/kerala-malabar-islamic-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/bp7ssuvRct.png",
+      "description": "Listen to Kerala Malabar Islamic Radio online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Kerala"
+      ]
+    },
+    {
+      "name": "Kerala FM",
+      "slug": "keralam-fm",
+      "playerUrl": "https://www.radioindia.in/keralam-fm",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/XCg4ezfKyN.png",
+      "description": "Listen to Kerala FM online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Kerala"
+      ]
+    },
+    {
+      "name": "Akashvani Kerala",
+      "slug": "akashvani-kerala",
+      "playerUrl": "https://www.radioindia.in/akashvani-kerala",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/emdejgftnejj.jpg",
+      "description": "Listen to Akashvani Kerala online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Kerala"
+      ]
+    },
+    {
+      "name": "Vismaya Kerala Malayalam Internet Radio",
+      "slug": "vismaya-kerala-malayalam-internet-radio",
+      "playerUrl": "https://www.radioindia.in/vismaya-kerala-malayalam-internet-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/hEmhQxAZh4.png",
+      "description": "Listen to Vismaya Kerala Malayalam Internet Radio online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Kerala"
+      ]
+    },
+    {
+      "name": "Radio Kerala",
+      "slug": "kerala-radio",
+      "playerUrl": "https://www.radioindia.in/kerala-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/f6Q2nRUhad.png",
+      "description": "Listen to Radio Kerala online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Kerala"
+      ]
+    },
+    {
+      "name": "Kerala FM",
+      "slug": "keralam-fm",
+      "playerUrl": "https://www.radioindia.in/keralam-fm",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/XCg4ezfKyN.png",
+      "description": "Listen to Kerala FM online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Kerala"
+      ]
+    },
+    {
+      "name": "Kerala Malabar Islamic Radio",
+      "slug": "kerala-malabar-islamic-radio",
+      "playerUrl": "https://www.radioindia.in/kerala-malabar-islamic-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/bp7ssuvRct.png",
+      "description": "Listen to Kerala Malabar Islamic Radio online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Kerala"
+      ]
+    },
+    {
+      "name": "Akashvani Kerala",
+      "slug": "akashvani-kerala",
+      "playerUrl": "https://www.radioindia.in/akashvani-kerala",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/emdejgftnejj.jpg",
+      "description": "Listen to Akashvani Kerala online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Kerala"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "generatedAt": "2025-11-29T03:37:03.909Z",
+  "category": "Tamil Nadu",
+  "count": 2,
+  "stations": [
+    {
+      "name": "Akashvani Tamil Nadu",
+      "slug": "akashvani-tamil-nadu",
+      "playerUrl": "https://www.radioindia.in/akashvani-tamil-nadu",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/76gxfe8avpxw.jpg",
+      "description": "Listen to Akashvani Tamil Nadu online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Tamil Nadu"
+      ]
+    },
+    {
+      "name": "Akashvani Tamil Nadu",
+      "slug": "akashvani-tamil-nadu",
+      "playerUrl": "https://www.radioindia.in/akashvani-tamil-nadu",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/76gxfe8avpxw.jpg",
+      "description": "Listen to Akashvani Tamil Nadu online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Tamil Nadu"
+      ]
+    }
+  ]
+}

@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'library/song_page.dart';
 import 'library/library_data.dart';
 import 'playback_manager.dart';
+import 'background_audio.dart';
 import 'library/library_page.dart';
 import 'app_data.dart';
 import 'profile_page.dart';
@@ -75,6 +76,12 @@ class _SplashPageState extends State<SplashPage> {
     try {
       setState(() => _status = 'Restoring playback...');
       await PlaybackManager.instance.loadPersisted();
+
+      // Request notification permission early (Android 13+) so the
+      // foreground service notification is allowed before starting playback.
+      try {
+        await requestNotificationPermission();
+      } catch (_) {}
 
       setState(() => _status = 'Checking backend...');
       // Try a quick stations call to verify backend is reachable and fetch
@@ -190,7 +197,7 @@ class _SplashPageState extends State<SplashPage> {
           final platformInfo = info[key];
           if (platformInfo is Map<String, dynamic>) {
             final serverVersion = (platformInfo['version'] ?? '') as String;
-            final serverBuild = (platformInfo['build'] ?? platformInfo['code'] ?? null);
+            final serverBuild = (platformInfo['build'] ?? platformInfo['code']);
 
             bool shouldShow = false;
 
@@ -529,7 +536,7 @@ class _HomePageState extends State<HomePage>
                         // feature flag is enabled AND user is logged in.
                         ValueListenableBuilder<bool>(
                           valueListenable: AppData.isLoggedIn,
-                          builder: (ctx2, loggedIn, __2) {
+                          builder: (ctx2, loggedIn, _2) {
                             if (enableDownloads && loggedIn) {
                               return ListTile(
                                 leading: const Icon(Icons.download, color: Colors.white),
@@ -629,7 +636,7 @@ class _HomePageState extends State<HomePage>
                                                       if (enableDownloads)
                                                         ValueListenableBuilder<bool>(
                                                           valueListenable: AppData.isLoggedIn,
-                                                          builder: (ctx3, loggedIn, __3) {
+                                                          builder: (ctx3, loggedIn, _3) {
                                                             if (!loggedIn) return const SizedBox.shrink();
                                                             return CheckboxListTile(
                                                               value: has('downloads'),
@@ -811,8 +818,8 @@ class _HomePageState extends State<HomePage>
                 )
               : (_activeTab == 2)
                   // Render Library inline using the same LibraryPage content
-                  ? Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+                  ? const Padding(
+                      padding: EdgeInsets.fromLTRB(20, 0, 20, 140),
                       child: LibraryPage(useScaffold: false),
                     )
                   : ListView(

@@ -1,0 +1,51 @@
+{
+  "generatedAt": "2025-11-29T03:37:03.913Z",
+  "category": "Puducherry",
+  "count": 4,
+  "stations": [
+    {
+      "name": "Akashvani Puducherry",
+      "slug": "akashvani-puducherry",
+      "playerUrl": "https://www.radioindia.in/akashvani-puducherry",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/kxpvsjcr5edt.jpg",
+      "description": "Listen to Akashvani Puducherry online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Puducherry"
+      ]
+    },
+    {
+      "name": "FM Rainbow Puducherry",
+      "slug": "fm-rainbow-puducherry",
+      "playerUrl": "https://www.radioindia.in/fm-rainbow-puducherry",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/lrwwdtdlufpw.jpg",
+      "description": "Listen to FM Rainbow Puducherry online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Puducherry"
+      ]
+    },
+    {
+      "name": "FM Rainbow Puducherry",
+      "slug": "fm-rainbow-puducherry",
+      "playerUrl": "https://www.radioindia.in/fm-rainbow-puducherry",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/lrwwdtdlufpw.jpg",
+      "description": "Listen to FM Rainbow Puducherry online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Puducherry"
+      ]
+    },
+    {
+      "name": "Akashvani Puducherry",
+      "slug": "akashvani-puducherry",
+      "playerUrl": "https://www.radioindia.in/akashvani-puducherry",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/kxpvsjcr5edt.jpg",
+      "description": "Listen to Akashvani Puducherry online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Puducherry"
+      ]
+    }
+  ]
+}

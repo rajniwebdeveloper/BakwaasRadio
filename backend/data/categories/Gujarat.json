@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2025-11-29T03:37:03.906Z",
+  "category": "Gujarat",
+  "count": 6,
+  "stations": [
+    {
+      "name": "Goldy Gujarati",
+      "slug": "goldy-gujarati",
+      "playerUrl": "https://www.radioindia.in/goldy-gujarati",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/xqywneqdfkps.png",
+      "description": "Listen to Goldy Gujarati online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Gujarat"
+      ]
+    },
+    {
+      "name": "Air Kashmir",
+      "slug": "rajkot-air-gujarati-810-am",
+      "playerUrl": "https://www.radioindia.in/rajkot-air-gujarati-810-am",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/tzspex4bugmf.jpg",
+      "description": "Listen to Air Kashmir online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Gujarat"
+      ]
+    },
+    {
+      "name": "Rangilo Gujarat",
+      "slug": "rangilo-gujarat",
+      "playerUrl": "https://www.radioindia.in/rangilo-gujarat",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/M4k4y4Zqd3.jpg",
+      "description": "Listen to Rangilo Gujarat online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Gujarat"
+      ]
+    },
+    {
+      "name": "Goldy Gujarati",
+      "slug": "goldy-gujarati",
+      "playerUrl": "https://www.radioindia.in/goldy-gujarati",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/xqywneqdfkps.png",
+      "description": "Listen to Goldy Gujarati online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Gujarat"
+      ]
+    },
+    {
+      "name": "Air Kashmir",
+      "slug": "rajkot-air-gujarati-810-am",
+      "playerUrl": "https://www.radioindia.in/rajkot-air-gujarati-810-am",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/tzspex4bugmf.jpg",
+      "description": "Listen to Air Kashmir online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Gujarat"
+      ]
+    },
+    {
+      "name": "Rangilo Gujarat",
+      "slug": "rangilo-gujarat",
+      "playerUrl": "https://www.radioindia.in/rangilo-gujarat",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/M4k4y4Zqd3.jpg",
+      "description": "Listen to Rangilo Gujarat online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Gujarat"
+      ]
+    }
+  ]
+}

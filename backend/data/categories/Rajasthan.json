@@ -1,0 +1,51 @@
+{
+  "generatedAt": "2025-11-29T03:37:03.914Z",
+  "category": "Rajasthan",
+  "count": 4,
+  "stations": [
+    {
+      "name": "Rajasthani Bhajan",
+      "slug": "rajasthani-bhajan",
+      "playerUrl": "https://www.radioindia.in/rajasthani-bhajan",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/jtkK5x8kdG.png",
+      "description": "Listen to Rajasthani Bhajan online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Rajasthan"
+      ]
+    },
+    {
+      "name": "Khamma Gani Rajasthan",
+      "slug": "khamma-gani-rajasthan",
+      "playerUrl": "https://www.radioindia.in/khamma-gani-rajasthan",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/Qwmxzb85RS.png",
+      "description": "Listen to Khamma Gani Rajasthan online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Rajasthan"
+      ]
+    },
+    {
+      "name": "Rajasthani Bhajan",
+      "slug": "rajasthani-bhajan",
+      "playerUrl": "https://www.radioindia.in/rajasthani-bhajan",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/jtkK5x8kdG.png",
+      "description": "Listen to Rajasthani Bhajan online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Rajasthan"
+      ]
+    },
+    {
+      "name": "Khamma Gani Rajasthan",
+      "slug": "khamma-gani-rajasthan",
+      "playerUrl": "https://www.radioindia.in/khamma-gani-rajasthan",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/Qwmxzb85RS.png",
+      "description": "Listen to Khamma Gani Rajasthan online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Rajasthan"
+      ]
+    }
+  ]
+}

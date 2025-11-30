@@ -1,12 +1,18 @@
 import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:audio_service/audio_service.dart';
+import 'background_audio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PlaybackManager extends ChangeNotifier {
   PlaybackManager._internal() {
     _audioPlayer = AudioPlayer();
+    // Try to initialize the background audio handler. If that fails,
+    // we continue to use the local AudioPlayer instance as a fallback.
+    _initHandler();
+
     _audioPlayer.onDurationChanged.listen((duration) {
       _durationSeconds = duration.inSeconds;
       notifyListeners();
@@ -25,6 +31,7 @@ class PlaybackManager extends ChangeNotifier {
   static final PlaybackManager instance = PlaybackManager._internal();
 
   late final AudioPlayer _audioPlayer;
+  AudioHandler? _audioHandler;
   Map<String, String>? _currentSong;
   bool _isPlaying = false;
   double _progress = 0.0; // 0.0 - 1.0
@@ -68,7 +75,34 @@ class PlaybackManager extends ChangeNotifier {
     }
   }
 
-  void play(Map<String, String> song, {int duration = 0}) {
+  Future<void> _initHandler() async {
+    try {
+      // Request notification permission on Android 13+ so the service
+      // notification is allowed before starting the background handler.
+      try {
+        await requestNotificationPermission();
+      } catch (_) {}
+
+      _audioHandler = await initBackgroundAudioHandler();
+      // subscribe to handler streams to reflect state in the manager
+      _audioHandler!.playbackState.listen((state) {
+        _isPlaying = state.playing;
+        // update position/duration if available
+        notifyListeners();
+      });
+      _audioHandler!.mediaItem.listen((item) {
+        if (item != null) {
+          _durationSeconds = item.duration?.inSeconds ?? _durationSeconds;
+        }
+        notifyListeners();
+      });
+    } catch (e) {
+      // initialization failed; keep using local player as fallback
+      _audioHandler = null;
+    }
+  }
+
+  Future<void> play(Map<String, String> song, {int duration = 0}) async {
     if (song['url'] == null || song['url']!.isEmpty) {
       return;
     }
@@ -77,12 +111,37 @@ class PlaybackManager extends ChangeNotifier {
     if (_currentSong != null &&
         _mapEquals(_currentSong!, song) &&
         !_isPlaying) {
-      _audioPlayer.resume();
+      if (_audioHandler != null) {
+        _audioHandler!.play();
+      } else {
+        _audioPlayer.resume();
+      }
       return;
     }
 
     _currentSong = Map.from(song);
-    _audioPlayer.play(UrlSource(song['url']!));
+    // Ensure handler is initialized (attempt again) before playback.
+    if (_audioHandler == null) {
+      await _initHandler();
+    }
+
+    if (_audioHandler != null) {
+      try {
+        final handler = _audioHandler as dynamic;
+        // Prepare extras mapping: ensure artwork is passed as 'artUri'
+        final extras = Map<String, String>.from(song);
+        if (extras.containsKey('image') && !extras.containsKey('artUri')) {
+          extras['artUri'] = extras['image']!;
+        }
+        await handler.setUrl(song['url']!, extras: extras);
+        _audioHandler!.play();
+      } catch (_) {
+        // if the handler does not support setUrl, fall back
+        _audioPlayer.play(UrlSource(song['url']!));
+      }
+    } else {
+      _audioPlayer.play(UrlSource(song['url']!));
+    }
     _lastSong = Map.from(song);
     // update history: push front and persist
     _addToHistory(Map.from(song));
@@ -104,7 +163,11 @@ class PlaybackManager extends ChangeNotifier {
   }
 
   void pause() {
-    _audioPlayer.pause();
+    if (_audioHandler != null) {
+      _audioHandler!.pause();
+    } else {
+      _audioPlayer.pause();
+    }
   }
 
   void toggle() {
@@ -119,14 +182,27 @@ class PlaybackManager extends ChangeNotifier {
 
   void seek(double value) {
     final position = value * _durationSeconds;
-    _audioPlayer.seek(Duration(seconds: position.round()));
+    if (_audioHandler != null) {
+      _audioHandler!.seek(Duration(seconds: position.round()));
+    } else {
+      _audioPlayer.seek(Duration(seconds: position.round()));
+    }
   }
 
   /// Set player volume (0.0 - 1.0)
   void setVolume(double v) {
     _volume = v.clamp(0.0, 1.0);
     try {
-      _audioPlayer.setVolume(_volume);
+      if (_audioHandler != null) {
+        try {
+          final handler = _audioHandler as dynamic;
+          handler.setVolume(_volume);
+        } catch (_) {
+          _audioPlayer.setVolume(_volume);
+        }
+      } else {
+        _audioPlayer.setVolume(_volume);
+      }
     } catch (_) {
       // ignore if underlying player doesn't support setVolume
     }
@@ -136,6 +212,7 @@ class PlaybackManager extends ChangeNotifier {
   @override
   void dispose() {
     _audioPlayer.dispose();
+    _audioHandler?.stop();
     super.dispose();
   }
 

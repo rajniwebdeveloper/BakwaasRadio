@@ -48,6 +48,7 @@ console.log('🛣️  Setting up routes...');
 app.use('/api/stations', require('./routes/stations'));
 app.use('/api/streams', require('./routes/streams'));
 app.use('/api/radio', require('./routes/radio'));  // Add new radio routes
+app.use('/api/radioindia', require('./routes/radioindia'));
 
 // Serve admin control panel
 app.get('/admincp', (req, res) => {

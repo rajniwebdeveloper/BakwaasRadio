@@ -15,6 +15,10 @@ dependencies:
   app_links: ^2.0.4
   http: ^1.2.1
   audioplayers: ^6.0.0
+  just_audio: ^0.9.33
+  audio_service: ^0.18.0
+  audio_session: ^0.1.6
+  permission_handler: ^10.4.0
   url_launcher: ^6.1.5
   shared_preferences: ^2.1.1
   msix: ^3.16.12

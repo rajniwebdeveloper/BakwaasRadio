@@ -91,7 +91,7 @@ class _ImportLinkPageState extends State<ImportLinkPage> {
 
         return ValueListenableBuilder<bool>(
           valueListenable: AppData.isLoggedIn,
-          builder: (ctx2, loggedIn, __2) {
+          builder: (ctx2, loggedIn, _2) {
             final showDownloads = enableDownloads && loggedIn;
             return Scaffold(
               appBar: AppBar(
@@ -112,23 +112,23 @@ class _ImportLinkPageState extends State<ImportLinkPage> {
   }
 
   Widget _buildImporting() {
-    return Center(
+    return const Center(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const SizedBox(height: 8),
-        const CircularProgressIndicator(color: Colors.green),
-        const SizedBox(height: 12),
-        const Text('Importing shared link...', style: TextStyle(color: Colors.white70)),
+        SizedBox(height: 8),
+        CircularProgressIndicator(color: Colors.green),
+        SizedBox(height: 12),
+        Text('Importing shared link...', style: TextStyle(color: Colors.white70)),
       ]),
     );
   }
 
   Widget _buildProbing() {
-    return Center(
+    return const Center(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const SizedBox(height: 8),
-        const CircularProgressIndicator(color: Colors.green),
-        const SizedBox(height: 12),
-        const Text('Fetching info from network...', style: TextStyle(color: Colors.white70)),
+        SizedBox(height: 8),
+        CircularProgressIndicator(color: Colors.green),
+        SizedBox(height: 12),
+        Text('Fetching info from network...', style: TextStyle(color: Colors.white70)),
       ]),
     );
   }
@@ -147,7 +147,11 @@ class _ImportLinkPageState extends State<ImportLinkPage> {
               value: selected,
               onChanged: (v) {
                 setState(() {
-                  if (v == true) _selected.add(i); else _selected.remove(i);
+                  if (v == true) {
+                    _selected.add(i);
+                  } else {
+                    _selected.remove(i);
+                  }
                 });
               },
               title: Text(it.title, style: const TextStyle(color: Colors.white)),
@@ -230,7 +234,7 @@ class _UrlInfo {
   String get subtitle {
     final parts = <String>[];
     if (contentType != null) parts.add(contentType!);
-    if (contentLength != null) parts.add('${contentLength} bytes');
+    if (contentLength != null) parts.add('$contentLength bytes');
     return parts.isEmpty ? url : parts.join(' • ');
   }
 }

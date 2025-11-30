@@ -13,6 +13,14 @@ android {
     // Use the installed Android NDK version 29 to match local SDK installation.
     ndkVersion = "29.0.14206865"
 
+    packagingOptions {
+        jniLibs {
+            // Use legacy JNI packaging to avoid issues with some native libraries
+            // and comply with devices expecting the older layout.
+            useLegacyPackaging = true
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -31,6 +39,12 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Pass CMake arguments to support flexible page sizes in native builds
+        externalNativeBuild {
+            cmake {
+                arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
+            }
+        }
     }
 
     buildTypes {

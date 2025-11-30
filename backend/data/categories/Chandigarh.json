@@ -1,0 +1,29 @@
+{
+  "generatedAt": "2025-11-29T03:37:03.901Z",
+  "category": "Chandigarh",
+  "count": 2,
+  "stations": [
+    {
+      "name": "Akashvani Chandigarh",
+      "slug": "akashvani-chandigarh",
+      "playerUrl": "https://www.radioindia.in/akashvani-chandigarh",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/prqrvgplhshn.jpg",
+      "description": "Listen to Akashvani Chandigarh online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Chandigarh"
+      ]
+    },
+    {
+      "name": "Akashvani Chandigarh",
+      "slug": "akashvani-chandigarh",
+      "playerUrl": "https://www.radioindia.in/akashvani-chandigarh",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/prqrvgplhshn.jpg",
+      "description": "Listen to Akashvani Chandigarh online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Chandigarh"
+      ]
+    }
+  ]
+}

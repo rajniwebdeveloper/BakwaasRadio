@@ -1,0 +1,29 @@
+{
+  "generatedAt": "2025-11-29T03:37:03.904Z",
+  "category": "Chhattisgarh",
+  "count": 2,
+  "stations": [
+    {
+      "name": "Akashvani Chhattisgarh",
+      "slug": "akashvani-chhattisgarh",
+      "playerUrl": "https://www.radioindia.in/akashvani-chhattisgarh",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/gvh7phnq2y99.jpg",
+      "description": "Listen to Akashvani Chhattisgarh online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Chhattisgarh"
+      ]
+    },
+    {
+      "name": "Akashvani Chhattisgarh",
+      "slug": "akashvani-chhattisgarh",
+      "playerUrl": "https://www.radioindia.in/akashvani-chhattisgarh",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/gvh7phnq2y99.jpg",
+      "description": "Listen to Akashvani Chhattisgarh online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Chhattisgarh"
+      ]
+    }
+  ]
+}

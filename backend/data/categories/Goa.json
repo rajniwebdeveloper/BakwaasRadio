@@ -1,0 +1,51 @@
+{
+  "generatedAt": "2025-11-29T03:37:03.905Z",
+  "category": "Goa",
+  "count": 4,
+  "stations": [
+    {
+      "name": "Radio Goa",
+      "slug": "radio-goa",
+      "playerUrl": "https://www.radioindia.in/radio-goa",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/hwgvuzh3ujr5.png",
+      "description": "Listen to Radio Goa online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Goa"
+      ]
+    },
+    {
+      "name": "FM Rainbow Goa",
+      "slug": "fm-rainbow-goa",
+      "playerUrl": "https://www.radioindia.in/fm-rainbow-goa",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/ssqcqgq9yk2t.jpg",
+      "description": "Listen to FM Rainbow Goa online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Goa"
+      ]
+    },
+    {
+      "name": "Radio Goa",
+      "slug": "radio-goa",
+      "playerUrl": "https://www.radioindia.in/radio-goa",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/hwgvuzh3ujr5.png",
+      "description": "Listen to Radio Goa online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Goa"
+      ]
+    },
+    {
+      "name": "FM Rainbow Goa",
+      "slug": "fm-rainbow-goa",
+      "playerUrl": "https://www.radioindia.in/fm-rainbow-goa",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/ssqcqgq9yk2t.jpg",
+      "description": "Listen to FM Rainbow Goa online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Goa"
+      ]
+    }
+  ]
+}

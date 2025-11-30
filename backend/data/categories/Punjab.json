@@ -1,0 +1,139 @@
+{
+  "generatedAt": "2025-11-29T03:37:03.900Z",
+  "category": "Punjab",
+  "count": 12,
+  "stations": [
+    {
+      "name": "Bol Punjabi Radio",
+      "slug": "bol-punjabi-radio",
+      "playerUrl": "https://www.radioindia.in/bol-punjabi-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/g3WhNTFt6q.jpg",
+      "description": "Listen to Bol Punjabi Radio online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Punjab"
+      ]
+    },
+    {
+      "name": "Bollywood Punjabi Radio",
+      "slug": "bollywood-punjabi-radio",
+      "playerUrl": "https://www.radioindia.in/bollywood-punjabi-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/nf5dx9fjd5xa.png",
+      "description": "Listen to Bollywood Punjabi Radio online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Punjab"
+      ]
+    },
+    {
+      "name": "Non Stop Punjabi Radio",
+      "slug": "non-stop-punjabi-radio",
+      "playerUrl": "https://www.radioindia.in/non-stop-punjabi-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/101/non-stop-punjabi-radio.6794a0a9.png",
+      "description": "Listen to Non Stop Punjabi Radio online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Punjab"
+      ]
+    },
+    {
+      "name": "AIR Punjabi",
+      "slug": "air-punjabi",
+      "playerUrl": "https://www.radioindia.in/air-punjabi",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/b4fktpnzs5ua.jpg",
+      "description": "Listen to AIR Punjabi online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Punjab"
+      ]
+    },
+    {
+      "name": "Akashvani Punjabi",
+      "slug": "akashvani-punjabi",
+      "playerUrl": "https://www.radioindia.in/akashvani-punjabi",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/wdpvcqh8ebkc.jpg",
+      "description": "Listen to Akashvani Punjabi online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Punjab"
+      ]
+    },
+    {
+      "name": "Visionary Radio Punjabi",
+      "slug": "visionary-radio-punjabi",
+      "playerUrl": "https://www.radioindia.in/visionary-radio-punjabi",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/320/visionary-radio-punjabi.10afc118.jpg",
+      "description": "Listen to Visionary Radio Punjabi online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Punjab"
+      ]
+    },
+    {
+      "name": "Bol Punjabi Radio",
+      "slug": "bol-punjabi-radio",
+      "playerUrl": "https://www.radioindia.in/bol-punjabi-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/g3WhNTFt6q.jpg",
+      "description": "Listen to Bol Punjabi Radio online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Punjab"
+      ]
+    },
+    {
+      "name": "Bollywood Punjabi Radio",
+      "slug": "bollywood-punjabi-radio",
+      "playerUrl": "https://www.radioindia.in/bollywood-punjabi-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/nf5dx9fjd5xa.png",
+      "description": "Listen to Bollywood Punjabi Radio online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Punjab"
+      ]
+    },
+    {
+      "name": "Non Stop Punjabi Radio",
+      "slug": "non-stop-punjabi-radio",
+      "playerUrl": "https://www.radioindia.in/non-stop-punjabi-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/101/non-stop-punjabi-radio.6794a0a9.png",
+      "description": "Listen to Non Stop Punjabi Radio online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Punjab"
+      ]
+    },
+    {
+      "name": "AIR Punjabi",
+      "slug": "air-punjabi",
+      "playerUrl": "https://www.radioindia.in/air-punjabi",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/b4fktpnzs5ua.jpg",
+      "description": "Listen to AIR Punjabi online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Punjab"
+      ]
+    },
+    {
+      "name": "Akashvani Punjabi",
+      "slug": "akashvani-punjabi",
+      "playerUrl": "https://www.radioindia.in/akashvani-punjabi",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/wdpvcqh8ebkc.jpg",
+      "description": "Listen to Akashvani Punjabi online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Punjab"
+      ]
+    },
+    {
+      "name": "Visionary Radio Punjabi",
+      "slug": "visionary-radio-punjabi",
+      "playerUrl": "https://www.radioindia.in/visionary-radio-punjabi",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/320/visionary-radio-punjabi.10afc118.jpg",
+      "description": "Listen to Visionary Radio Punjabi online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Punjab"
+      ]
+    }
+  ]
+}

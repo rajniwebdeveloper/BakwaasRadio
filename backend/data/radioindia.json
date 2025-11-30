@@ -1,0 +1,825 @@
+{
+  "generatedAt": "2025-11-29T03:06:46.036Z",
+  "counts": {
+    "stations": 60,
+    "categories": 47,
+    "locations": 1,
+    "urls": 196
+  },
+  "items": [
+    {
+      "position": 1,
+      "title": "Vividh Bharti (विविध भारती)",
+      "slug": "vividh-bharti",
+      "playerUrl": "https://www.radioindia.in/vividh-bharti",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/238/vividh-bharti.92c90eb1.png"
+    },
+    {
+      "position": 2,
+      "title": "Radio Baingan",
+      "slug": "radio-baingan",
+      "playerUrl": "https://www.radioindia.in/radio-baingan",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/187/radio-baingan.bafe82a1.jpg"
+    },
+    {
+      "position": 3,
+      "title": "Hindi Retro Hits Radio",
+      "slug": "hindi-retro-hits-radio",
+      "playerUrl": "https://www.radioindia.in/hindi-retro-hits-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/7ksqhvudgsc9.jpg"
+    },
+    {
+      "position": 4,
+      "title": "GOLDY Evergreen",
+      "slug": "goldy-evergreen",
+      "playerUrl": "https://www.radioindia.in/goldy-evergreen",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/khbf2jlccjaf.png"
+    },
+    {
+      "position": 5,
+      "title": "Non Stop Hindi",
+      "slug": "non-stop-hindi",
+      "playerUrl": "https://www.radioindia.in/non-stop-hindi",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/Ekv3xnWJpp.png"
+    },
+    {
+      "position": 6,
+      "title": "AIR FM Gold Dehli",
+      "slug": "air-fm-gold",
+      "playerUrl": "https://www.radioindia.in/air-fm-gold",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/M2xsuJ2eSP.jpg"
+    },
+    {
+      "position": 7,
+      "title": "Bollywood Gaane Purane",
+      "slug": "bollywood-gaane-purane",
+      "playerUrl": "https://www.radioindia.in/bollywood-gaane-purane",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/ppqbgfej6skx.jpeg"
+    },
+    {
+      "position": 8,
+      "title": "Radio Retro Bollywood 90s",
+      "slug": "radio-retro-bollywood-90s",
+      "playerUrl": "https://www.radioindia.in/radio-retro-bollywood-90s",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/9fKKkfbJKE.png"
+    },
+    {
+      "position": 9,
+      "title": "Mohabbat Radio",
+      "slug": "mohabbat-radio",
+      "playerUrl": "https://www.radioindia.in/mohabbat-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/608/mohabbat-radio.8821dce6.png"
+    },
+    {
+      "position": 10,
+      "title": "Radio Namkin",
+      "slug": "radio-namkin",
+      "playerUrl": "https://www.radioindia.in/radio-namkin",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 11,
+      "title": "Radio Mirchi 98.3 FM",
+      "slug": "radio-mirchi-983-fm",
+      "playerUrl": "https://www.radioindia.in/radio-mirchi-983-fm",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 12,
+      "title": "AIR Vividh Bharati",
+      "slug": "air-vividh-bharati",
+      "playerUrl": "https://www.radioindia.in/air-vividh-bharati",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 13,
+      "title": "Kumar Sanu",
+      "slug": "kumar-sanu",
+      "playerUrl": "https://www.radioindia.in/kumar-sanu",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 14,
+      "title": "Hindi Desi Bollywood Evergreen Hits",
+      "slug": "hindi-desi-bollywood-evergreen-hits",
+      "playerUrl": "https://www.radioindia.in/hindi-desi-bollywood-evergreen-hits",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 15,
+      "title": "Retro Bollywood",
+      "slug": "retro-bollywood",
+      "playerUrl": "https://www.radioindia.in/retro-bollywood",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 16,
+      "title": "Radio Aashiqanaa",
+      "slug": "radio-aashiqanaa",
+      "playerUrl": "https://www.radioindia.in/radio-aashiqanaa",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 17,
+      "title": "Bhakti Sangeet",
+      "slug": "bhakti-sangeet",
+      "playerUrl": "https://www.radioindia.in/bhakti-sangeet",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 18,
+      "title": "Mirchi Love Hindi",
+      "slug": "mirchi-love-hindi",
+      "playerUrl": "https://www.radioindia.in/mirchi-love-hindi",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 19,
+      "title": "Mixify 90's Hits",
+      "slug": "mixify",
+      "playerUrl": "https://www.radioindia.in/mixify",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 20,
+      "title": "Akashvani Pune FM",
+      "slug": "air-pune-fm",
+      "playerUrl": "https://www.radioindia.in/air-pune-fm",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 21,
+      "title": "BollyHits Radio",
+      "slug": "bollyhits-radio",
+      "playerUrl": "https://www.radioindia.in/bollyhits-radio",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 22,
+      "title": "Hits Of Lata Mangeshkar",
+      "slug": "hits-of-lata-mangeshkar",
+      "playerUrl": "https://www.radioindia.in/hits-of-lata-mangeshkar",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 23,
+      "title": "Suryan FM 93.5",
+      "slug": "suryan-fm-935",
+      "playerUrl": "https://www.radioindia.in/suryan-fm-935",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 24,
+      "title": "Vaigai FM",
+      "slug": "vaigai-fm",
+      "playerUrl": "https://www.radioindia.in/vaigai-fm",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 25,
+      "title": "Marathi Tarang मराठी तरंग",
+      "slug": "marathi-tarang-mraatthii-trng",
+      "playerUrl": "https://www.radioindia.in/marathi-tarang-mraatthii-trng",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 26,
+      "title": "Hits Of Kishor Kumar",
+      "slug": "hits-of-kishor-kumar",
+      "playerUrl": "https://www.radioindia.in/hits-of-kishor-kumar",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 27,
+      "title": "92.7 Big FM",
+      "slug": "927-big-fm",
+      "playerUrl": "https://www.radioindia.in/927-big-fm",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 28,
+      "title": "FM Gold Mumbai",
+      "slug": "fm-gold-mumbai",
+      "playerUrl": "https://www.radioindia.in/fm-gold-mumbai",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 29,
+      "title": "Maayboli Radio",
+      "slug": "maayboli",
+      "playerUrl": "https://www.radioindia.in/maayboli",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 30,
+      "title": "Goldy Mukesh",
+      "slug": "goldy-mukesh",
+      "playerUrl": "https://www.radioindia.in/goldy-mukesh",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 31,
+      "title": "Radio Mirchi Tamil FM",
+      "slug": "radio-mirchi-tamil-fm",
+      "playerUrl": "https://www.radioindia.in/radio-mirchi-tamil-fm",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 32,
+      "title": "AIR FM Rainbow Dehli",
+      "slug": "air-fm-rainbow",
+      "playerUrl": "https://www.radioindia.in/air-fm-rainbow",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 33,
+      "title": "Akashvani Kochi FM 102.3",
+      "slug": "air-kochi-fm-1203",
+      "playerUrl": "https://www.radioindia.in/air-kochi-fm-1203",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 34,
+      "title": "Akashvani Pune",
+      "slug": "air-pune",
+      "playerUrl": "https://www.radioindia.in/air-pune",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 35,
+      "title": "VB Kannada",
+      "slug": "vb-kannada",
+      "playerUrl": "https://www.radioindia.in/vb-kannada",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 36,
+      "title": "92.5 SV FM Radio",
+      "slug": "925-sv-fm-radio",
+      "playerUrl": "https://www.radioindia.in/925-sv-fm-radio",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 37,
+      "title": "Hello FM 106.4",
+      "slug": "hello-fm-1064",
+      "playerUrl": "https://www.radioindia.in/hello-fm-1064",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 38,
+      "title": "Legends Hits Hindi",
+      "slug": "legends-hits-hindi",
+      "playerUrl": "https://www.radioindia.in/legends-hits-hindi",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 39,
+      "title": "Radio Badal",
+      "slug": "radio-badal",
+      "playerUrl": "https://www.radioindia.in/radio-badal",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 40,
+      "title": "Kodai City FM",
+      "slug": "kodaicity-fm",
+      "playerUrl": "https://www.radioindia.in/kodaicity-fm",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 41,
+      "title": "FM Rainbow Lucknow",
+      "slug": "fm-rainbow-lucknow",
+      "playerUrl": "https://www.radioindia.in/fm-rainbow-lucknow",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 42,
+      "title": "Bhaktiworld Media Shiva",
+      "slug": "bhakti-world-shiva",
+      "playerUrl": "https://www.radioindia.in/bhakti-world-shiva",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 43,
+      "title": "VB Telugu Vijayawada",
+      "slug": "vb-telugu-vijayawada",
+      "playerUrl": "https://www.radioindia.in/vb-telugu-vijayawada",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 44,
+      "title": "Hits Of Bollywood",
+      "slug": "hits-of-bollywood",
+      "playerUrl": "https://www.radioindia.in/hits-of-bollywood",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 45,
+      "title": "Goldy Cool",
+      "slug": "goldy-cool",
+      "playerUrl": "https://www.radioindia.in/goldy-cool",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 46,
+      "title": "M S Viswanathan FM",
+      "slug": "m-s-viswanathan-fm",
+      "playerUrl": "https://www.radioindia.in/m-s-viswanathan-fm",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 47,
+      "title": "Classic Radio Hindi Hits",
+      "slug": "classic-radio-hindi-hits",
+      "playerUrl": "https://www.radioindia.in/classic-radio-hindi-hits",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 48,
+      "title": "AIR Malayalam",
+      "slug": "air-malayalam",
+      "playerUrl": "https://www.radioindia.in/air-malayalam",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 49,
+      "title": "NP 24 Radio",
+      "slug": "np-24-radio",
+      "playerUrl": "https://www.radioindia.in/np-24-radio",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 50,
+      "title": "ISHQ 104.8 FM",
+      "slug": "ishq-1048-fm",
+      "playerUrl": "https://www.radioindia.in/ishq-1048-fm",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 51,
+      "title": "Mirchi 90's Radio - Filmy hits",
+      "slug": "mirchi-90s-radio-filmy-hits",
+      "playerUrl": "https://www.radioindia.in/mirchi-90s-radio-filmy-hits",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 52,
+      "title": "Mixify Evergreen Hits",
+      "slug": "mixify-evergreen-hits",
+      "playerUrl": "https://www.radioindia.in/mixify-evergreen-hits",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 53,
+      "title": "Radio Saptrang",
+      "slug": "radio-saptrang",
+      "playerUrl": "https://www.radioindia.in/radio-saptrang",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 54,
+      "title": "Old Monk Radio",
+      "slug": "old-monk-radio",
+      "playerUrl": "https://www.radioindia.in/old-monk-radio",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 55,
+      "title": "Akashvani Mysuru",
+      "slug": "air-misuru",
+      "playerUrl": "https://www.radioindia.in/air-misuru",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 56,
+      "title": "Rainbow Kannada Kaamanbilu",
+      "slug": "radio-kannada-kaamanbilu",
+      "playerUrl": "https://www.radioindia.in/radio-kannada-kaamanbilu",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 57,
+      "title": "AIR Live News 24x7",
+      "slug": "all-india-radio-news",
+      "playerUrl": "https://www.radioindia.in/all-india-radio-news",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 58,
+      "title": "Tamil Panpalai Gold",
+      "slug": "tamil-panpalai-gold",
+      "playerUrl": "https://www.radioindia.in/tamil-panpalai-gold",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 59,
+      "title": "Madhur Sangeet",
+      "slug": "madhur-sangeet",
+      "playerUrl": "https://www.radioindia.in/madhur-sangeet",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    },
+    {
+      "position": 60,
+      "title": "Bhaktiworld Media Hanuman Ji",
+      "slug": "bhakti-world-hanuman",
+      "playerUrl": "https://www.radioindia.in/bhakti-world-hanuman",
+      "playerImage": "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg"
+    }
+  ],
+  "categories": [
+    {
+      "name": "Country",
+      "url": "https://www.radioindia.in/radio/country-158"
+    },
+    {
+      "name": "Oldies / Classic Hits",
+      "url": "https://www.radioindia.in/radio/oldies-classic-hits-155"
+    },
+    {
+      "name": "Discover",
+      "url": "https://www.radioindia.in/radio/discover-180"
+    },
+    {
+      "name": "Rock",
+      "url": "https://www.radioindia.in/radio/rock-156"
+    },
+    {
+      "name": "Pop / Today's Hits",
+      "url": "https://www.radioindia.in/radio/pop-todays-hits-152"
+    },
+    {
+      "name": "80s / 90s",
+      "url": "https://www.radioindia.in/radio/80s-90s-154"
+    },
+    {
+      "name": "R&B / Hip Hop",
+      "url": "https://www.radioindia.in/radio/rb-hip-hop-163"
+    },
+    {
+      "name": "Dance / Electronic",
+      "url": "https://www.radioindia.in/radio/dance-electronic-160"
+    },
+    {
+      "name": "Metal",
+      "url": "https://www.radioindia.in/radio/metal-153"
+    },
+    {
+      "name": "Latino / Caribbean",
+      "url": "https://www.radioindia.in/radio/latino-caribbean-162"
+    },
+    {
+      "name": "Chillout / Lounge",
+      "url": "https://www.radioindia.in/radio/chillout-lounge-161"
+    },
+    {
+      "name": "Jazz / Blues",
+      "url": "https://www.radioindia.in/radio/jazz-blues-157"
+    },
+    {
+      "name": "Classical Music",
+      "url": "https://www.radioindia.in/radio/classical-music-159"
+    },
+    {
+      "name": "Andaman and Nicobar",
+      "url": "https://www.radioindia.in/radio/andaman-and-nicobar"
+    },
+    {
+      "name": "Andhra Pradesh",
+      "url": "https://www.radioindia.in/radio/andhra-pradesh"
+    },
+    {
+      "name": "Arunachal Pradesh",
+      "url": "https://www.radioindia.in/radio/arunachal-pradesh"
+    },
+    {
+      "name": "Assam",
+      "url": "https://www.radioindia.in/radio/assam"
+    },
+    {
+      "name": "Bihar",
+      "url": "https://www.radioindia.in/radio/bihar"
+    },
+    {
+      "name": "Chandigarh",
+      "url": "https://www.radioindia.in/radio/chandigarh"
+    },
+    {
+      "name": "Chhattisgarh",
+      "url": "https://www.radioindia.in/radio/chhattisgarh"
+    },
+    {
+      "name": "Daman and Diu",
+      "url": "https://www.radioindia.in/radio/daman-and-diu"
+    },
+    {
+      "name": "Goa",
+      "url": "https://www.radioindia.in/radio/goa"
+    },
+    {
+      "name": "Gujarat",
+      "url": "https://www.radioindia.in/radio/gujarat"
+    },
+    {
+      "name": "Haryana",
+      "url": "https://www.radioindia.in/radio/haryana"
+    },
+    {
+      "name": "Himachal Pradesh",
+      "url": "https://www.radioindia.in/radio/himachal-pradesh"
+    },
+    {
+      "name": "Jharkhand",
+      "url": "https://www.radioindia.in/radio/jharkhand"
+    },
+    {
+      "name": "Karnataka",
+      "url": "https://www.radioindia.in/radio/karnataka"
+    },
+    {
+      "name": "Kashmir",
+      "url": "https://www.radioindia.in/radio/kashmir"
+    },
+    {
+      "name": "Kerala",
+      "url": "https://www.radioindia.in/radio/kerala"
+    },
+    {
+      "name": "Laccadives",
+      "url": "https://www.radioindia.in/radio/laccadives"
+    },
+    {
+      "name": "Madhya Pradesh",
+      "url": "https://www.radioindia.in/radio/madhya-pradesh"
+    },
+    {
+      "name": "Maharashtra",
+      "url": "https://www.radioindia.in/radio/maharashtra"
+    },
+    {
+      "name": "Manipur",
+      "url": "https://www.radioindia.in/radio/manipur"
+    },
+    {
+      "name": "Meghalaya",
+      "url": "https://www.radioindia.in/radio/meghalaya"
+    },
+    {
+      "name": "Mizoram",
+      "url": "https://www.radioindia.in/radio/mizoram"
+    },
+    {
+      "name": "Nagaland",
+      "url": "https://www.radioindia.in/radio/nagaland"
+    },
+    {
+      "name": "National Capital Territory of Delhi",
+      "url": "https://www.radioindia.in/radio/national-capital-territory-of-delhi"
+    },
+    {
+      "name": "Odisha",
+      "url": "https://www.radioindia.in/radio/odisha"
+    },
+    {
+      "name": "Puducherry",
+      "url": "https://www.radioindia.in/radio/puducherry"
+    },
+    {
+      "name": "Punjab",
+      "url": "https://www.radioindia.in/radio/punjab"
+    },
+    {
+      "name": "Rajasthan",
+      "url": "https://www.radioindia.in/radio/rajasthan"
+    },
+    {
+      "name": "Sikkim",
+      "url": "https://www.radioindia.in/radio/sikkim"
+    },
+    {
+      "name": "Tamil Nadu",
+      "url": "https://www.radioindia.in/radio/tamil-nadu"
+    },
+    {
+      "name": "Tripura",
+      "url": "https://www.radioindia.in/radio/tripura"
+    },
+    {
+      "name": "Uttar Pradesh",
+      "url": "https://www.radioindia.in/radio/uttar-pradesh"
+    },
+    {
+      "name": "Uttarakhand",
+      "url": "https://www.radioindia.in/radio/uttarakhand"
+    },
+    {
+      "name": "West Bengal",
+      "url": "https://www.radioindia.in/radio/west-bengal"
+    }
+  ],
+  "locations": [
+    {
+      "name": "All",
+      "url": "https://www.radioindia.in/"
+    }
+  ],
+  "urls": [
+    "http://www.podcasts-online.org/",
+    "https://cdn.mytuner.mobi/static/ctr/images/radio-default.jpg",
+    "https://mytuner-radio.com/",
+    "https://static.mytuner.mobi/media/radios-150px/187/radio-baingan.bafe82a1.jpg",
+    "https://static.mytuner.mobi/media/radios-150px/238/vividh-bharti.92c90eb1.png",
+    "https://static.mytuner.mobi/media/radios-150px/608/mohabbat-radio.8821dce6.png",
+    "https://static.mytuner.mobi/media/radios-150px/7ksqhvudgsc9.jpg",
+    "https://static.mytuner.mobi/media/radios-150px/9fKKkfbJKE.png",
+    "https://static.mytuner.mobi/media/radios-150px/Ekv3xnWJpp.png",
+    "https://static.mytuner.mobi/media/radios-150px/M2xsuJ2eSP.jpg",
+    "https://static.mytuner.mobi/media/radios-150px/khbf2jlccjaf.png",
+    "https://static.mytuner.mobi/media/radios-150px/ppqbgfej6skx.jpeg",
+    "https://www.canadaradiostations.com",
+    "https://www.canli-radyo-dinle.com/",
+    "https://www.emisoras-de-honduras.com",
+    "https://www.emisoras-puertorico.com/",
+    "https://www.emisorascolombianas.co",
+    "https://www.fmradiofree.com",
+    "https://www.greek-radio.org",
+    "https://www.internetradio-horen.de",
+    "https://www.internetradio-schweiz.ch",
+    "https://www.onlineradio-bg.com",
+    "https://www.onlineradiok.org",
+    "https://www.radiaonline.org",
+    "https://www.radijskepostaje.com",
+    "https://www.radio-ao-vivo.com/",
+    "https://www.radio-australia.org",
+    "https://www.radio-belgie.be",
+    "https://www.radio-danmark.dk",
+    "https://www.radio-dominicana.com/",
+    "https://www.radio-ecuador.org/",
+    "https://www.radio-en-ligne.fr",
+    "https://www.radio-en-vivo.mx",
+    "https://www.radio-espana.es",
+    "https://www.radio-ghana.org",
+    "https://www.radio-hk.com",
+    "https://www.radio-hrvatska.com",
+    "https://www.radio-ireland.com",
+    "https://www.radio-israel.org",
+    "https://www.radio-italiane.it",
+    "https://www.radio-jamaica.com",
+    "https://www.radio-kenya.com",
+    "https://www.radio-korea.com",
+    "https://www.radio-maroc.org/",
+    "https://www.radio-nederland.nl",
+    "https://www.radio-nigeria.com",
+    "https://www.radio-norge.org",
+    "https://www.radio-osterreich.at",
+    "https://www.radio-philippines.com",
+    "https://www.radio-polska.pl/",
+    "https://www.radio-romania.com",
+    "https://www.radio-senegal.com",
+    "https://www.radio-singapore.com",
+    "https://www.radio-south-africa.co.za",
+    "https://www.radio-stations.co.nz/",
+    "https://www.radio-suomi.com",
+    "https://www.radio-sveriges.se",
+    "https://www.radio-thai.com",
+    "https://www.radio-trinidad.com",
+    "https://www.radio-ua.com",
+    "https://www.radio-uk.co.uk",
+    "https://www.radioarabic.org",
+    "https://www.radioindia.in/",
+    "https://www.radioindia.in/925-sv-fm-radio",
+    "https://www.radioindia.in/927-big-fm",
+    "https://www.radioindia.in/about-us",
+    "https://www.radioindia.in/air-fm-gold",
+    "https://www.radioindia.in/air-fm-rainbow",
+    "https://www.radioindia.in/air-kochi-fm-1203",
+    "https://www.radioindia.in/air-malayalam",
+    "https://www.radioindia.in/air-misuru",
+    "https://www.radioindia.in/air-pune",
+    "https://www.radioindia.in/air-pune-fm",
+    "https://www.radioindia.in/air-vividh-bharati",
+    "https://www.radioindia.in/all-india-radio-news",
+    "https://www.radioindia.in/best-songs",
+    "https://www.radioindia.in/bhakti-sangeet",
+    "https://www.radioindia.in/bhakti-world-hanuman",
+    "https://www.radioindia.in/bhakti-world-shiva",
+    "https://www.radioindia.in/bollyhits-radio",
+    "https://www.radioindia.in/bollywood-gaane-purane",
+    "https://www.radioindia.in/broadcasters/",
+    "https://www.radioindia.in/classic-radio-hindi-hits",
+    "https://www.radioindia.in/contact-us",
+    "https://www.radioindia.in/fm-gold-mumbai",
+    "https://www.radioindia.in/fm-rainbow-lucknow",
+    "https://www.radioindia.in/goldy-cool",
+    "https://www.radioindia.in/goldy-evergreen",
+    "https://www.radioindia.in/goldy-mukesh",
+    "https://www.radioindia.in/hello-fm-1064",
+    "https://www.radioindia.in/hindi-desi-bollywood-evergreen-hits",
+    "https://www.radioindia.in/hindi-retro-hits-radio",
+    "https://www.radioindia.in/hits-of-bollywood",
+    "https://www.radioindia.in/hits-of-kishor-kumar",
+    "https://www.radioindia.in/hits-of-lata-mangeshkar",
+    "https://www.radioindia.in/ishq-1048-fm",
+    "https://www.radioindia.in/kodaicity-fm",
+    "https://www.radioindia.in/kumar-sanu",
+    "https://www.radioindia.in/legends-hits-hindi",
+    "https://www.radioindia.in/m-s-viswanathan-fm",
+    "https://www.radioindia.in/maayboli",
+    "https://www.radioindia.in/madhur-sangeet",
+    "https://www.radioindia.in/marathi-tarang-mraatthii-trng",
+    "https://www.radioindia.in/mirchi-90s-radio-filmy-hits",
+    "https://www.radioindia.in/mirchi-love-hindi",
+    "https://www.radioindia.in/mixify",
+    "https://www.radioindia.in/mixify-evergreen-hits",
+    "https://www.radioindia.in/mohabbat-radio",
+    "https://www.radioindia.in/my-list",
+    "https://www.radioindia.in/non-stop-hindi",
+    "https://www.radioindia.in/np-24-radio",
+    "https://www.radioindia.in/old-monk-radio",
+    "https://www.radioindia.in/podcasts",
+    "https://www.radioindia.in/privacy-policy",
+    "https://www.radioindia.in/radio-aashiqanaa",
+    "https://www.radioindia.in/radio-badal",
+    "https://www.radioindia.in/radio-baingan",
+    "https://www.radioindia.in/radio-kannada-kaamanbilu",
+    "https://www.radioindia.in/radio-mirchi-983-fm",
+    "https://www.radioindia.in/radio-mirchi-tamil-fm",
+    "https://www.radioindia.in/radio-namkin",
+    "https://www.radioindia.in/radio-retro-bollywood-90s",
+    "https://www.radioindia.in/radio-saptrang",
+    "https://www.radioindia.in/radio/80s-90s-154",
+    "https://www.radioindia.in/radio/andaman-and-nicobar",
+    "https://www.radioindia.in/radio/andhra-pradesh",
+    "https://www.radioindia.in/radio/arunachal-pradesh",
+    "https://www.radioindia.in/radio/assam",
+    "https://www.radioindia.in/radio/bihar",
+    "https://www.radioindia.in/radio/chandigarh",
+    "https://www.radioindia.in/radio/chhattisgarh",
+    "https://www.radioindia.in/radio/chillout-lounge-161",
+    "https://www.radioindia.in/radio/classical-music-159",
+    "https://www.radioindia.in/radio/country-158",
+    "https://www.radioindia.in/radio/daman-and-diu",
+    "https://www.radioindia.in/radio/dance-electronic-160",
+    "https://www.radioindia.in/radio/discover-180",
+    "https://www.radioindia.in/radio/goa",
+    "https://www.radioindia.in/radio/gujarat",
+    "https://www.radioindia.in/radio/haryana",
+    "https://www.radioindia.in/radio/himachal-pradesh",
+    "https://www.radioindia.in/radio/jazz-blues-157",
+    "https://www.radioindia.in/radio/jharkhand",
+    "https://www.radioindia.in/radio/karnataka",
+    "https://www.radioindia.in/radio/kashmir",
+    "https://www.radioindia.in/radio/kerala",
+    "https://www.radioindia.in/radio/laccadives",
+    "https://www.radioindia.in/radio/latino-caribbean-162",
+    "https://www.radioindia.in/radio/madhya-pradesh",
+    "https://www.radioindia.in/radio/maharashtra",
+    "https://www.radioindia.in/radio/manipur",
+    "https://www.radioindia.in/radio/meghalaya",
+    "https://www.radioindia.in/radio/metal-153",
+    "https://www.radioindia.in/radio/mizoram",
+    "https://www.radioindia.in/radio/nagaland",
+    "https://www.radioindia.in/radio/national-capital-territory-of-delhi",
+    "https://www.radioindia.in/radio/odisha",
+    "https://www.radioindia.in/radio/oldies-classic-hits-155",
+    "https://www.radioindia.in/radio/pop-todays-hits-152",
+    "https://www.radioindia.in/radio/puducherry",
+    "https://www.radioindia.in/radio/punjab",
+    "https://www.radioindia.in/radio/rajasthan",
+    "https://www.radioindia.in/radio/rb-hip-hop-163",
+    "https://www.radioindia.in/radio/rock-156",
+    "https://www.radioindia.in/radio/sikkim",
+    "https://www.radioindia.in/radio/tamil-nadu",
+    "https://www.radioindia.in/radio/tripura",
+    "https://www.radioindia.in/radio/uttar-pradesh",
+    "https://www.radioindia.in/radio/uttarakhand",
+    "https://www.radioindia.in/radio/west-bengal",
+    "https://www.radioindia.in/retro-bollywood",
+    "https://www.radioindia.in/suryan-fm-935",
+    "https://www.radioindia.in/tamil-panpalai-gold",
+    "https://www.radioindia.in/terms",
+    "https://www.radioindia.in/vaigai-fm",
+    "https://www.radioindia.in/vb-kannada",
+    "https://www.radioindia.in/vb-telugu-vijayawada",
+    "https://www.radioindia.in/vividh-bharti",
+    "https://www.radioindia.in/widgets/",
+    "https://www.radioindonesia.org",
+    "https://www.radiojapan.org",
+    "https://www.radiomalaysia.org",
+    "https://www.radios-argentinas.org",
+    "https://www.radios-bolivia.com/",
+    "https://www.radios-chilenas.com",
+    "https://www.radios-guatemala.com/",
+    "https://www.radios-online.pt/",
+    "https://www.radios-uruguay.com/",
+    "https://www.radios-venezuela.com/",
+    "https://www.radioscostarica.org/",
+    "https://www.radiosdelperu.com.pe",
+    "https://www.radiosdenicaragua.org",
+    "https://www.radioselsalvador.org",
+    "https://www.radiosrbija.org",
+    "https://www.radiotaiwan.tw",
+    "https://www.top-charts.com/"
+  ]
+}

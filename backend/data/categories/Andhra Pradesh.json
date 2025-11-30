@@ -1,0 +1,29 @@
+{
+  "generatedAt": "2025-11-29T03:37:03.898Z",
+  "category": "Andhra Pradesh",
+  "count": 2,
+  "stations": [
+    {
+      "name": "Akashvani Andhra Pradesh",
+      "slug": "air-andhra-pradesh",
+      "playerUrl": "https://www.radioindia.in/air-andhra-pradesh",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/44b2xetff3sy.jpg",
+      "description": "Listen to Akashvani Andhra Pradesh online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Andhra Pradesh"
+      ]
+    },
+    {
+      "name": "Akashvani Andhra Pradesh",
+      "slug": "air-andhra-pradesh",
+      "playerUrl": "https://www.radioindia.in/air-andhra-pradesh",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/44b2xetff3sy.jpg",
+      "description": "Listen to Akashvani Andhra Pradesh online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Andhra Pradesh"
+      ]
+    }
+  ]
+}

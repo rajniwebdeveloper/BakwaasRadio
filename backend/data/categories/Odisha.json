@@ -1,0 +1,51 @@
+{
+  "generatedAt": "2025-11-29T03:37:03.912Z",
+  "category": "Odisha",
+  "count": 4,
+  "stations": [
+    {
+      "name": "Odisha Radio",
+      "slug": "odisha-radio",
+      "playerUrl": "https://www.radioindia.in/odisha-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/X3yAeCHQkV.png",
+      "description": "Listen to Odisha Radio online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Odisha"
+      ]
+    },
+    {
+      "name": "Odisha Radio Love Station",
+      "slug": "odisha-radio-love-station",
+      "playerUrl": "https://www.radioindia.in/odisha-radio-love-station",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/Gkv7bRbkSq.jpg",
+      "description": "Listen to Odisha Radio Love Station online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Odisha"
+      ]
+    },
+    {
+      "name": "Odisha Radio",
+      "slug": "odisha-radio",
+      "playerUrl": "https://www.radioindia.in/odisha-radio",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/X3yAeCHQkV.png",
+      "description": "Listen to Odisha Radio online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Odisha"
+      ]
+    },
+    {
+      "name": "Odisha Radio Love Station",
+      "slug": "odisha-radio-love-station",
+      "playerUrl": "https://www.radioindia.in/odisha-radio-love-station",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/Gkv7bRbkSq.jpg",
+      "description": "Listen to Odisha Radio Love Station online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Odisha"
+      ]
+    }
+  ]
+}

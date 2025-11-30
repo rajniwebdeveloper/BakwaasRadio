@@ -1,0 +1,51 @@
+{
+  "generatedAt": "2025-11-29T03:37:03.899Z",
+  "category": "Assam",
+  "count": 4,
+  "stations": [
+    {
+      "name": "Mixify Assamese Hits",
+      "slug": "mixify-assamese-hits",
+      "playerUrl": "https://www.radioindia.in/mixify-assamese-hits",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/776/mixify-assamese-hits.eb3eeb14.png",
+      "description": "Listen to Mixify Assamese Hits online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Assam"
+      ]
+    },
+    {
+      "name": "Akashvani Assamese",
+      "slug": "air-assamese",
+      "playerUrl": "https://www.radioindia.in/air-assamese",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/rpkmsysrwtux.jpg",
+      "description": "Listen to Akashvani Assamese online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Assam"
+      ]
+    },
+    {
+      "name": "Mixify Assamese Hits",
+      "slug": "mixify-assamese-hits",
+      "playerUrl": "https://www.radioindia.in/mixify-assamese-hits",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/776/mixify-assamese-hits.eb3eeb14.png",
+      "description": "Listen to Mixify Assamese Hits online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Assam"
+      ]
+    },
+    {
+      "name": "Akashvani Assamese",
+      "slug": "air-assamese",
+      "playerUrl": "https://www.radioindia.in/air-assamese",
+      "playerImage": "https://static.mytuner.mobi/media/radios-150px/rpkmsysrwtux.jpg",
+      "description": "Listen to Akashvani Assamese online. Music, podcasts, shows and the latest news. FM Radio India, all stations.",
+      "streams": [],
+      "categories": [
+        "Assam"
+      ]
+    }
+  ]
+}
