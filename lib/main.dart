@@ -141,27 +141,41 @@ class _SplashPageState extends State<SplashPage> {
         }
       } catch (_) {}
 
-      // If there's no persisted lastSong, try to auto-play the first station
-      // we received from the backend. Prefer `playerUrl`, then `streamURL`,
-      // then `mp3Url` as the playback source.
+      // If there's no persisted lastSong, try to auto-play a random station
+      // we received from the backend. Try multiple attempts and pick another
+      // random station if one fails to play.
       try {
         final last = PlaybackManager.instance.lastSong;
         final needAuto = last == null || (last['url']?.isEmpty == true);
-          if (needAuto && stations != null && stations.isNotEmpty) {
-          final s = stations.first;
-          final url = s.playerUrl ?? s.streamURL ?? s.mp3Url ?? '';
-          if (url.isNotEmpty) {
-              // On web, avoid auto-playing audio to prevent browser `NotAllowedError`.
-              // Auto-play is allowed on native platforms; for web require user interaction.
-              if (!kIsWeb) {
-                setState(() => _status = 'Starting ${s.name}...');
-                PlaybackManager.instance.play({
-                  'title': s.name,
-                  'subtitle': s.description ?? '',
-                  'image': s.profilepic ?? '',
-                  'url': url
-                });
+        if (needAuto && stations != null && stations.isNotEmpty && !kIsWeb) {
+          setState(() => _status = 'Attempting to start a station...');
+          final tried = <int>{};
+          final rand = math.Random();
+          bool started = false;
+          while (!started && tried.length < stations.length) {
+            final idx = rand.nextInt(stations.length);
+            if (tried.contains(idx)) continue;
+            tried.add(idx);
+            final s = stations[idx];
+            final url = s.playerUrl ?? s.streamURL ?? s.mp3Url ?? '';
+            if (url.isEmpty) continue;
+            setState(() => _status = 'Starting ${s.name}...');
+            // For each chosen station, try up to 5 playback attempts before
+            // picking another random station.
+            for (var attempt = 1; attempt <= 5 && !started; attempt++) {
+              final ok = await PlaybackManager.instance.play({
+                'title': s.name,
+                'subtitle': s.description ?? '',
+                'image': s.profilepic ?? '',
+                'url': url
+              });
+              if (ok == true) {
+                started = true;
+                break;
               }
+              // small backoff between attempts
+              await Future.delayed(Duration(milliseconds: 300 * attempt));
+            }
           }
         }
       } catch (_) {
@@ -483,6 +497,101 @@ class _HomePageState extends State<HomePage>
         autoplay: _playback.isPlaying,
       ),
     ));
+  }
+
+  Future<void> _playPrevious() async {
+    final history = PlaybackManager.instance.history;
+    if (history.length >= 2) {
+      // history[0] is current, history[1] is previous
+      final prev = history[1];
+      final ok = await PlaybackManager.instance.play(prev);
+      if (ok && mounted) {
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => SongPage(
+                  title: prev['title'] ?? '',
+                  subtitle: prev['subtitle'] ?? '',
+                  imageUrl: prev['image'],
+                  autoplay: true,
+                  showBottomNav: true,
+                )));
+      }
+      return;
+    }
+    // Fallback: pick a random station
+    final stations = LibraryData.stations.value;
+    if (stations.isNotEmpty) {
+      final s = stations[math.Random().nextInt(stations.length)];
+      final url = s.playerUrl ?? s.streamURL ?? s.mp3Url ?? '';
+      if (url.isNotEmpty) {
+        final song = {
+          'title': s.name,
+          'subtitle': s.description ?? '',
+          'image': s.profilepic ?? '',
+          'url': url
+        };
+        final ok = await PlaybackManager.instance.play(song);
+        if (ok && mounted) {
+          Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => SongPage(
+                    title: song['title'] ?? '',
+                    subtitle: song['subtitle'] ?? '',
+                    imageUrl: song['image'],
+                    autoplay: true,
+                    showBottomNav: true,
+                  )));
+        }
+      }
+    }
+  }
+
+  Future<void> _playNext() async {
+    final stations = LibraryData.stations.value;
+    final currentUrl = PlaybackManager.instance.currentSong?['url'] ?? PlaybackManager.instance.lastSong?['url'];
+    if (stations.isNotEmpty) {
+      // try to find station matching currentUrl
+      int found = -1;
+      for (var i = 0; i < stations.length; i++) {
+        final s = stations[i];
+        final candidates = <String?>[s.playerUrl, s.streamURL, s.mp3Url];
+        for (final c in candidates) {
+          if (c == null || currentUrl == null) continue;
+          if (c.trim() == currentUrl.trim() || c.contains(currentUrl) || currentUrl.contains(c)) {
+            found = i;
+            break;
+          }
+        }
+        if (found != -1) break;
+      }
+      Station? nextStation;
+      if (found != -1) {
+        nextStation = stations[(found + 1) % stations.length];
+      } else {
+        // pick a random station
+        nextStation = stations[math.Random().nextInt(stations.length)];
+      }
+      final url = nextStation.playerUrl ?? nextStation.streamURL ?? nextStation.mp3Url ?? '';
+      if (url.isNotEmpty) {
+        final song = {
+          'title': nextStation.name,
+          'subtitle': nextStation.description ?? '',
+          'image': nextStation.profilepic ?? '',
+          'url': url
+        };
+        final ok = await PlaybackManager.instance.play(song);
+        if (ok && mounted) {
+          Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => SongPage(
+                    title: song['title'] ?? '',
+                    subtitle: song['subtitle'] ?? '',
+                    imageUrl: song['image'],
+                    autoplay: true,
+                    showBottomNav: true,
+                  )));
+        }
+      }
+      return;
+    }
+    // fallback: nothing to do
   }
 
   @override
@@ -970,7 +1079,7 @@ class _HomePageState extends State<HomePage>
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           IconButton(
-            onPressed: _openFullPlayer,
+            onPressed: _playPrevious,
             icon: const Icon(Icons.skip_previous, color: Colors.white70),
             iconSize: 32,
           ),
@@ -1000,7 +1109,7 @@ class _HomePageState extends State<HomePage>
             ),
           ),
           IconButton(
-            onPressed: _openFullPlayer,
+            onPressed: _playNext,
             icon: const Icon(Icons.skip_next, color: Colors.white70),
             iconSize: 32,
           ),

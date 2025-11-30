@@ -24,8 +24,22 @@ class PlaybackManager extends ChangeNotifier {
       notifyListeners();
     });
     _audioPlayer.onPlayerStateChanged.listen((state) {
+      final wasPlaying = _isPlaying;
       _isPlaying = state == PlayerState.playing;
       notifyListeners();
+      // If playback stopped unexpectedly (not user-paused), try reconnecting
+      if (!wasPlaying && !_isPlaying && !_manuallyPaused && _currentSong != null) {
+        // schedule a reconnect attempt
+        if (_reconnectAttempts < _maxReconnectAttempts) {
+          _reconnectAttempts++;
+          final attempt = _reconnectAttempts;
+          Future.delayed(Duration(milliseconds: 400 * attempt), () async {
+            try {
+              await play(_currentSong!);
+            } catch (_) {}
+          });
+        }
+      }
     });
   }
   static final PlaybackManager instance = PlaybackManager._internal();
@@ -39,6 +53,11 @@ class PlaybackManager extends ChangeNotifier {
 
   // simple volume support to satisfy callers in UI
   double _volume = 1.0;
+
+  // reconnect state
+  bool _manuallyPaused = false;
+  int _reconnectAttempts = 0;
+  final int _maxReconnectAttempts = 3;
 
   // Remember the last played song even when playback is stopped
   Map<String, String>? _lastSong;
@@ -102,9 +121,9 @@ class PlaybackManager extends ChangeNotifier {
     }
   }
 
-  Future<void> play(Map<String, String> song, {int duration = 0}) async {
+  Future<bool> play(Map<String, String> song, {int duration = 0}) async {
     if (song['url'] == null || song['url']!.isEmpty) {
-      return;
+      return false;
     }
 
     // If same song and was paused, resume
@@ -116,36 +135,63 @@ class PlaybackManager extends ChangeNotifier {
       } else {
         _audioPlayer.resume();
       }
-      return;
+      _manuallyPaused = false;
+      return true;
     }
 
     _currentSong = Map.from(song);
+    _manuallyPaused = false;
+    _reconnectAttempts = 0;
     // Ensure handler is initialized (attempt again) before playback.
     if (_audioHandler == null) {
       await _initHandler();
     }
 
+    // Helper to wait briefly for player to report playing state
+    Future<bool> _waitForPlaying({int timeoutMs = 2000}) async {
+      final sw = DateTime.now();
+      while (DateTime.now().difference(sw).inMilliseconds < timeoutMs) {
+        if (_isPlaying) return true;
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
+      return _isPlaying;
+    }
+
     if (_audioHandler != null) {
       try {
         final handler = _audioHandler as dynamic;
-        // Prepare extras mapping: ensure artwork is passed as 'artUri'
         final extras = Map<String, String>.from(song);
         if (extras.containsKey('image') && !extras.containsKey('artUri')) {
           extras['artUri'] = extras['image']!;
         }
         await handler.setUrl(song['url']!, extras: extras);
-        _audioHandler!.play();
+        await handler.play();
+        final ok = await _waitForPlaying();
+        if (ok) {
+          _lastSong = Map.from(song);
+          _addToHistory(Map.from(song));
+          notifyListeners();
+          return true;
+        }
+        return false;
       } catch (_) {
-        // if the handler does not support setUrl, fall back
-        _audioPlayer.play(UrlSource(song['url']!));
+        // fall through to local player fallback
       }
-    } else {
-      _audioPlayer.play(UrlSource(song['url']!));
     }
-    _lastSong = Map.from(song);
-    // update history: push front and persist
-    _addToHistory(Map.from(song));
-    notifyListeners();
+
+    try {
+      await _audioPlayer.play(UrlSource(song['url']!));
+      final ok = await _waitForPlaying();
+      if (ok) {
+        _lastSong = Map.from(song);
+        _addToHistory(Map.from(song));
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
   }
 
   void _addToHistory(Map<String, String> song) async {
@@ -163,6 +209,7 @@ class PlaybackManager extends ChangeNotifier {
   }
 
   void pause() {
+    _manuallyPaused = true;
     if (_audioHandler != null) {
       _audioHandler!.pause();
     } else {
@@ -175,6 +222,7 @@ class PlaybackManager extends ChangeNotifier {
       pause();
     } else {
       if (_currentSong != null) {
+        _manuallyPaused = false;
         play(_currentSong!);
       }
     }
