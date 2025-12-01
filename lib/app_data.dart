@@ -5,6 +5,7 @@ import 'dart:convert';
 const _kAuthTokenKey = 'auth_token';
 const _kAuthTokenExpiresKey = 'auth_token_expires';
 const _kAuthUserKey = 'auth_user_json';
+const _kEnablePreviewKey = 'enable_preview_autoplay';
 
 class AppData {
   // Demo playlists removed. Keep an empty list so UI can handle "no data".
@@ -47,6 +48,9 @@ class AppData {
       }
     }
   );
+
+  /// Whether Home should autoplay a short preview when stations load.
+  static final ValueNotifier<bool> enablePreviewAutoplay = ValueNotifier<bool>(true);
 
   /// Convenience accessor for UI labels. Returns `key` from `uiConfig['labels']`
   /// or `fallback` if not found.
@@ -107,6 +111,23 @@ class AppData {
     } catch (e) {
       // ignore errors reading prefs
     }
+  }
+
+  /// Load lightweight app settings (like preview autoplay) from prefs.
+  static Future<void> loadSettingsFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final val = prefs.getBool(_kEnablePreviewKey);
+      if (val != null) enablePreviewAutoplay.value = val;
+    } catch (_) {}
+  }
+
+  static Future<void> saveEnablePreviewAutoplay(bool v) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_kEnablePreviewKey, v);
+      enablePreviewAutoplay.value = v;
+    } catch (_) {}
   }
 
   /// Persist current auth token, expiry and user to prefs.

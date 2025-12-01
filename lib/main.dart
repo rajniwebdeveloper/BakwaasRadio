@@ -87,20 +87,18 @@ class _SplashPageState extends State<SplashPage> {
       // Try a quick stations call to verify backend is reachable and fetch
       // stations so we can optionally auto-start playback if nothing is
       // persisted.
-      List<Station>? stations;
       try {
-        print('Splash: calling ApiService.getStations()');
+        debugPrint('Splash: calling ApiService.getStations()');
         final fetched = await ApiService.getStations();
-        stations = fetched;
         // populate library stations cache so LibraryPage shows live data
         LibraryData.stations.value = fetched;
-        print('Splash: fetched ${fetched.length} stations');
+        debugPrint('Splash: fetched ${fetched.length} stations');
       } catch (e, st) {
-        print('Splash: getStations failed: $e');
+        debugPrint('Splash: getStations failed: $e');
         // ignore stack in release but helpful in DevTools
         // ignore: avoid_print
-        print(st);
-        stations = null;
+        debugPrint('$st');
+        // failed to fetch stations
       }
 
       // Fetch UI labels/config from backend (optional). Failures are non-fatal.
@@ -109,8 +107,13 @@ class _SplashPageState extends State<SplashPage> {
         AppData.uiConfig.value = ui;
       } catch (e) {
         // ignore: avoid_print
-        print('Splash: ui-config not available or failed: $e');
+        debugPrint('Splash: ui-config not available or failed: $e');
       }
+
+      // Load lightweight app settings (preview autoplay toggle, etc.)
+      try {
+        await AppData.loadSettingsFromPrefs();
+      } catch (_) {}
 
       // Restore persisted auth (if any) and validate token with /auth/me
       try {
@@ -141,46 +144,9 @@ class _SplashPageState extends State<SplashPage> {
         }
       } catch (_) {}
 
-      // If there's no persisted lastSong, try to auto-play a random station
-      // we received from the backend. Try multiple attempts and pick another
-      // random station if one fails to play.
-      try {
-        final last = PlaybackManager.instance.lastSong;
-        final needAuto = last == null || (last['url']?.isEmpty == true);
-        if (needAuto && stations != null && stations.isNotEmpty && !kIsWeb) {
-          setState(() => _status = 'Attempting to start a station...');
-          final tried = <int>{};
-          final rand = math.Random();
-          bool started = false;
-          while (!started && tried.length < stations.length) {
-            final idx = rand.nextInt(stations.length);
-            if (tried.contains(idx)) continue;
-            tried.add(idx);
-            final s = stations[idx];
-            final url = s.playerUrl ?? s.streamURL ?? s.mp3Url ?? '';
-            if (url.isEmpty) continue;
-            setState(() => _status = 'Starting ${s.name}...');
-            // For each chosen station, try up to 5 playback attempts before
-            // picking another random station.
-            for (var attempt = 1; attempt <= 5 && !started; attempt++) {
-              final ok = await PlaybackManager.instance.play({
-                'title': s.name,
-                'subtitle': s.description ?? '',
-                'image': s.profilepic ?? '',
-                'url': url
-              });
-              if (ok == true) {
-                started = true;
-                break;
-              }
-              // small backoff between attempts
-              await Future.delayed(Duration(milliseconds: 300 * attempt));
-            }
-          }
-        }
-      } catch (_) {
-        // don't block startup on playback errors
-      }
+      // Do NOT auto-play stations from the splash. Only check backend
+      // reachability and fetch data. Playback restoration/resume should
+      // be explicit (handled by player screen or user action).
 
       // Small delay so splash is visible briefly
       await Future.delayed(const Duration(milliseconds: 700));
@@ -188,7 +154,7 @@ class _SplashPageState extends State<SplashPage> {
       // Check update metadata from backend. If the request fails or times out
       // we intentionally do not show any update popup (per requirement).
       try {
-        print('Splash: checking update info');
+        debugPrint('Splash: checking update info');
         final nowTs = DateTime.now().toUtc().toIso8601String();
         final info = await ApiService.getUpdateInfo(v: AppInfo.version, ts: nowTs);
         if (info != null && info is Map<String, dynamic>) {
@@ -249,13 +215,13 @@ class _SplashPageState extends State<SplashPage> {
                     } else {
                       // unreachable status (404/500/etc) -> ignore update
                       // ignore: avoid_print
-                      print('Splash: update URL returned status ${head.statusCode}, ignoring update');
+                      debugPrint('Splash: update URL returned status ${head.statusCode}, ignoring update');
                       urlValid = false;
                     }
                   } catch (e) {
                     // network error or timeout -> ignore update
                     // ignore: avoid_print
-                    print('Splash: failed to verify update URL: $e');
+                    debugPrint('Splash: failed to verify update URL: $e');
                     urlValid = false;
                   }
                 } else {
@@ -320,7 +286,7 @@ class _SplashPageState extends State<SplashPage> {
         }
       } catch (e) {
         // Per requirement: if we don't get a response or it fails, do NOT show update popup.
-        print('Splash: update check failed or timed out: $e');
+        debugPrint('Splash: update check failed or timed out: $e');
       }
 
       // Navigate to home
@@ -420,10 +386,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
+  with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final PlaybackManager _playback = PlaybackManager.instance;
   late final AnimationController _ringController;
   int _activeTab = 0;
+  bool _previewStarted = false;
   // Navigation now uses inline tabs; no nav lock required.
 
   @override
@@ -443,33 +410,16 @@ class _HomePageState extends State<HomePage>
       if (!mounted) return;
       setState(() => _activeTab = AppData.rootTab.value.clamp(0, 2));
     });
-    // Auto-play and open last known song if it has a valid URL (after build)
+    // Register lifecycle observer to pause playback when app backgrounded
+    WidgetsBinding.instance.addObserver(this);
+    // Load persisted playback state but do NOT auto-resume playback here.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Load persisted playback state, then resume if possible
-    PlaybackManager.instance.loadPersisted().then((_) {
-      print('Home: loadPersisted completed');
-      final last = PlaybackManager.instance.lastSong;
-      if (last != null &&
-          (last['url']?.isNotEmpty == true) &&
-          !PlaybackManager.instance.isPlaying) {
-        print('Home: resuming last song ${last['title']}');
-        PlaybackManager.instance.play(last);
-        // open the full player page so user sees what's playing (guard mounted)
-        if (!mounted) return;
-        Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => SongPage(
-                  title: last['title'] ?? '',
-                  subtitle: last['subtitle'] ?? '',
-                  imageUrl: last['image'],
-                  autoplay: true,
-                  // when auto-opening from Home on startup, keep the bottom nav visible
-                  showBottomNav: true,
-                )));
-      } else {
-        print('Home: no persisted song to resume');
-      }
+      PlaybackManager.instance.loadPersisted().then((_) {
+        debugPrint('Home: loadPersisted completed (no auto-resume)');
+      });
     });
-    });
+    // Start a one-time listener to autoplay a short preview when stations finish loading
+    LibraryData.stations.addListener(_onStationsLoaded);
     // Start listening for deep links and share intents (incoming URLs)
     DeepLinkHandler.instance.startListening(context);
   }
@@ -478,7 +428,62 @@ class _HomePageState extends State<HomePage>
   void dispose() {
     _ringController.dispose();
     _playback.removeListener(_handlePlayback);
+    WidgetsBinding.instance.removeObserver(this);
+    LibraryData.stations.removeListener(_onStationsLoaded);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When app is backgrounded or the screen locks, pause playback.
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      try {
+        PlaybackManager.instance.pause();
+      } catch (_) {}
+    }
+  }
+
+  void _onStationsLoaded() {
+    _startPreviewIfNeeded();
+  }
+
+  Future<void> _startPreviewIfNeeded() async {
+    if (_previewStarted) return;
+    final stations = LibraryData.stations.value;
+    if (stations.isEmpty) return;
+    Station? chosen;
+    for (final s in stations) {
+      final url = s.playerUrl ?? s.streamURL ?? s.mp3Url ?? '';
+      if (url.isNotEmpty) {
+        chosen = s;
+        break;
+      }
+    }
+    if (chosen == null) return;
+    if (PlaybackManager.instance.isPlaying) return;
+    // Respect user setting: only autoplay preview when enabled
+    if (!AppData.enablePreviewAutoplay.value) return;
+    final Station s = chosen;
+    _previewStarted = true;
+    final song = {
+      'title': s.name,
+      'subtitle': s.description ?? '',
+      'image': s.profilepic ?? '',
+      'url': s.playerUrl ?? s.streamURL ?? s.mp3Url ?? ''
+    };
+    try {
+      await PlaybackManager.instance.play(song, duration: 10);
+    } catch (_) {}
+    if (!mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => SongPage(
+              station: s,
+              title: s.name,
+              subtitle: s.description ?? '',
+              imageUrl: s.profilepic,
+              autoplay: false,
+              showBottomNav: true,
+            )));
   }
 
   void _handlePlayback() => setState(() {});
@@ -486,18 +491,7 @@ class _HomePageState extends State<HomePage>
   Map<String, String>? get _heroSong =>
       _playback.currentSong ?? _playback.lastSong;
 
-  void _openFullPlayer() {
-    // Open full player using current/last song data if available.
-    final song = _heroSong ?? <String, String>{};
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => SongPage(
-        title: song['title'] ?? '',
-        subtitle: song['subtitle'] ?? '',
-        imageUrl: song['image'],
-        autoplay: _playback.isPlaying,
-      ),
-    ));
-  }
+  // helper removed: open full player now uses explicit navigation where needed
 
   Future<void> _playPrevious() async {
     final history = PlaybackManager.instance.history;
@@ -835,6 +829,22 @@ class _HomePageState extends State<HomePage>
                                     ),
                                   );
                                 });
+                          },
+                        ),
+                        // Toggle: preview autoplay when stations load
+                        ValueListenableBuilder<bool>(
+                          valueListenable: AppData.enablePreviewAutoplay,
+                          builder: (ctx4, enabled, __) {
+                            return SwitchListTile(
+                              secondary: const Icon(Icons.play_arrow, color: Colors.white),
+                              title: const Text('Auto Preview', style: TextStyle(color: Colors.white)),
+                              value: enabled,
+                              onChanged: (v) async {
+                                await AppData.saveEnablePreviewAutoplay(v);
+                                setState(() {});
+                              },
+                              activeThumbColor: BakwaasPalette.neonGreen,
+                            );
                           },
                         ),
                         ListTile(

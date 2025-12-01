@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 const Station = require('../models/Station');
 
 function escapeRegExp(s) {
-  return s.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&');
+  return s.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
 }
 
 function logLine(action, name, url, extra) {
@@ -16,6 +16,19 @@ function logLine(action, name, url, extra) {
   if (url) parts.push(`url="${url}"`);
   if (extra) parts.push(extra);
   console.log(parts.join(' | '));
+}
+
+function normalizeUrl(u) {
+  if (!u) return '';
+  try {
+    const urlObj = new URL(u);
+    // remove trailing slashes from pathname but keep single leading slash
+    const pathname = urlObj.pathname.replace(/\/+$/g, '');
+    return urlObj.origin + pathname;
+  } catch (e) {
+    // fallback: strip query and trailing slashes
+    return u.toString().replace(/\?.*$/, '').replace(/\/+$/g, '');
+  }
 }
 
 async function main() {
@@ -42,6 +55,9 @@ async function main() {
 
   await mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
 
+  // Detect replace flag early
+  const replaceAll = process.argv.includes('--replace');
+
   // Backup existing stations collection
   const backupDir = path.resolve(__dirname, '..', 'backups');
   if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
@@ -54,9 +70,29 @@ async function main() {
   const toCreate = [];
   const skipped = { duplicates: 0, no_stream: 0, js_urls: 0 };
 
+  // If replaceAll requested, delete existing docs after backup and before duplicate checks
+  if (replaceAll) {
+    try {
+      const delRes = await Station.deleteMany({});
+      console.log(`Replaced mode: deleted ${delRes.deletedCount} existing stations from DB (after backup)`);
+    } catch (err) {
+      console.error('Failed to delete existing stations:', err.message);
+      await mongoose.disconnect();
+      process.exit(1);
+    }
+  }
+
   for (const [i, s] of stations.entries()) {
-    const url = (s.streaming_url || s.stream || s.stream_url || s.url || '').toString().trim();
-    const name = (s.name || s.title || s.station_name || s.station || '').toString().trim() || 'Unknown Station';
+    // Prefer explicit streaming_url, then streams array, then common fallbacks
+    let url = '';
+    if (s.streaming_url) url = s.streaming_url;
+    else if (Array.isArray(s.streams) && s.streams.length) url = s.streams[0];
+    else if (s.stream) url = s.stream;
+    else if (s.stream_url) url = s.stream_url;
+    else if (s.url) url = s.url;
+    url = (url || '').toString().trim();
+
+    const name = ((s.name || s.title || s.station_name || s.station) || 'Unknown Station').toString().trim();
 
     if (!url) {
       skipped.no_stream++;
@@ -65,16 +101,17 @@ async function main() {
     }
 
     // If the path (before query) ends with .js => skip
-    const urlPath = url.split('?')[0].toLowerCase();
-    if (urlPath.endsWith('.js')) {
+    const urlPathLower = url.split('?')[0].toLowerCase();
+    if (urlPathLower.endsWith('.js')) {
       skipped.js_urls++;
       logLine('SKIP_JS_URL', name, url, `index=${i}`);
       continue;
     }
 
-    const mp3Url = url;
+    // Normalize mp3/stream URL for duplicate detection
+    const mp3Url = normalizeUrl(url);
 
-    // Duplicate check: existing by mp3Url or name (case-insensitive exact)
+    // Duplicate check: existing by normalized mp3Url or name (case-insensitive exact)
     const nameRegex = new RegExp('^' + escapeRegExp(name) + '$', 'i');
     const existingDoc = await Station.findOne({ $or: [ { mp3Url }, { name: { $regex: nameRegex } } ] }).lean();
     if (existingDoc) {
@@ -84,15 +121,36 @@ async function main() {
       continue;
     }
 
+    // Extract profile image: prefer `playerImage`, then `banner`, then other fallbacks
+    const profilepic = (s.playerImage || s.banner || s.player_image || s.playerImg || s.image || s.logo || s.icon || '').toString().trim();
+
+    // Description and extras
+    const description = (s.description || s.details || s.info || s.summary || '').toString().trim();
+
+    // Genre: prefer explicit genre, else categories (join if multiple)
+    let genre = 'General';
+    if (s.genre) genre = s.genre;
+    else if (Array.isArray(s.categories) && s.categories.length) {
+      // categories may be strings or objects
+      const parts = s.categories.map(c => (typeof c === 'string' ? c : (c.name || c.title || '') )).filter(Boolean);
+      if (parts.length) genre = parts.join(', ');
+    }
+
+    // Tags: categories if strings, else tags field
+    let tags = [];
+    if (Array.isArray(s.categories) && s.categories.every(c => typeof c === 'string')) tags = s.categories;
+    else if (Array.isArray(s.tags)) tags = s.tags;
+
     const doc = {
       name,
       mp3Url,
-      profilepic: s.logo || s.image || s.icon || '',
-      banner: s.banner || '',
-      description: s.description || s.details || s.info || '',
-      genre: s.genre || (Array.isArray(s.categories) ? s.categories[0] : '') || 'General',
+      profilepic,
+      // Banner: prefer explicit `banner`, else fall back to `playerImage` or empty
+      banner: (s.banner || s.playerImage || s.player_image || '').toString().trim(),
+      description,
+      genre: genre || 'General',
       contentLanguage: s.language || s.lang || s.country || 'Hindi',
-      tags: s.tags || s.categories || [],
+      tags,
       isStandalone: true,
     };
 
@@ -108,6 +166,8 @@ async function main() {
     await mongoose.disconnect();
     return;
   }
+
+  // (deletion handled earlier)
 
   let imported = 0;
   let errors = 0;

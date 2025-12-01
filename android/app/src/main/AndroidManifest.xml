@@ -36,6 +36,22 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Ensure the audio service stays running even if the app task is
+             removed from Recents. This service declaration marks the
+             audio service as a long-running foreground service and sets
+             stopWithTask="false" so Android doesn't stop it when the
+             user swipes the app away. The AudioService plugin will bind
+             to this service class at runtime. -->
+        <service android:name="com.ryanheise.audioservice.AudioService"
+                 android:exported="false"
+                 android:stopWithTask="false">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+        <service android:name=".PlaybackKeepAliveService"
+                 android:exported="false"
+                 android:stopWithTask="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

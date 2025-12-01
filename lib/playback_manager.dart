@@ -3,15 +3,17 @@ import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:audio_service/audio_service.dart';
 import 'background_audio.dart';
+import 'cache_helper.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PlaybackManager extends ChangeNotifier {
   PlaybackManager._internal() {
     _audioPlayer = AudioPlayer();
-    // Try to initialize the background audio handler. If that fails,
-    // we continue to use the local AudioPlayer instance as a fallback.
-    _initHandler();
+    // NOTE: Do NOT initialize the background audio handler automatically.
+    // Some deployments prefer not to use the background player or notification
+    // area. Keep handler initialization available but explicit; by default
+    // we continue using the local AudioPlayer instance as fallback.
 
     _audioPlayer.onDurationChanged.listen((duration) {
       _durationSeconds = duration.inSeconds;
@@ -121,6 +123,12 @@ class PlaybackManager extends ChangeNotifier {
     }
   }
 
+  /// Returns true if the background audio service is available and running.
+  Future<bool> _audioServiceAvailable() async {
+    // Treat the presence of a non-null audio handler as availability.
+    return _audioHandler != null;
+  }
+
   Future<bool> play(Map<String, String> song, {int duration = 0}) async {
     if (song['url'] == null || song['url']!.isEmpty) {
       return false;
@@ -157,12 +165,24 @@ class PlaybackManager extends ChangeNotifier {
       return _isPlaying;
     }
 
-    if (_audioHandler != null) {
+    if (await _audioServiceAvailable()) {
       try {
         final handler = _audioHandler as dynamic;
         final extras = Map<String, String>.from(song);
+        // If an image URL is provided, try to cache it locally and provide
+        // a file:// URI for the notification so Android can show a large
+        // artwork icon even if the app process is killed.
         if (extras.containsKey('image') && !extras.containsKey('artUri')) {
-          extras['artUri'] = extras['image']!;
+          try {
+            final cached = await CacheHelper.cacheImage(extras['image']!);
+            if (cached != null && cached.isNotEmpty) {
+              extras['artUri'] = Uri.file(cached).toString();
+            } else {
+              extras['artUri'] = extras['image']!;
+            }
+          } catch (_) {
+            extras['artUri'] = extras['image']!;
+          }
         }
         await handler.setUrl(song['url']!, extras: extras);
         await handler.play();

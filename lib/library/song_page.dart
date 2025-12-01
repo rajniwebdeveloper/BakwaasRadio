@@ -12,15 +12,15 @@ class SongPage extends StatefulWidget {
   final String subtitle;
   final String? imageUrl; // optional image to show inside the CD
   final bool autoplay; // whether to auto-start playback when opened
-  final bool showBottomNav;
-  const SongPage(
+    final bool showBottomNav;
+    const SongPage(
       {super.key,
       this.station,
       required this.title,
       required this.subtitle,
       this.imageUrl,
       this.autoplay = false,
-      this.showBottomNav = false});
+      this.showBottomNav = true});
 
   @override
   State<SongPage> createState() => _SongPageState();

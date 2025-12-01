@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'api_service.dart';
 import 'models/station.dart';
 import 'library/song_page.dart';
-import 'library/liked_songs_manager.dart';
 import 'widgets/bakwaas_chrome.dart';
 
 class StationsPage extends StatefulWidget {
@@ -130,15 +129,16 @@ class _StationsPageState extends State<StationsPage> {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final station = stations[index];
-        return InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => SongPage(
-                  station: station,
-                  title: station.name,
-                  subtitle: station.description ?? '',
-                  imageUrl: station.profilepic,
-                  autoplay: true))),
+            return InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => SongPage(
+                      station: station,
+                      title: station.name,
+                      subtitle: station.description ?? '',
+                      imageUrl: station.profilepic,
+                      autoplay: true,
+                      showBottomNav: true))),
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BakwaasTheme.glassDecoration(radius: 18, opacity: 0.08),
@@ -190,33 +190,7 @@ class _StationsPageState extends State<StationsPage> {
                     ],
                   ),
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        LikedSongsManager.contains({'title': station.name, 'subtitle': station.description ?? ''})
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: Colors.pinkAccent,
-                      ),
-                      onPressed: () {
-                        final songMap = {
-                          'title': station.name,
-                          'subtitle': station.description ?? '',
-                          'image': station.profilepic ?? '',
-                          'url': station.playerUrl ?? station.streamURL ?? station.mp3Url ?? ''
-                        };
-                        if (LikedSongsManager.contains(songMap)) {
-                          LikedSongsManager.remove(songMap);
-                        } else {
-                          LikedSongsManager.add(songMap);
-                        }
-                      },
-                    ),
-                    const Icon(Icons.chevron_right, color: Colors.white70)
-                  ],
-                )
+                const Icon(Icons.chevron_right, color: Colors.white70)
               ],
             ),
           ),
@@ -227,7 +201,7 @@ class _StationsPageState extends State<StationsPage> {
 
   Widget _buildGrid(List<Station> stations) {
     final screenWidth = MediaQuery.of(context).size.width - 40; // account for padding
-    final tileSize = 76; // desired tile width
+    const tileSize = 76; // desired tile width
     int cross = (screenWidth / tileSize).floor();
     if (cross < 3) cross = 3;
     if (cross > 6) cross = 6;
@@ -243,18 +217,19 @@ class _StationsPageState extends State<StationsPage> {
       itemCount: stations.length,
       itemBuilder: (context, index) {
         final station = stations[index];
-        return InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => SongPage(
-                  station: station,
-                  title: station.name,
-                  subtitle: station.description ?? '',
-                  imageUrl: station.profilepic,
-                  autoplay: true))),
+            return InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => SongPage(
+                      station: station,
+                      title: station.name,
+                      subtitle: station.description ?? '',
+                      imageUrl: station.profilepic,
+                      autoplay: true,
+                      showBottomNav: true))),
           child: Container(
             decoration: BakwaasTheme.glassDecoration(radius: 12, opacity: 0.06),
-            child: Stack(
+                child: Stack(
               children: [
                 Positioned.fill(
                   child: ClipRRect(
@@ -269,7 +244,7 @@ class _StationsPageState extends State<StationsPage> {
                     ),
                   ),
                 ),
-                if (_showSerial)
+                       if (_showSerial)
                   Positioned(
                     left: 6,
                     top: 6,
@@ -279,6 +254,7 @@ class _StationsPageState extends State<StationsPage> {
                       child: Text('${index + 1}', style: const TextStyle(color: Colors.white, fontSize: 11)),
                     ),
                   ),
+                      // Like button removed from station grid — managed on player page only
               ],
             ),
           ),

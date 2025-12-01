@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:http/http.dart' as http;
 
 /// AppConfig provides a resolver for the API base URL.
@@ -17,28 +17,56 @@ class AppConfig {
     if (_forcedBaseUrl != null && _forcedBaseUrl!.isNotEmpty) return _forcedBaseUrl!;
     if (_cachedBaseUrl != null) return _cachedBaseUrl!;
     // Prefer a local backend during development. Try multiple local host
-    // variants so simulators, emulators and web can connect more reliably.
-    // Avoid using `dart:io` so this file works on web builds too.
-    final List<String> candidates = kIsWeb
+    // variants first (web, emulator, simulator) and then fall back to
+    // public hosts in the order requested by the user.
+    final List<String> localCandidates = kIsWeb
       ? ['http://localhost:3222', 'http://127.0.0.1:3222']
-      : [ 'http://127.0.0.1:3222', 'http://localhost:3222'];
-    const fallback = 'https://radio.rajnikantmahato.me';
-    final probeTimeout = timeout.inSeconds < 5 ? const Duration(seconds: 5) : timeout;
+      : ['http://localhost:3222', 'http://127.0.0.1:3222', 'http://10.0.2.2:3222'];
 
-    for (final local in candidates) {
+    // Public hosts (probing order): primary, local DNS, radio fallback, beta
+    final List<String> publicCandidates = [
+      'https://bakwaasfm.in',
+      'https://local.bakwaasfm.in',
+      'https://radio.rajnikantmahato.me',
+      'https://beta.bakwaasfm.in',
+    ];
+
+    final probeTimeout = timeout.inSeconds < 3 ? const Duration(seconds: 3) : timeout;
+
+    // Helper to probe a single URL's /api/health endpoint
+    Future<bool> probe(String base) async {
       try {
-        final uri = Uri.parse('$local/api/health');
+        final uri = Uri.parse('$base/api/health');
         final resp = await http.get(uri).timeout(probeTimeout);
-        if (resp.statusCode == 200) {
-          _cachedBaseUrl = local;
-          return _cachedBaseUrl!;
-        }
-      } catch (_) {
-        // try next candidate
+        return resp.statusCode == 200;
+      } catch (e) {
+        return false;
       }
     }
 
-    _cachedBaseUrl = fallback;
+    // Try locals first (in user-requested order: localhost first)
+    for (final candidate in localCandidates) {
+      final ok = await probe(candidate);
+      if (ok) {
+        _cachedBaseUrl = candidate;
+        debugPrint('AppConfig.resolveApiBaseUrl -> using $candidate (local)');
+        return _cachedBaseUrl!;
+      }
+    }
+
+    // Try public hosts in the specified order
+    for (final candidate in publicCandidates) {
+      final ok = await probe(candidate);
+      if (ok) {
+        _cachedBaseUrl = candidate;
+        debugPrint('AppConfig.resolveApiBaseUrl -> using $candidate (public)');
+        return _cachedBaseUrl!;
+      }
+    }
+
+    // If none responded, fall back to the primary public host as a last resort
+    _cachedBaseUrl = publicCandidates.isNotEmpty ? publicCandidates.first : 'https://radio.rajnikantmahato.me';
+    debugPrint('AppConfig.resolveApiBaseUrl -> falling back to $_cachedBaseUrl');
     return _cachedBaseUrl!;
   }
 
@@ -55,7 +83,7 @@ class AppConfig {
 
   /// Returns the last resolved base URL synchronously if available, or the
   /// public fallback. Prefer `resolveApiBaseUrl()` for reliable results.
-  static String get apiBaseUrlSync => _cachedBaseUrl ?? 'https://radio.rajnikantmahato.me';
+  static String get apiBaseUrlSync => _cachedBaseUrl ?? 'https://bakwaasfm.in';
 }
 
 /// Basic app identity constants used in UI (app name, package id, logo asset).

@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'models/station.dart';
 import 'config.dart';
+import 'cache_helper.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiService {
   // Internal cached base URL for this runtime session. Use AppConfig.resolveApiBaseUrl
@@ -18,31 +20,46 @@ class ApiService {
 
   /// Fetch stations and decode into `Station` objects.
   static Future<List<Station>> getStations() async {
+    // Attempt to use cached stations JSON first (one-time fetch behavior).
+    try {
+      final cached = await CacheHelper.loadStationsJson();
+      if (cached != null && cached.isNotEmpty) {
+        try {
+          final data = json.decode(cached) as List<dynamic>;
+          return data.map((e) => Station.fromJson(e as Map<String, dynamic>)).toList();
+        } catch (_) {
+          // fallthrough to network fetch if cache is corrupt
+        }
+      }
+    } catch (_) {}
+
     final base = await _baseUrl();
-    // Debug: print resolved base so web console shows what's being used
-    // (helps diagnose missing network calls when running in browser)
-    // ignore: avoid_print
-    print('ApiService.getStations -> base: $base');
+    debugPrint('ApiService.getStations -> base: $base');
     final uri = Uri.parse('$base/api/stations');
     final response = await http.get(uri);
-    // ignore: avoid_print
-    print('GET $uri -> ${response.statusCode}');
+    debugPrint('GET $uri -> ${response.statusCode}');
     if (response.statusCode == 200) {
       try {
+        // Save raw body to cache for offline reuse
+        await CacheHelper.saveStationsJson(response.body);
         final data = json.decode(response.body) as List<dynamic>;
         return data.map((e) => Station.fromJson(e as Map<String, dynamic>)).toList();
       } catch (e, st) {
-        // ignore: avoid_print
-        print('ApiService.getStations: JSON decode error: $e');
-        // ignore: avoid_print
-        print(st);
+        debugPrint('ApiService.getStations: JSON decode error: $e');
+        debugPrint('$st');
         rethrow;
       }
     }
 
-    // Non-200: print body to help debugging
-    // ignore: avoid_print
-    print('ApiService.getStations failed body: ${response.body}');
+    // Non-200: if cache exists return it; otherwise throw
+    final cached2 = await CacheHelper.loadStationsJson();
+    if (cached2 != null && cached2.isNotEmpty) {
+      try {
+        final data = json.decode(cached2) as List<dynamic>;
+        return data.map((e) => Station.fromJson(e as Map<String, dynamic>)).toList();
+      } catch (_) {}
+    }
+    debugPrint('ApiService.getStations failed body: ${response.body}');
     throw Exception('Failed to load stations: ${response.statusCode} ${response.body}');
   }
 
@@ -127,6 +144,18 @@ class ApiService {
     } catch (_) {
       return false;
     }
+  }
+
+  /// Debug helper: resolve and return the API base URL used by the app.
+  /// Useful for verifying which backend was selected at runtime.
+  static Future<String> resolveAndLogBase() async {
+    final base = await _baseUrl();
+    try {
+      // Use debugPrint to avoid analyzer 'avoid_print' noise.
+      // ignore: avoid_print
+      debugPrint('ApiService.resolveAndLogBase -> $base');
+    } catch (_) {}
+    return base;
   }
 
   /// Fetch update metadata. Endpoint: /api/update
