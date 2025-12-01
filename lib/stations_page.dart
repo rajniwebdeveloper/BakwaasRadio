@@ -16,8 +16,10 @@ class StationsPage extends StatefulWidget {
 class _StationsPageState extends State<StationsPage> {
   bool _searching = false;
   String _query = '';
-  bool _gridView = false;
-  bool _showSerial = true;
+  // Default to icon-only grid view. Serial badges off by default —
+  // user can toggle serials using the header button.
+  bool _gridView = true;
+  bool _showSerial = false;
 
   @override
   Widget build(BuildContext context) {

@@ -645,7 +645,7 @@ class _HomePageState extends State<HomePage>
                         // feature flag is enabled AND user is logged in.
                         ValueListenableBuilder<bool>(
                           valueListenable: AppData.isLoggedIn,
-                          builder: (ctx2, loggedIn, 2) {
+                          builder: (ctx2, loggedIn, __) {
                             if (enableDownloads && loggedIn) {
                               return ListTile(
                                 leading: const Icon(Icons.download, color: Colors.white),
@@ -742,10 +742,10 @@ class _HomePageState extends State<HomePage>
                                                       // feature flag is enabled AND the user is logged in.
                                                       // This prevents the UI from advertising download
                                                       // functionality when it's not available.
-                                                      if (enableDownloads)
+                                                        if (enableDownloads)
                                                         ValueListenableBuilder<bool>(
                                                           valueListenable: AppData.isLoggedIn,
-                                                          builder: (ctx3, loggedIn, 3) {
+                                                          builder: (ctx3, loggedIn, __) {
                                                             if (!loggedIn) return const SizedBox.shrink();
                                                             return CheckboxListTile(
                                                               value: has('downloads'),
