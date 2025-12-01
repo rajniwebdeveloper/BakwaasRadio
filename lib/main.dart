@@ -11,7 +11,7 @@ import 'library/song_page.dart';
 import 'library/library_data.dart';
 import 'playback_manager.dart';
 import 'background_audio.dart';
-import 'library/library_page.dart';
+
 import 'app_data.dart';
 import 'profile_page.dart';
 import 'library/playlist_detail_page.dart';
@@ -645,7 +645,7 @@ class _HomePageState extends State<HomePage>
                         // feature flag is enabled AND user is logged in.
                         ValueListenableBuilder<bool>(
                           valueListenable: AppData.isLoggedIn,
-                          builder: (ctx2, loggedIn, _2) {
+                          builder: (ctx2, loggedIn, 2) {
                             if (enableDownloads && loggedIn) {
                               return ListTile(
                                 leading: const Icon(Icons.download, color: Colors.white),
@@ -745,7 +745,7 @@ class _HomePageState extends State<HomePage>
                                                       if (enableDownloads)
                                                         ValueListenableBuilder<bool>(
                                                           valueListenable: AppData.isLoggedIn,
-                                                          builder: (ctx3, loggedIn, _3) {
+                                                          builder: (ctx3, loggedIn, 3) {
                                                             if (!loggedIn) return const SizedBox.shrink();
                                                             return CheckboxListTile(
                                                               value: has('downloads'),
@@ -888,56 +888,57 @@ class _HomePageState extends State<HomePage>
       },
       bodyPadding: EdgeInsets.zero,
       body: _activeTab == 0
-          ? ListView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
-              children: [
-                _buildHeroSection(heroSong),
-                const SizedBox(height: 18),
-                // Quick access to Stations
-                GestureDetector(
-                  onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const StationsPage())),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
-                    decoration:
-                        BakwaasTheme.glassDecoration(radius: 22, opacity: 0.06),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.radio, color: Colors.white70),
-                        SizedBox(width: 12),
-                        Expanded(
-                            child: Text('Browse Stations',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700))),
-                        Icon(Icons.chevron_right, color: Colors.white70)
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-              ],
+          ? const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 140),
+              child: StationsPage(useScaffold: false),
             )
           : (_activeTab == 1)
-              ? const Padding(
-                  padding: EdgeInsets.fromLTRB(20, 0, 20, 140),
-                  child: LikedSongsContent(),
+              ? ListView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+                  children: [
+                    _buildHeroSection(heroSong),
+                    const SizedBox(height: 18),
+                    // Quick access to Stations (kept for consistency)
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const StationsPage())),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        decoration:
+                            BakwaasTheme.glassDecoration(radius: 22, opacity: 0.06),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.radio, color: Colors.white70),
+                            SizedBox(width: 12),
+                            Expanded(
+                                child: Text('Browse Stations',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700))),
+                            Icon(Icons.chevron_right, color: Colors.white70)
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                  ],
                 )
               : (_activeTab == 2)
-                  // Render Library inline using the same LibraryPage content
                   ? const Padding(
                       padding: EdgeInsets.fromLTRB(20, 0, 20, 140),
-                      child: LibraryPage(useScaffold: false),
+                      child: LikedSongsContent(),
                     )
                   : ListView(
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
-                      children: [
-                        // fallback: show home content if unknown
-                        _buildHeroSection(heroSong),
-                        const SizedBox(height: 18),
+                      children: const [
+                        // fallback: show stations if unknown
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(20, 0, 20, 140),
+                          child: StationsPage(useScaffold: false),
+                        ),
                       ],
                     ),
       onNavTap: (index) {

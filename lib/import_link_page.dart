@@ -91,7 +91,7 @@ class _ImportLinkPageState extends State<ImportLinkPage> {
 
         return ValueListenableBuilder<bool>(
           valueListenable: AppData.isLoggedIn,
-          builder: (ctx2, loggedIn, _2) {
+          builder: (ctx2, loggedIn, 2) {
             final showDownloads = enableDownloads && loggedIn;
             return Scaffold(
               appBar: AppBar(

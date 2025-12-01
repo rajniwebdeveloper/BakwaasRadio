@@ -148,7 +148,7 @@ class PlaybackManager extends ChangeNotifier {
     }
 
     // Helper to wait briefly for player to report playing state
-    Future<bool> _waitForPlaying({int timeoutMs = 2000}) async {
+    Future<bool> waitForPlaying({int timeoutMs = 2000}) async {
       final sw = DateTime.now();
       while (DateTime.now().difference(sw).inMilliseconds < timeoutMs) {
         if (_isPlaying) return true;
@@ -166,7 +166,7 @@ class PlaybackManager extends ChangeNotifier {
         }
         await handler.setUrl(song['url']!, extras: extras);
         await handler.play();
-        final ok = await _waitForPlaying();
+        final ok = await waitForPlaying();
         if (ok) {
           _lastSong = Map.from(song);
           _addToHistory(Map.from(song));
@@ -181,7 +181,7 @@ class PlaybackManager extends ChangeNotifier {
 
     try {
       await _audioPlayer.play(UrlSource(song['url']!));
-      final ok = await _waitForPlaying();
+      final ok = await waitForPlaying();
       if (ok) {
         _lastSong = Map.from(song);
         _addToHistory(Map.from(song));
