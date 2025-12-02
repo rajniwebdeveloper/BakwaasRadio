@@ -116,13 +116,15 @@ class _LibraryPageState extends State<LibraryPage> {
                                   width: 220,
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(12),
-                                    onTap: () => Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                            builder: (_) => SongPage(
-                                                  title: s['title'] ?? '',
-                                                  subtitle: s['subtitle'] ?? '',
-                                                  imageUrl: s['image'],
-                                                ))),
+                                    onTap: () {
+                                      AppData.rootTab.value = 2;
+                                      Navigator.of(context).push(MaterialPageRoute(
+                                          builder: (_) => SongPage(
+                                                title: s['title'] ?? '',
+                                                subtitle: s['subtitle'] ?? '',
+                                                imageUrl: s['image'],
+                                              )));
+                                    },
                                     child: Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BakwaasTheme.glassDecoration(
@@ -245,6 +247,7 @@ class _LibraryPageState extends State<LibraryPage> {
                         'image': s['image'] ?? ''
                       };
                       PlaybackManager.instance.play(songMap, duration: 191);
+                      AppData.rootTab.value = 2;
                       Navigator.of(context).push(MaterialPageRoute(
                           builder: (_) => SongPage(
                                 title: songMap['title']!,
@@ -475,6 +478,7 @@ class _LibraryPageState extends State<LibraryPage> {
                   'image': image,
                   'url': url
                 });
+                AppData.rootTab.value = 2;
                 Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => SongPage(
                           station: s,

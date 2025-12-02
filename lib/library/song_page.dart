@@ -2,9 +2,66 @@ import 'dart:math' as math;
 import 'package:bakwaas_fm/models/station.dart';
 import 'package:flutter/material.dart';
 import '../playback_manager.dart';
+import '../app_data.dart';
 import 'liked_songs_manager.dart';
 import '../widgets/bakwaas_chrome.dart';
 import '../widgets/orbital_ring.dart';
+import 'package:flutter/services.dart';
+
+class _SystemVolumeControl extends StatefulWidget {
+  const _SystemVolumeControl({Key? key}) : super(key: key);
+  @override
+  State<_SystemVolumeControl> createState() => _SystemVolumeControlState();
+}
+
+class _SystemVolumeControlState extends State<_SystemVolumeControl> {
+  static const MethodChannel _volumeChannel = MethodChannel('com.bakwaas.fm/volume');
+  double _vol = 0.5;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final cur = await _volumeChannel.invokeMethod('getVolume');
+      setState(() {
+        _vol = (cur is double) ? cur : (cur is num ? cur.toDouble() : 0.5);
+      });
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(Icons.volume_up, color: Colors.white70),
+        const SizedBox(width: 12),
+        Expanded(
+          child: SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 3,
+              activeTrackColor: Colors.white,
+              inactiveTrackColor: Colors.white.withOpacity(0.18),
+              thumbColor: Colors.white,
+            ),
+            child: Slider(
+              value: _vol.clamp(0.0, 1.0),
+              onChanged: (v) async {
+                setState(() => _vol = v);
+                try {
+                  await _volumeChannel.invokeMethod('setVolume', v);
+                } catch (_) {}
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class SongPage extends StatefulWidget {
   final Station? station;
@@ -31,6 +88,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
   late final AnimationController _ringController;
   bool _isPlaying = false;
   double _progress = 0.0;
+  int _durationSeconds = 0;
 
   // Songs list starts empty; we'll populate from `station` or passed title only.
   final List<Map<String, String>> _songs = [];
@@ -145,6 +203,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
     setState(() {
       _isPlaying = mgr.isPlaying;
       _progress = mgr.progress;
+      _durationSeconds = mgr.durationSeconds;
       
       if (_isPlaying) {
         if (!_rotationController.isAnimating) _rotationController.repeat();
@@ -174,18 +233,21 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
 
     return BakwaasScaffold(
       backgroundImage: imageUrl,
-      activeTab: 2,
+      activeTab: AppData.rootTab.value,
       showBottomNav: widget.showBottomNav,
       onMenuTap: () => Navigator.of(context).maybePop(),
       onExitTap: () => Navigator.of(context).maybePop(),
       bodyPadding: const EdgeInsets.fromLTRB(12, 0, 12, 120),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 12),
-            SizedBox(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final availableHeight = constraints.maxHeight;
+          return SizedBox(
+            height: availableHeight,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 12),
+                SizedBox(
               width: albumSize + 64,
               height: albumSize + 64,
               child: AnimatedBuilder(
@@ -268,7 +330,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                   ),
                 ],
               ),
-              child: Column(
+                child: Column(
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -335,7 +397,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(48),
                 border: Border.all(color: Colors.white.withOpacity(0.06)),
               ),
-              child: Row(
+                child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   IconButton(
@@ -364,11 +426,20 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                         ],
                       ),
                       child: Center(
-                        child: Icon(
-                          _isPlaying ? Icons.pause : Icons.play_arrow,
-                          color: Colors.white,
-                          size: 42,
-                        ),
+                        child: PlaybackManager.instance.isLoading
+                            ? const SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.6,
+                                ),
+                              )
+                            : Icon(
+                                _isPlaying ? Icons.pause : Icons.play_arrow,
+                                color: Colors.white,
+                                size: 42,
+                              ),
                       ),
                     ),
                   ),
@@ -381,11 +452,11 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
               ),
             ),
             const SizedBox(height: 12),
+            // Progress slider and time display (single control)
             Column(
               children: [
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6.0, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 6),
                   child: Row(
                     children: [
                       Expanded(
@@ -396,12 +467,15 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                             inactiveTrackColor: Colors.white.withOpacity(0.12),
                             thumbColor: Colors.white,
                             overlayColor: Colors.tealAccent.withOpacity(0.12),
-                            thumbShape: const RoundSliderThumbShape(
-                                enabledThumbRadius: 8),
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
                           ),
                           child: Slider(
                             value: _progress.clamp(0.0, 1.0),
-                            onChanged: (v) => PlaybackManager.instance.seek(v),
+                            onChanged: (v) {
+                              if (PlaybackManager.instance.durationSeconds > 0) {
+                                PlaybackManager.instance.seek(v);
+                              }
+                            },
                           ),
                         ),
                       ),
@@ -410,18 +484,25 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                 ),
                 Row(
                   children: [
-                    // Left side intentionally left empty to avoid duplicate "Now Playing" label
                     const Expanded(child: SizedBox()),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Text(
-                          _formatTime((_progress * _totalSeconds).round()),
-                          style:
-                              TextStyle(color: Colors.white.withOpacity(0.75))),
+                        _formatTime((_durationSeconds > 0
+                                ? (_progress * _durationSeconds).round()
+                                : (_progress * _totalSeconds).round())
+                            .toInt()),
+                        style: TextStyle(color: Colors.white.withOpacity(0.75)),
+                      ),
                     )
                   ],
                 )
               ],
+            ),
+            // Inline system volume slider (controls Android STREAM_MUSIC)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
+              child: _SystemVolumeControl(),
             ),
             // const SizedBox(height: 10),
             // Padding(
@@ -540,10 +621,12 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
             //     ],
               // ),
             // ),
+            const Spacer(),
             const SizedBox(height: 40),
           ],
         ),
-      ),
+      );
+    }),
     );
   }
 }

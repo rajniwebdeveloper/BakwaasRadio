@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../app_data.dart';
 import '../playback_manager.dart';
 import '../config.dart';
+import '../library/song_page.dart';
+import 'package:flutter/services.dart';
 
 class BakwaasPalette {
   static const Color navy = Color(0xFF040812);
@@ -160,36 +162,181 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
                       child: widget.body,
                     ),
                   ),
+                  if (widget.showBottomNav) ...[
+                    // Put mini-player and bottom nav inside the SafeArea column
+                    // so they don't overlap and touch targets remain reachable.
+                    _MiniPlayer(),
+                    BakwaasBottomNav(
+                      activeIndex: widget.activeTab,
+                      onTap: widget.onNavTap ?? (index) {
+                        if (index == widget.activeTab) return;
+                        Navigator.of(context).popUntil((r) => r.isFirst);
+                        AppData.rootTab.value = index.clamp(0, 2);
+                        return;
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                  ]
                 ],
               ),
             ),
-            if (widget.showBottomNav)
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: BakwaasBottomNav(
-                  activeIndex: widget.activeTab,
-                  onTap: widget.onNavTap ?? (index) {
-                    // Default navigation when parent doesn't provide a handler.
-                    // Instead of pushing new pages for primary tabs, update
-                    // the global `AppData.rootTab` and return to the root route
-                    // so the main HomePage can show the selected tab. This
-                    // prevents stacking multiple `BakwaasScaffold`s and
-                    // duplicate bottom nav bars.
-                    if (index == widget.activeTab) return;
-                    // Pop back to root then set the global tab value so the
-                    // HomePage (if present) will switch its content.
-                    Navigator.of(context).popUntil((r) => r.isFirst);
-                    AppData.rootTab.value = index.clamp(0, 2);
-                    return;
-                  },
-                ),
-              ),
           ],
         ),
       ),
     );
   }
 }
+
+  class _MiniPlayer extends StatefulWidget {
+    @override
+    State<_MiniPlayer> createState() => _MiniPlayerState();
+  }
+
+  class _MiniPlayerState extends State<_MiniPlayer> {
+    static const MethodChannel _volumeChannel = MethodChannel('com.bakwaas.fm/volume');
+    @override
+    void initState() {
+      super.initState();
+      PlaybackManager.instance.addListener(_onPlaybackChanged);
+    }
+
+    void _onPlaybackChanged() => setState(() {});
+
+    @override
+    void dispose() {
+      PlaybackManager.instance.removeListener(_onPlaybackChanged);
+      super.dispose();
+    }
+
+    @override
+    Widget build(BuildContext context) {
+      final mgr = PlaybackManager.instance;
+      final song = mgr.currentSong;
+      if (song == null) return const SizedBox.shrink();
+
+      final title = song['title'] ?? 'Unknown';
+      final subtitle = song['subtitle'] ?? '';
+
+      return GestureDetector(
+        onTap: () {
+          Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => SongPage(
+                    title: title,
+                    subtitle: subtitle,
+                    imageUrl: song['image'],
+                  )));
+        },
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.04)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.white12,
+                      image: (song['image'] != null && song['image']!.isNotEmpty)
+                          ? DecorationImage(
+                              image: NetworkImage(song['image']!), fit: BoxFit.cover)
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.white, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 2),
+                        Text(subtitle,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: Colors.white.withOpacity(0.7), fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(mgr.isPlaying ? Icons.pause : Icons.play_arrow,
+                            color: Colors.white),
+                        onPressed: () => mgr.toggle(),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.volume_up, color: Colors.white70),
+                        onPressed: () async {
+                          // show volume dialog
+                          double vol = 0.5;
+                          try {
+                            final cur = await _volumeChannel.invokeMethod('getVolume');
+                            vol = (cur is double) ? cur : (cur is num ? cur.toDouble() : vol);
+                          } catch (_) {}
+
+                          showDialog(
+                              context: context,
+                              builder: (ctx) {
+                                return AlertDialog(
+                                  backgroundColor: Colors.black87,
+                                  content: StatefulBuilder(
+                                    builder: (c, setState) {
+                                      return Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Text('Device volume', style: TextStyle(color: Colors.white)),
+                                          const SizedBox(height: 12),
+                                          Slider(
+                                            value: vol.clamp(0.0, 1.0),
+                                            onChanged: (v) async {
+                                              setState(() => vol = v);
+                                              try {
+                                                await _volumeChannel.invokeMethod('setVolume', v);
+                                              } catch (_) {}
+                                            },
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () => Navigator.of(ctx).pop(),
+                                        child: const Text('Close', style: TextStyle(color: Colors.white)))
+                                  ],
+                                );
+                              });
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              LinearProgressIndicator(
+                value: mgr.progress.clamp(0.0, 1.0),
+                backgroundColor: Colors.white.withOpacity(0.06),
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.tealAccent),
+                minHeight: 3,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
 
 class BakwaasTopBar extends StatelessWidget {
   final VoidCallback? onMenuTap;

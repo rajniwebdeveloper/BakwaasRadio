@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:audio_service/audio_service.dart';
 import 'background_audio.dart';
+import 'package:flutter/services.dart';
 import 'cache_helper.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,28 +30,45 @@ class PlaybackManager extends ChangeNotifier {
     _audioPlayer.onPlayerStateChanged.listen((state) {
       final wasPlaying = _isPlaying;
       _isPlaying = state == PlayerState.playing;
+      // Any explicit player state update should clear the "loading"
+      // indicator unless the underlying player exposes a separate
+      // buffering/loading status (audio_service handles that for
+      // background handler). This avoids the UI showing a perpetual
+      // spinner when playback failed to start.
+      _isLoading = false;
       notifyListeners();
       // If playback stopped unexpectedly (not user-paused), try reconnecting
       if (!wasPlaying && !_isPlaying && !_manuallyPaused && _currentSong != null) {
-        // schedule a reconnect attempt
-        if (_reconnectAttempts < _maxReconnectAttempts) {
-          _reconnectAttempts++;
+        // increment attempt counter and either retry or trigger auto-next
+        _reconnectAttempts++;
+        if (_reconnectAttempts <= _maxReconnectAttempts) {
           final attempt = _reconnectAttempts;
           Future.delayed(Duration(milliseconds: 400 * attempt), () async {
             try {
               await play(_currentSong!);
             } catch (_) {}
           });
+        } else {
+          // exceeded retries -> clear loading and notify UI, then ask UI to play next
+          _isLoading = false;
+          notifyListeners();
+          _reconnectAttempts = 0;
+          try {
+            if (onAutoNext != null) onAutoNext!();
+          } catch (_) {}
         }
       }
     });
   }
   static final PlaybackManager instance = PlaybackManager._internal();
 
+  static const MethodChannel _keepAliveChannel = MethodChannel('com.bakwaas.fm/keepalive');
+
   late final AudioPlayer _audioPlayer;
   AudioHandler? _audioHandler;
   Map<String, String>? _currentSong;
   bool _isPlaying = false;
+  bool _isLoading = false;
   double _progress = 0.0; // 0.0 - 1.0
   int _durationSeconds = 0;
 
@@ -59,15 +78,21 @@ class PlaybackManager extends ChangeNotifier {
   // reconnect state
   bool _manuallyPaused = false;
   int _reconnectAttempts = 0;
-  final int _maxReconnectAttempts = 3;
+  final int _maxReconnectAttempts = 5;
+  /// Optional callback invoked when playback failed after max retries.
+  /// UI code can register a handler to advance to the next track/station.
+  void Function()? onAutoNext;
 
   // Remember the last played song even when playback is stopped
   Map<String, String>? _lastSong;
   // persisted history (most-recent-first)
   List<Map<String, String>> _history = [];
+  // Optional timer used for short preview playback (auto-pause)
+  Timer? _previewTimer;
 
   Map<String, String>? get currentSong => _currentSong;
   bool get isPlaying => _isPlaying;
+  bool get isLoading => _isLoading;
   double get progress => _progress;
   int get durationSeconds => _durationSeconds;
   Map<String, String>? get lastSong =>
@@ -108,6 +133,8 @@ class PlaybackManager extends ChangeNotifier {
       // subscribe to handler streams to reflect state in the manager
       _audioHandler!.playbackState.listen((state) {
         _isPlaying = state.playing;
+        // reflect audio_service processing state as loading flag
+        _isLoading = state.processingState == AudioProcessingState.loading;
         // update position/duration if available
         notifyListeners();
       });
@@ -150,6 +177,10 @@ class PlaybackManager extends ChangeNotifier {
     _currentSong = Map.from(song);
     _manuallyPaused = false;
     _reconnectAttempts = 0;
+    _isLoading = true;
+    // cancel any previous preview timer when a new play request is made
+    _previewTimer?.cancel();
+    notifyListeners();
     // Ensure handler is initialized (attempt again) before playback.
     if (_audioHandler == null) {
       await _initHandler();
@@ -187,12 +218,29 @@ class PlaybackManager extends ChangeNotifier {
         await handler.setUrl(song['url']!, extras: extras);
         await handler.play();
         final ok = await waitForPlaying();
+        _isLoading = false;
         if (ok) {
+          // Ensure native keep-alive foreground service is running so the
+          // notification and background sync persist even if the Flutter
+          // UI process is backgrounded. Best-effort; ignore errors.
+          try {
+            _keepAliveChannel.invokeMethod('startService');
+          } catch (_) {}
           _lastSong = Map.from(song);
           _addToHistory(Map.from(song));
+          // schedule preview auto-pause when requested
+          if (duration > 0) {
+            _previewTimer?.cancel();
+            _previewTimer = Timer(Duration(seconds: duration), () {
+              try {
+                pause();
+              } catch (_) {}
+            });
+          }
           notifyListeners();
           return true;
         }
+        notifyListeners();
         return false;
       } catch (_) {
         // fall through to local player fallback
@@ -202,14 +250,27 @@ class PlaybackManager extends ChangeNotifier {
     try {
       await _audioPlayer.play(UrlSource(song['url']!));
       final ok = await waitForPlaying();
+      _isLoading = false;
       if (ok) {
         _lastSong = Map.from(song);
         _addToHistory(Map.from(song));
+        // schedule preview auto-pause when requested
+        if (duration > 0) {
+          _previewTimer?.cancel();
+          _previewTimer = Timer(Duration(seconds: duration), () {
+            try {
+              pause();
+            } catch (_) {}
+          });
+        }
         notifyListeners();
         return true;
       }
+      notifyListeners();
       return false;
     } catch (_) {
+      _isLoading = false;
+      notifyListeners();
       return false;
     }
   }
@@ -230,11 +291,19 @@ class PlaybackManager extends ChangeNotifier {
 
   void pause() {
     _manuallyPaused = true;
+    _isLoading = false;
+    // cancel any preview timer if user paused
+    _previewTimer?.cancel();
     if (_audioHandler != null) {
       _audioHandler!.pause();
     } else {
       _audioPlayer.pause();
     }
+    // Stop the keep-alive service when playback is paused/stopped to avoid
+    // leaving an unnecessary foreground notification running.
+    try {
+      _keepAliveChannel.invokeMethod('stopService');
+    } catch (_) {}
   }
 
   void toggle() {
@@ -279,6 +348,7 @@ class PlaybackManager extends ChangeNotifier {
 
   @override
   void dispose() {
+    _previewTimer?.cancel();
     _audioPlayer.dispose();
     _audioHandler?.stop();
     super.dispose();

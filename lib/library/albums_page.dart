@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'song_page.dart';
+import '../app_data.dart';
 
 class AlbumsPage extends StatefulWidget {
   const AlbumsPage({super.key});
@@ -87,7 +88,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, i) {
                   final a = albums[i];
-                  return Container(
+                    return Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     child: ListTile(
                       contentPadding: EdgeInsets.zero,
@@ -102,11 +103,14 @@ class _AlbumsPageState extends State<AlbumsPage> {
                                   fit: BoxFit.cover))),
                       title: Text(a['title'] ?? '',
                           style: const TextStyle(fontWeight: FontWeight.w600)),
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => SongPage(
-                              title: a['title'] ?? '',
-                              subtitle: 'Various Artists',
-                              imageUrl: a['image']))),
+                    onTap: () {
+                    AppData.rootTab.value = 2;
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => SongPage(
+                        title: a['title'] ?? '',
+                        subtitle: 'Various Artists',
+                        imageUrl: a['image'])));
+                    },
                     ),
                   );
                 },

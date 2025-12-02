@@ -242,7 +242,7 @@ Future<AudioHandler> initBackgroundAudioHandler() async {
   return await AudioService.init(
     builder: () => BackgroundAudioHandler(),
     config: AudioServiceConfig(
-      androidNotificationChannelId: 'com.example.bakwaas.audio',
+      androidNotificationChannelId: 'com.bakwaas.fm.audio',
       androidNotificationChannelName: 'Bakwaas Audio',
       androidNotificationOngoing: true,
       // Keep the foreground service running when the app is paused/removed

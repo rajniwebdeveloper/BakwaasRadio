@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'api_service.dart';
+import 'library/library_data.dart';
+import 'app_data.dart';
 import 'models/station.dart';
 import 'library/song_page.dart';
 import 'widgets/bakwaas_chrome.dart';
@@ -21,6 +22,13 @@ class _StationsPageState extends State<StationsPage> {
   bool _showSerial = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Ensure library stations are loaded when this page is shown standalone.
+    LibraryData.load();
+  }
+
+  @override
   Widget build(BuildContext context) {
     Widget content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -31,23 +39,28 @@ class _StationsPageState extends State<StationsPage> {
           child: _searching ? _buildSearchBox() : _buildHeaderRow(),
         ),
         Expanded(
-          child: FutureBuilder<List<Station>>(
-            future: ApiService.getStations(),
-            builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                final stations = snapshot.data!
-                    .where((s) => s.name.toLowerCase().contains(_query.toLowerCase()))
-                    .toList();
-                if (_gridView) {
-                  return _buildGrid(stations);
-                }
-                return _buildList(stations);
-              } else if (snapshot.hasError) {
+          child: ValueListenableBuilder<List<Station>>(
+            valueListenable: LibraryData.stations,
+            builder: (context, stations, __) {
+              // If there was an error, show a message
+              if (LibraryData.stationsError.value != null) {
                 return Center(
-                    child: Text('Failed to load stations', style: TextStyle(color: Colors.white.withOpacity(0.7))));
+                    child: Text(LibraryData.stationsError.value!,
+                        style: TextStyle(color: Colors.white.withOpacity(0.7))));
               }
-              return const Center(
-                  child: CircularProgressIndicator(color: BakwaasPalette.neonGreen));
+
+              final filtered = stations
+                  .where((s) => s.name.toLowerCase().contains(_query.toLowerCase()))
+                  .toList();
+              if (filtered.isEmpty) {
+                // If we have zero stations but no error, show loader while initial fetch happens
+                return const Center(
+                    child: CircularProgressIndicator(color: BakwaasPalette.neonGreen));
+              }
+              if (_gridView) {
+                return _buildGrid(filtered);
+              }
+              return _buildList(filtered);
             },
           ),
         )
@@ -129,16 +142,19 @@ class _StationsPageState extends State<StationsPage> {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final station = stations[index];
-            return InkWell(
+              return InkWell(
               borderRadius: BorderRadius.circular(16),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => SongPage(
-                      station: station,
-                      title: station.name,
-                      subtitle: station.description ?? '',
-                      imageUrl: station.profilepic,
-                      autoplay: true,
-                      showBottomNav: true))),
+              onTap: () {
+              AppData.rootTab.value = 2;
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => SongPage(
+                  station: station,
+                  title: station.name,
+                  subtitle: station.description ?? '',
+                  imageUrl: station.profilepic,
+                  autoplay: true,
+                  showBottomNav: true)));
+              },
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BakwaasTheme.glassDecoration(radius: 18, opacity: 0.08),
@@ -219,14 +235,17 @@ class _StationsPageState extends State<StationsPage> {
         final station = stations[index];
             return InkWell(
               borderRadius: BorderRadius.circular(12),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => SongPage(
-                      station: station,
-                      title: station.name,
-                      subtitle: station.description ?? '',
-                      imageUrl: station.profilepic,
-                      autoplay: true,
-                      showBottomNav: true))),
+              onTap: () {
+                AppData.rootTab.value = 2;
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => SongPage(
+                        station: station,
+                        title: station.name,
+                        subtitle: station.description ?? '',
+                        imageUrl: station.profilepic,
+                        autoplay: true,
+                        showBottomNav: true)));
+              },
           child: Container(
             decoration: BakwaasTheme.glassDecoration(radius: 12, opacity: 0.06),
                 child: Stack(

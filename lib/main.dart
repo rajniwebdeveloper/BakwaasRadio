@@ -1112,11 +1112,22 @@ class _HomePageState extends State<HomePage>
                   ),
                 ],
               ),
-              child: Icon(
-                _playback.isPlaying ? Icons.pause : Icons.play_arrow,
-                color: Colors.white,
-                size: 38,
-              ),
+              child: _playback.isLoading
+                  ? const Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.6,
+                        ),
+                      ),
+                    )
+                  : Icon(
+                      _playback.isPlaying ? Icons.pause : Icons.play_arrow,
+                      color: Colors.white,
+                      size: 38,
+                    ),
             ),
           ),
           IconButton(

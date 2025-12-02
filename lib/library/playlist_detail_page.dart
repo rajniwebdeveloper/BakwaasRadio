@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../playback_manager.dart';
 import 'song_page.dart';
+import '../app_data.dart';
 
 class PlaylistDetailPage extends StatelessWidget {
   final Map<String, dynamic> playlist;
@@ -48,12 +49,13 @@ class PlaylistDetailPage extends StatelessWidget {
                   'image': s['image'] ?? ''
                 };
                 PlaybackManager.instance.play(songMap, duration: 191);
+                AppData.rootTab.value = 2;
                 Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => SongPage(
-                        title: songMap['title']!,
-                        subtitle: songMap['subtitle']!,
-                        imageUrl: songMap['image'],
-                        autoplay: true)));
+                  builder: (_) => SongPage(
+                    title: songMap['title']!,
+                    subtitle: songMap['subtitle']!,
+                    imageUrl: songMap['image'],
+                    autoplay: true)));
               },
             ),
             onTap: () {
@@ -62,13 +64,14 @@ class PlaylistDetailPage extends StatelessWidget {
                 'subtitle': s['subtitle'] ?? '',
                 'image': s['image'] ?? ''
               };
-              PlaybackManager.instance.play(songMap, duration: 191);
-              Navigator.of(context).push(MaterialPageRoute(
+                PlaybackManager.instance.play(songMap, duration: 191);
+                AppData.rootTab.value = 2;
+                Navigator.of(context).push(MaterialPageRoute(
                   builder: (_) => SongPage(
-                      title: songMap['title']!,
-                      subtitle: songMap['subtitle']!,
-                      imageUrl: songMap['image'],
-                      autoplay: true)));
+                    title: songMap['title']!,
+                    subtitle: songMap['subtitle']!,
+                    imageUrl: songMap['image'],
+                    autoplay: true)));
             },
           );
         },

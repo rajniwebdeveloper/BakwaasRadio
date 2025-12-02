@@ -43,15 +43,17 @@
              user swipes the app away. The AudioService plugin will bind
              to this service class at runtime. -->
         <service android:name="com.ryanheise.audioservice.AudioService"
-                 android:exported="false"
-                 android:stopWithTask="false">
+             android:exported="false"
+             android:stopWithTask="false"
+             android:foregroundServiceType="mediaPlayback">
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
         <service android:name=".PlaybackKeepAliveService"
-                 android:exported="false"
-                 android:stopWithTask="false" />
+             android:exported="false"
+             android:stopWithTask="false"
+             android:foregroundServiceType="mediaPlayback" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
