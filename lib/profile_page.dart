@@ -26,9 +26,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _showLanguagePicker() async {
     if (_languages.isEmpty) return;
+    // ignore: use_build_context_synchronously
     final chosen = await showDialog<String>(
-        context: context,
-        builder: (ctx) {
+      context: AppData.navigatorKey.currentContext!,
+      builder: (ctx) {
           return Dialog(
             backgroundColor: bg,
             child: SizedBox(
@@ -112,18 +113,23 @@ class _ProfilePageState extends State<ProfilePage> {
           );
         });
     if (chosen != null && chosen.isNotEmpty) {
+      final navCtx = AppData.navigatorKey.currentContext;
+      if (navCtx != null) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(navCtx).showSnackBar(SnackBar(content: Text('Language set to $chosen')));
+      }
+      if (!mounted) return;
       setState(() => _selectedLanguage = chosen);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Language set to $chosen')));
     }
   }
 
   void _showAddSingerDialog() async {
     final nameCtrl = TextEditingController();
     final imageCtrl = TextEditingController();
+    // ignore: use_build_context_synchronously
     final added = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
+      context: AppData.navigatorKey.currentContext!,
+      builder: (ctx) => AlertDialog(
               backgroundColor: bg,
               title: const Text('Add singer'),
               content: Column(
@@ -162,8 +168,11 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ));
     if (added == true) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Singer added')));
+      final navCtx = AppData.navigatorKey.currentContext;
+      if (navCtx != null) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(navCtx).showSnackBar(const SnackBar(content: Text('Singer added')));
+      }
     }
   }
 
@@ -171,9 +180,10 @@ class _ProfilePageState extends State<ProfilePage> {
     final nameCtrl = TextEditingController(text: _name);
     final emailCtrl = TextEditingController(text: _email);
     final phoneCtrl = TextEditingController(text: _phone);
+    // ignore: use_build_context_synchronously
     final saved = await showDialog<bool>(
-        context: context,
-        builder: (ctx) {
+      context: AppData.navigatorKey.currentContext!,
+      builder: (ctx) {
           return AlertDialog(
             backgroundColor: bg,
             title: const Text('Edit profile'),
@@ -234,7 +244,12 @@ class _ProfilePageState extends State<ProfilePage> {
       // Update local profile info. Do NOT automatically mark as logged in
       // unless the user completed an auth flow.
       AppData.currentUser.value = {'name': _name, 'email': _email, 'phone': _phone};
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated')));
+      final navCtx = AppData.navigatorKey.currentContext;
+      if (navCtx != null) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(navCtx).showSnackBar(const SnackBar(content: Text('Profile updated')));
+      }
+      if (!mounted) return;
     }
   }
 
@@ -242,9 +257,10 @@ class _ProfilePageState extends State<ProfilePage> {
     final emailCtrl = TextEditingController();
     final passCtrl = TextEditingController();
     bool keepSigned = false;
+    // ignore: use_build_context_synchronously
     final result = await showDialog<bool>(
-        context: context,
-        builder: (ctx) {
+      context: AppData.navigatorKey.currentContext!,
+      builder: (ctx) {
           return AlertDialog(
             title: const Text('Login'),
             content: Column(
@@ -277,7 +293,7 @@ class _ProfilePageState extends State<ProfilePage> {
       try {
         final deviceInfo = {'mode': 'web'}; // minimal device info; native platforms may add better details
         final resp = await ApiService.login(email, pwd, oneYear: keepSigned, device: deviceInfo);
-        if (resp != null && resp['ok'] == true) {
+          if (resp != null && resp['ok'] == true) {
           AppData.currentUser.value = resp['user'] as Map<String, dynamic>;
           if (resp.containsKey('token')) AppData.currentUser.value['token'] = resp['token'];
           if (resp.containsKey('tokenExpiresAt')) AppData.currentUser.value['tokenExpiresAt'] = resp['tokenExpiresAt'];
@@ -286,12 +302,27 @@ class _ProfilePageState extends State<ProfilePage> {
             await AppData.saveAuthToPrefs(token: resp['token'] as String, tokenExpiresAt: resp['tokenExpiresAt'] as String?, user: resp['user'] as Map<String, dynamic>);
           }
           AppData.isLoggedIn.value = true;
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logged in')));
+          final navCtx = AppData.navigatorKey.currentContext;
+          if (navCtx != null) {
+            // ignore: use_build_context_synchronously
+            ScaffoldMessenger.of(navCtx).showSnackBar(const SnackBar(content: Text('Logged in')));
+          }
+          if (!mounted) return;
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(resp['error'] ?? 'Login failed')));
+          final navCtx = AppData.navigatorKey.currentContext;
+          if (navCtx != null) {
+            // ignore: use_build_context_synchronously
+            ScaffoldMessenger.of(navCtx).showSnackBar(SnackBar(content: Text(resp['error'] ?? 'Login failed')));
+          }
+          if (!mounted) return;
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login error: $e')));
+        final navCtx = AppData.navigatorKey.currentContext;
+        if (navCtx != null) {
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(navCtx).showSnackBar(SnackBar(content: Text('Login error: $e')));
+        }
+        if (!mounted) return;
       }
     }
   }
@@ -300,9 +331,10 @@ class _ProfilePageState extends State<ProfilePage> {
     final emailCtrl = TextEditingController();
     final passCtrl = TextEditingController();
     bool keepSigned = false;
+    // ignore: use_build_context_synchronously
     final result = await showDialog<bool>(
-        context: context,
-        builder: (ctx) {
+      context: AppData.navigatorKey.currentContext!,
+      builder: (ctx) {
           return AlertDialog(
             title: const Text('Sign up'),
             content: Column(
@@ -343,12 +375,27 @@ class _ProfilePageState extends State<ProfilePage> {
             await AppData.saveAuthToPrefs(token: resp['token'] as String, tokenExpiresAt: resp['tokenExpiresAt'] as String?, user: resp['user'] as Map<String, dynamic>);
           }
           AppData.isLoggedIn.value = true;
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account created and logged in')));
+          final navCtx = AppData.navigatorKey.currentContext;
+          if (navCtx != null) {
+            // ignore: use_build_context_synchronously
+            ScaffoldMessenger.of(navCtx).showSnackBar(const SnackBar(content: Text('Account created and logged in')));
+          }
+          if (!mounted) return;
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(resp['error'] ?? 'Signup failed')));
+          final navCtx = AppData.navigatorKey.currentContext;
+          if (navCtx != null) {
+            // ignore: use_build_context_synchronously
+            ScaffoldMessenger.of(navCtx).showSnackBar(SnackBar(content: Text(resp['error'] ?? 'Signup failed')));
+          }
+          if (!mounted) return;
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Signup error: $e')));
+        final navCtx = AppData.navigatorKey.currentContext;
+        if (navCtx != null) {
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(navCtx).showSnackBar(SnackBar(content: Text('Signup error: $e')));
+        }
+        if (!mounted) return;
       }
     }
   }

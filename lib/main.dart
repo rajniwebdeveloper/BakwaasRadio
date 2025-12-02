@@ -35,6 +35,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final base = ThemeData.dark();
     return MaterialApp(
+      navigatorKey: AppData.navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Bakwaas FM',
       theme: base.copyWith(
@@ -82,6 +83,25 @@ class _SplashPageState extends State<SplashPage> {
       try {
         await requestNotificationPermission();
       } catch (_) {}
+
+        // Eagerly initialize background audio handler so notifications
+        // and the audio_service are ready before playback starts. This
+        // improves the chance that the Android notification appears and
+        // background playback works reliably when the user starts playback.
+        try {
+          await PlaybackManager.instance.ensureBackgroundHandler();
+          // Start the native keep-alive foreground service so the
+          // notification channel and native service are running prior
+          // to any user-initiated playback. This helps ensure the
+          // notification appears reliably when playback starts.
+          try {
+            await PlaybackManager.instance.startNativeKeepAlive();
+          } catch (e) {
+            debugPrint('Splash: startNativeKeepAlive failed: $e');
+          }
+        } catch (e) {
+          debugPrint('Splash: ensureBackgroundHandler failed: $e');
+        }
 
       setState(() => _status = 'Checking backend...');
       // Try a quick stations call to verify backend is reachable and fetch
@@ -236,10 +256,13 @@ class _SplashPageState extends State<SplashPage> {
                 print('Splash: Ignoring update because update URL is missing or unreachable');
               } else {
                 // Show blocking dialog on top of splash
+                // ignore: use_build_context_synchronously
                 await showDialog<void>(
-                  context: context,
+                  context: AppData.navigatorKey.currentContext!,
                   barrierDismissible: !force,
                   builder: (ctx) {
+                    // Deprecated but still supported on older Flutter SDKs; replace with PopScope when migrating
+                    // ignore: deprecated_member_use
                     return WillPopScope(
                       onWillPop: () async => !force,
                       child: AlertDialog(
@@ -280,6 +303,7 @@ class _SplashPageState extends State<SplashPage> {
                     );
                   },
                 );
+                if (!mounted) return;
               }
             }
           }
@@ -291,15 +315,19 @@ class _SplashPageState extends State<SplashPage> {
 
       // Navigate to home
       if (!mounted) return;
-      Navigator.of(context)
-          .pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
+      final nav = AppData.navigatorKey.currentState;
+      if (nav != null) {
+        nav.pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
+      }
     } catch (e) {
       // On unexpected failure, still proceed but show message briefly
       setState(() => _status = 'Initialization failed — continuing');
       await Future.delayed(const Duration(seconds: 1));
       if (!mounted) return;
-      Navigator.of(context)
-          .pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
+      final nav = AppData.navigatorKey.currentState;
+      if (nav != null) {
+        nav.pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
+      }
     }
 
   }
@@ -338,8 +366,8 @@ class _SplashPageState extends State<SplashPage> {
               shape: BoxShape.circle,
               gradient: BakwaasTheme.glowGradient,
               boxShadow: [
-                BoxShadow(
-                  color: BakwaasPalette.neonGreen.withOpacity(0.18),
+                      BoxShadow(
+                  color: BakwaasPalette.neonGreen.withAlpha((0.18 * 255).round()),
                   blurRadius: 24,
                   spreadRadius: 4,
                 )
@@ -421,7 +449,7 @@ class _HomePageState extends State<HomePage>
     // Start a one-time listener to autoplay a short preview when stations finish loading
     LibraryData.stations.addListener(_onStationsLoaded);
     // Start listening for deep links and share intents (incoming URLs)
-    DeepLinkHandler.instance.startListening(context);
+    DeepLinkHandler.instance.startListening();
   }
 
   @override
@@ -481,8 +509,8 @@ class _HomePageState extends State<HomePage>
               title: s.name,
               subtitle: s.description ?? '',
               imageUrl: s.profilepic,
-              autoplay: false,
-              showBottomNav: true,
+                                      autoplay: false,
+                                      showBottomNav: false,
             )));
   }
 
@@ -506,7 +534,7 @@ class _HomePageState extends State<HomePage>
                   subtitle: prev['subtitle'] ?? '',
                   imageUrl: prev['image'],
                   autoplay: true,
-                  showBottomNav: true,
+                                showBottomNav: false,
                 )));
       }
       return;
@@ -531,7 +559,7 @@ class _HomePageState extends State<HomePage>
                     subtitle: song['subtitle'] ?? '',
                     imageUrl: song['image'],
                     autoplay: true,
-                    showBottomNav: true,
+                    showBottomNav: false,
                   )));
         }
       }
@@ -579,7 +607,7 @@ class _HomePageState extends State<HomePage>
                     subtitle: song['subtitle'] ?? '',
                     imageUrl: song['image'],
                     autoplay: true,
-                    showBottomNav: true,
+                    showBottomNav: false,
                   )));
         }
       }
@@ -899,13 +927,13 @@ class _HomePageState extends State<HomePage>
       bodyPadding: EdgeInsets.zero,
       body: _activeTab == 0
           ? const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 140),
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: StationsPage(useScaffold: false),
             )
           : (_activeTab == 1)
               ? ListView(
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                   children: [
                     _buildHeroSection(heroSong),
                     const SizedBox(height: 18),
@@ -937,16 +965,16 @@ class _HomePageState extends State<HomePage>
                 )
               : (_activeTab == 2)
                   ? const Padding(
-                      padding: EdgeInsets.fromLTRB(20, 0, 20, 140),
+                      padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
                       child: LikedSongsContent(),
                     )
                   : ListView(
                       physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                       children: const [
                         // fallback: show stations if unknown
                         Padding(
-                          padding: EdgeInsets.fromLTRB(20, 0, 20, 140),
+                          padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
                           child: StationsPage(useScaffold: false),
                         ),
                       ],
@@ -1070,9 +1098,12 @@ class _HomePageState extends State<HomePage>
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5)),
           const SizedBox(height: 6),
-          Text(song['subtitle'] ?? '',
+              Text(song['subtitle'] ?? '',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white.withOpacity(0.78))),
+              softWrap: true,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: Colors.white.withAlpha((0.78 * 255).round()))),
         ],
       ),
     );
@@ -1082,9 +1113,9 @@ class _HomePageState extends State<HomePage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withAlpha((0.05 * 255).round()),
         borderRadius: BorderRadius.circular(48),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withAlpha((0.05 * 255).round())),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -1106,7 +1137,7 @@ class _HomePageState extends State<HomePage>
                 boxShadow: [
                   BoxShadow(
                     color: BakwaasPalette.neonGreen
-                        .withOpacity(_playback.isPlaying ? 0.45 : 0.2),
+                        .withAlpha(((_playback.isPlaying ? 0.45 : 0.2) * 255).round()),
                     blurRadius: _playback.isPlaying ? 28 : 16,
                     spreadRadius: _playback.isPlaying ? 6 : 2,
                   ),
@@ -1280,11 +1311,11 @@ class ToggleButton extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       decoration: BoxDecoration(
         color: selected
-            ? Colors.white.withOpacity(0.08)
-            : Colors.white.withOpacity(0.02),
+            ? Colors.white.withAlpha((0.08 * 255).round())
+            : Colors.white.withAlpha((0.02 * 255).round()),
         borderRadius: BorderRadius.circular(24),
         border:
-            Border.all(color: Colors.white.withOpacity(selected ? 0.3 : 0.12)),
+            Border.all(color: Colors.white.withAlpha(((selected ? 0.3 : 0.12) * 255).round())),
       ),
       child: Text(label.toUpperCase(),
           style: TextStyle(
@@ -1365,7 +1396,7 @@ class Section extends StatelessWidget {
                                                     fit: BoxFit.cover)
                                                 : null,
                                             color:
-                                                Colors.white.withOpacity(0.05),
+                                              Colors.white.withAlpha((0.05 * 255).round()),
                                           ),
                                           child: (station.profilepic == null ||
                                                   station.profilepic!.isEmpty)
@@ -1390,9 +1421,9 @@ class Section extends StatelessWidget {
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
-                                            color:
-                                                Colors.white.withOpacity(0.7),
-                                            fontSize: 11)),
+                                          color:
+                                            Colors.white.withAlpha((0.7 * 255).round()),
+                                          fontSize: 11)),
                                   ],
                                 ),
                               ),
@@ -1458,9 +1489,9 @@ class Section extends StatelessWidget {
                                         color: Colors.white,
                                         fontWeight: FontWeight.w600)),
                                 Text('Personal mix',
-                                    style: TextStyle(
-                                        color: Colors.white.withOpacity(0.6),
-                                        fontSize: 11)),
+                                  style: TextStyle(
+                                    color: Colors.white.withAlpha((0.6 * 255).round()),
+                                    fontSize: 11)),
                               ],
                             ),
                           ),
@@ -1471,10 +1502,10 @@ class Section extends StatelessWidget {
                       if (AppData.playlists.isEmpty) {
                         return SizedBox(
                           width: 150,
-                          child: Center(
-                              child: Text('No playlists yet',
-                                  style: TextStyle(
-                                      color: Colors.white.withOpacity(0.6)))),
+                            child: Center(
+                            child: Text('No playlists yet',
+                              style: TextStyle(
+                                color: Colors.white.withAlpha((0.6 * 255).round())))),
                         );
                       }
                       final playlist =
@@ -1534,9 +1565,9 @@ class Section extends StatelessWidget {
                                         color: Colors.white,
                                         fontWeight: FontWeight.w600)),
                                 Text('Tap to explore',
-                                    style: TextStyle(
-                                        color: Colors.white.withOpacity(0.65),
-                                        fontSize: 11)),
+                                  style: TextStyle(
+                                    color: Colors.white.withAlpha((0.65 * 255).round()),
+                                    fontSize: 11)),
                               ],
                             ),
                           ),
@@ -1608,7 +1639,7 @@ class AllSongsPage extends StatelessWidget {
       showBottomNav: false,
       onMenuTap: () => Navigator.of(context).maybePop(),
       onExitTap: () => Navigator.of(context).maybePop(),
-      bodyPadding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+      bodyPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1646,7 +1677,7 @@ class AllSongsPage extends StatelessWidget {
                                     ? NetworkImage(s['image']!)
                                     : const AssetImage('assets/logo.png')
                                         as ImageProvider,
-                            backgroundColor: Colors.white.withOpacity(0.08)),
+                            backgroundColor: Colors.white.withAlpha((0.08 * 255).round())),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
@@ -1661,8 +1692,8 @@ class AllSongsPage extends StatelessWidget {
                               Text(s['subtitle'] ?? '',
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                      color: Colors.white.withOpacity(0.7),
-                                      fontSize: 12)),
+                                    color: Colors.white.withAlpha((0.7 * 255).round()),
+                                    fontSize: 11)),
                             ],
                           ),
                         ),
@@ -1695,7 +1726,7 @@ class TrendingGridPage extends StatelessWidget {
       showBottomNav: false,
       onMenuTap: () => Navigator.of(context).maybePop(),
       onExitTap: () => Navigator.of(context).maybePop(),
-      bodyPadding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+      bodyPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1741,7 +1772,7 @@ class TrendingGridPage extends StatelessWidget {
                                         image: NetworkImage(s['image']!),
                                         fit: BoxFit.cover)
                                     : null,
-                                color: Colors.white.withOpacity(0.04),
+                                color: Colors.white.withAlpha((0.04 * 255).round()),
                               ),
                             ),
                           ),

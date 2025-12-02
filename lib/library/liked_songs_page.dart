@@ -125,6 +125,8 @@ class _LikedSongsContentState extends State<LikedSongsContent> {
                                     title: s['title'] ?? '',
                                     subtitle: s['subtitle'] ?? '',
                                     imageUrl: s['image'],
+                                    autoplay: true,
+                                    showBottomNav: false,
                                   ),
                                 ));
                               },
@@ -143,6 +145,8 @@ class _LikedSongsContentState extends State<LikedSongsContent> {
                               title: s['title'] ?? '',
                               subtitle: s['subtitle'] ?? '',
                               imageUrl: s['image'],
+                              autoplay: true,
+                              showBottomNav: false,
                             ),
                           ));
                         },

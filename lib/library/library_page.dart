@@ -78,9 +78,9 @@ class _LibraryPageState extends State<LibraryPage> {
             padding: const EdgeInsets.symmetric(horizontal: 0),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 12.0),
-              child: Text(
+                child: Text(
                 'Use the top-left menu → Filters to show library sections (Liked, Albums, Stations, etc.).',
-                style: TextStyle(color: Colors.white.withOpacity(0.7)),
+                style: TextStyle(color: Colors.white.withAlpha((0.7 * 255).round())),
               ),
             ),
           ),
@@ -103,9 +103,9 @@ class _LibraryPageState extends State<LibraryPage> {
                       height: 120,
                       child: _history.isEmpty
                           ? Center(
-                              child: Text('No recently played items',
+                                child: Text('No recently played items',
                                   style: TextStyle(
-                                      color: Colors.white.withOpacity(0.7))),
+                                    color: Colors.white.withAlpha((0.7 * 255).round()))),
                             )
                           : ListView.builder(
                               scrollDirection: Axis.horizontal,
@@ -123,6 +123,8 @@ class _LibraryPageState extends State<LibraryPage> {
                                                 title: s['title'] ?? '',
                                                 subtitle: s['subtitle'] ?? '',
                                                 imageUrl: s['image'],
+                                                autoplay: true,
+                                                showBottomNav: false,
                                               )));
                                     },
                                     child: Container(
@@ -131,12 +133,12 @@ class _LibraryPageState extends State<LibraryPage> {
                                           radius: 14, opacity: 0.08),
                                       child: Row(
                                         children: [
-                                          CircleAvatar(
+                                            CircleAvatar(
                                               radius: 36,
                                               backgroundImage: s['image'] != null && s['image']!.isNotEmpty
-                                                  ? NetworkImage(s['image']!)
-                                                  : const AssetImage('assets/logo.png') as ImageProvider,
-                                              backgroundColor: Colors.white.withOpacity(0.04)),
+                                                ? NetworkImage(s['image']!)
+                                                : const AssetImage('assets/logo.png') as ImageProvider,
+                                              backgroundColor: Colors.white.withAlpha((0.04 * 255).round())),
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: Column(
@@ -154,7 +156,7 @@ class _LibraryPageState extends State<LibraryPage> {
                                                     maxLines: 1,
                                                     overflow: TextOverflow.ellipsis,
                                                     style: TextStyle(
-                                                        color: Colors.white.withOpacity(0.75)))
+                                                      color: Colors.white.withAlpha((0.75 * 255).round())))
                                               ],
                                             ),
                                           )
@@ -193,13 +195,13 @@ class _LibraryPageState extends State<LibraryPage> {
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                                color: Colors.redAccent.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(12)),
+                              color: Colors.redAccent.withAlpha((0.12 * 255).round()),
+                              borderRadius: BorderRadius.circular(12)),
                             child: Row(
                               children: [
                                 Expanded(
                                     child: Text(LibraryData.stationsError.value ?? '',
-                                        style: TextStyle(color: Colors.redAccent.withOpacity(0.9)))),
+                                      style: TextStyle(color: Colors.redAccent.withAlpha((0.9 * 255).round())))),
                                 TextButton(
                                     onPressed: () => LibraryData.load(forceRefresh: true),
                                     child: const Text('Retry'))
@@ -254,6 +256,7 @@ class _LibraryPageState extends State<LibraryPage> {
                                 subtitle: songMap['subtitle']!,
                                 imageUrl: songMap['image'],
                                 autoplay: true,
+                                showBottomNav: false,
                               )));
                     }
                   : null,
@@ -306,7 +309,7 @@ class _LibraryPageState extends State<LibraryPage> {
           builder: (_) => _buildMenuSheet(context),
         ),
         onExitTap: () => Navigator.of(context).maybePop(),
-        bodyPadding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+        bodyPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         body: content,
       );
     }
@@ -317,7 +320,7 @@ class _LibraryPageState extends State<LibraryPage> {
   Widget _buildMenuSheet(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.black.withOpacity(0.9), borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
+      decoration: BoxDecoration(color: Colors.black.withAlpha((0.9 * 255).round()), borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -364,7 +367,7 @@ class _LibraryPageState extends State<LibraryPage> {
           final current = Set<String>.from(LibraryData.filters.value);
           return Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.black.withOpacity(0.9), borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
+            decoration: BoxDecoration(color: Colors.black.withAlpha((0.9 * 255).round()), borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -486,6 +489,7 @@ class _LibraryPageState extends State<LibraryPage> {
                           subtitle: s.description ?? '',
                           imageUrl: image,
                           autoplay: true,
+                          showBottomNav: false,
                         )));
               }
             : null,
@@ -497,7 +501,7 @@ class _LibraryPageState extends State<LibraryPage> {
               CircleAvatar(
                 radius: 28,
                 backgroundImage: image.isNotEmpty ? NetworkImage(image) : const AssetImage('assets/logo.png') as ImageProvider,
-                backgroundColor: Colors.white.withOpacity(0.04),
+                backgroundColor: Colors.white.withAlpha((0.04 * 255).round()),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -506,7 +510,7 @@ class _LibraryPageState extends State<LibraryPage> {
                   children: [
                     Text(s.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 6),
-                    Text(s.description ?? '', style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(s.description ?? '', style: TextStyle(color: Colors.white.withAlpha((0.75 * 255).round()), fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),

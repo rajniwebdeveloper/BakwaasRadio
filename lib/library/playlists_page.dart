@@ -88,107 +88,78 @@ class _PlaylistsPageState extends State<PlaylistsPage> {
                                 .cast<Map<String, String>>())
                             .toList();
 
+                        // ignore: use_build_context_synchronously
                         await showDialog<void>(
-                            context: context,
-                            builder: (context) {
-                              final TextEditingController nameCtrl =
-                                  TextEditingController();
-                              final selected =
-                                  List<bool>.filled(candidates.length, false);
-                              return StatefulBuilder(
-                                  builder: (context, setStateDialog) {
-                                return AlertDialog(
-                                  backgroundColor: bg,
-                                  title: const Text('New Playlist'),
-                                  content: SizedBox(
-                                    width: double.maxFinite,
-                                    height: 360,
-                                    child: Column(
-                                      children: [
-                                        TextField(
-                                          controller: nameCtrl,
-                                          style: const TextStyle(
-                                              color: Colors.black),
-                                          decoration: const InputDecoration(
-                                              hintText: 'Playlist name',
-                                              hintStyle:
-                                                  TextStyle(color: Colors.grey),
-                                              border: OutlineInputBorder()),
+                          context: AppData.navigatorKey.currentContext!,
+                          builder: (context) {
+                            final TextEditingController nameCtrl = TextEditingController();
+                            final selected = List<bool>.filled(candidates.length, false);
+                            return StatefulBuilder(builder: (context, setStateDialog) {
+                              return AlertDialog(
+                                backgroundColor: bg,
+                                title: const Text('New Playlist'),
+                                content: SizedBox(
+                                  width: double.maxFinite,
+                                  height: 360,
+                                  child: Column(
+                                    children: [
+                                      TextField(
+                                        controller: nameCtrl,
+                                        style: const TextStyle(color: Colors.black),
+                                        decoration: const InputDecoration(
+                                            hintText: 'Playlist name',
+                                            hintStyle: TextStyle(color: Colors.grey),
+                                            border: OutlineInputBorder()),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Text('Select songs',
+                                              style: TextStyle(color: Colors.black87))),
+                                      const SizedBox(height: 8),
+                                      Expanded(
+                                        child: ListView.builder(
+                                          itemCount: candidates.length,
+                                          itemBuilder: (ctx, idx) {
+                                            final s = candidates[idx];
+                                            return CheckboxListTile(
+                                              activeColor: Colors.tealAccent,
+                                              value: selected[idx],
+                                              onChanged: (v) => setStateDialog(() => selected[idx] = v ?? false),
+                                              title: Text(s['title'] ?? '', style: const TextStyle(color: Colors.black)),
+                                              subtitle: Text(s['subtitle'] ?? '', style: const TextStyle(color: Colors.black87, fontSize: 12)),
+                                            );
+                                          },
                                         ),
-                                        const SizedBox(height: 12),
-                                        const Align(
-                                            alignment: Alignment.centerLeft,
-                                            child: Text('Select songs',
-                                                style: TextStyle(
-                                                    color: Colors.black87))),
-                                        const SizedBox(height: 8),
-                                        Expanded(
-                                          child: ListView.builder(
-                                            itemCount: candidates.length,
-                                            itemBuilder: (ctx, idx) {
-                                              final s = candidates[idx];
-                                              return CheckboxListTile(
-                                                activeColor: Colors.tealAccent,
-                                                value: selected[idx],
-                                                onChanged: (v) =>
-                                                    setStateDialog(() =>
-                                                        selected[idx] =
-                                                            v ?? false),
-                                                title: Text(s['title'] ?? '',
-                                                    style: const TextStyle(
-                                                        color: Colors.black)),
-                                                subtitle: Text(
-                                                    s['subtitle'] ?? '',
-                                                    style: const TextStyle(
-                                                        color: Colors.black87,
-                                                        fontSize: 12)),
-                                              );
-                                            },
-                                          ),
-                                        )
-                                      ],
-                                    ),
+                                      )
+                                    ],
                                   ),
-                                  actions: [
-                                    TextButton(
-                                        onPressed: () =>
-                                            Navigator.of(context).pop(),
-                                        child: const Text('Cancel')),
-                                    ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.tealAccent),
-                                        onPressed: () {
-                                          final name = nameCtrl.text.trim();
-                                          final selectedSongs =
-                                              <Map<String, String>>[];
-                                          for (var i = 0;
-                                              i < candidates.length;
-                                              i++) {
-                                            if (selected[i]) {
-                                              selectedSongs
-                                                  .add(Map.from(candidates[i]));
-                                            }
-                                          }
-                                          final newPlaylist = {
-                                            'title': name.isEmpty
-                                                ? 'New Playlist'
-                                                : name,
-                                            'image': selectedSongs.isNotEmpty
-                                                ? selectedSongs
-                                                        .first['image'] ??
-                                                    ''
-                                                : 'https://picsum.photos/200?image=70',
-                                            'songs': selectedSongs
-                                          };
-                                          AppData.playlists
-                                              .insert(0, newPlaylist);
-                                          Navigator.of(context).pop();
-                                        },
-                                        child: const Text('Create'))
-                                  ],
-                                );
-                              });
+                                ),
+                                actions: [
+                                        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+                                  ElevatedButton(
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.tealAccent),
+                                      onPressed: () {
+                                        final name = nameCtrl.text.trim();
+                                        final selectedSongs = <Map<String, String>>[];
+                                        for (var i = 0; i < candidates.length; i++) {
+                                          if (selected[i]) selectedSongs.add(Map.from(candidates[i]));
+                                        }
+                                        final newPlaylist = {
+                                          'title': name.isEmpty ? 'New Playlist' : name,
+                                          'image': selectedSongs.isNotEmpty ? selectedSongs.first['image'] ?? '' : 'https://picsum.photos/200?image=70',
+                                          'songs': selectedSongs
+                                        };
+                                        AppData.playlists.insert(0, newPlaylist);
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: const Text('Create'))
+                                ],
+                              );
                             });
+                          },
+                        );
+                        if (!mounted) return;
                         setState(() {});
                       })
                 ])),
@@ -273,8 +244,9 @@ class _PlaylistsPageState extends State<PlaylistsPage> {
                                 return;
                               }
                               if (value == 'delete') {
+                                // ignore: use_build_context_synchronously
                                 final doDelete = await showDialog<bool>(
-                                    context: context,
+                                  context: AppData.navigatorKey.currentContext!,
                                     builder: (ctx) => AlertDialog(
                                           backgroundColor: bg,
                                           title: const Text('Delete playlist'),
@@ -297,11 +269,12 @@ class _PlaylistsPageState extends State<PlaylistsPage> {
                                         ));
                                 if (doDelete == true) {
                                   AppData.playlists.removeAt(i);
-                                  setState(() {});
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                          content:
-                                              Text('Deleted ${p['title']}')));
+                                  final navCtx = AppData.navigatorKey.currentContext;
+                                  if (navCtx != null) {
+                                    // ignore: use_build_context_synchronously
+                                    ScaffoldMessenger.of(navCtx).showSnackBar(SnackBar(content: Text('Deleted ${p['title']}')));
+                                  }
+                                  if (mounted) setState(() {});
                                 }
                                 return;
                               }

@@ -45,8 +45,8 @@ class _StationsPageState extends State<StationsPage> {
               // If there was an error, show a message
               if (LibraryData.stationsError.value != null) {
                 return Center(
-                    child: Text(LibraryData.stationsError.value!,
-                        style: TextStyle(color: Colors.white.withOpacity(0.7))));
+                  child: Text(LibraryData.stationsError.value!,
+                    style: TextStyle(color: Colors.white.withAlpha((0.7 * 255).round()))));
               }
 
               final filtered = stations
@@ -74,7 +74,7 @@ class _StationsPageState extends State<StationsPage> {
         showBottomNav: false,
         onMenuTap: () => Navigator.of(context).maybePop(),
         onExitTap: () => Navigator.of(context).maybePop(),
-        bodyPadding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+        bodyPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         body: content,
       );
     }
@@ -153,7 +153,7 @@ class _StationsPageState extends State<StationsPage> {
                   subtitle: station.description ?? '',
                   imageUrl: station.profilepic,
                   autoplay: true,
-                  showBottomNav: true)));
+                                showBottomNav: false)));
               },
           child: Container(
             padding: const EdgeInsets.all(12),
@@ -171,7 +171,7 @@ class _StationsPageState extends State<StationsPage> {
                           image: (station.profilepic != null && station.profilepic!.isNotEmpty)
                               ? DecorationImage(image: NetworkImage(station.profilepic!), fit: BoxFit.cover)
                               : const DecorationImage(image: AssetImage('assets/logo.png'), fit: BoxFit.cover),
-                          color: Colors.white.withOpacity(0.04),
+                          color: Colors.white.withAlpha((0.04 * 255).round()),
                         ),
                       ),
                     ),
@@ -202,7 +202,7 @@ class _StationsPageState extends State<StationsPage> {
                       Text(station.description ?? 'Live station',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.white.withOpacity(0.75))),
+                          style: TextStyle(color: Colors.white.withAlpha((0.75 * 255).round()))),
                     ],
                   ),
                 ),
@@ -244,7 +244,7 @@ class _StationsPageState extends State<StationsPage> {
                         subtitle: station.description ?? '',
                         imageUrl: station.profilepic,
                         autoplay: true,
-                        showBottomNav: true)));
+                              showBottomNav: false)));
               },
           child: Container(
             decoration: BakwaasTheme.glassDecoration(radius: 12, opacity: 0.06),
@@ -258,7 +258,7 @@ class _StationsPageState extends State<StationsPage> {
                         image: (station.profilepic != null && station.profilepic!.isNotEmpty)
                             ? DecorationImage(image: NetworkImage(station.profilepic!), fit: BoxFit.cover)
                             : null,
-                        color: Colors.white.withOpacity(0.04),
+                        color: Colors.white.withAlpha((0.04 * 255).round()),
                       ),
                     ),
                   ),

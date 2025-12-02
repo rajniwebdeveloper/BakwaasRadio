@@ -9,7 +9,7 @@ import '../widgets/orbital_ring.dart';
 import 'package:flutter/services.dart';
 
 class _SystemVolumeControl extends StatefulWidget {
-  const _SystemVolumeControl({Key? key}) : super(key: key);
+  const _SystemVolumeControl();
   @override
   State<_SystemVolumeControl> createState() => _SystemVolumeControlState();
 }
@@ -44,7 +44,7 @@ class _SystemVolumeControlState extends State<_SystemVolumeControl> {
             data: SliderTheme.of(context).copyWith(
               trackHeight: 3,
               activeTrackColor: Colors.white,
-              inactiveTrackColor: Colors.white.withOpacity(0.18),
+              inactiveTrackColor: Colors.white.withAlpha((0.18 * 255).round()),
               thumbColor: Colors.white,
             ),
             child: Slider(
@@ -77,7 +77,7 @@ class SongPage extends StatefulWidget {
       required this.subtitle,
       this.imageUrl,
       this.autoplay = false,
-      this.showBottomNav = true});
+      this.showBottomNav = false});
 
   @override
   State<SongPage> createState() => _SongPageState();
@@ -319,12 +319,12 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withAlpha((0.1 * 255).round()),
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.white.withOpacity(0.2)),
+                border: Border.all(color: Colors.white.withAlpha((0.2 * 255).round())),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withAlpha((0.3 * 255).round()),
                     blurRadius: 20,
                     offset: const Offset(0, 18),
                   ),
@@ -383,9 +383,12 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                           fontSize: 24,
                           fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
-                  Text(current['subtitle'] ?? 'Live Show',
+                      Text(current['subtitle'] ?? 'Live Show',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white.withOpacity(0.8))),
+                      softWrap: true,
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.white.withAlpha((0.8 * 255).round()))),
                 ],
               ),
             ),
@@ -393,9 +396,9 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withAlpha((0.2 * 255).round()),
                 borderRadius: BorderRadius.circular(48),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
+                border: Border.all(color: Colors.white.withAlpha((0.06 * 255).round())),
               ),
                 child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -419,7 +422,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                         ]),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.green.withOpacity(0.34),
+                            color: Colors.green.withAlpha((0.34 * 255).round()),
                             blurRadius: 22,
                             spreadRadius: 2,
                           )
@@ -464,9 +467,9 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                           data: SliderTheme.of(context).copyWith(
                             trackHeight: 4,
                             activeTrackColor: Colors.tealAccent,
-                            inactiveTrackColor: Colors.white.withOpacity(0.12),
+                            inactiveTrackColor: Colors.white.withAlpha((0.12 * 255).round()),
                             thumbColor: Colors.white,
-                            overlayColor: Colors.tealAccent.withOpacity(0.12),
+                            overlayColor: Colors.tealAccent.withAlpha((0.12 * 255).round()),
                             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
                           ),
                           child: Slider(
@@ -492,7 +495,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
                                 ? (_progress * _durationSeconds).round()
                                 : (_progress * _totalSeconds).round())
                             .toInt()),
-                        style: TextStyle(color: Colors.white.withOpacity(0.75)),
+                        style: TextStyle(color: Colors.white.withAlpha((0.75 * 255).round())),
                       ),
                     )
                   ],
@@ -500,8 +503,8 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
               ],
             ),
             // Inline system volume slider (controls Android STREAM_MUSIC)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
               child: _SystemVolumeControl(),
             ),
             // const SizedBox(height: 10),

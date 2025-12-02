@@ -45,7 +45,7 @@ class BakwaasTheme {
   static TextStyle get labelStyle => TextStyle(
         fontSize: 12,
         letterSpacing: 0.8,
-        color: Colors.white.withOpacity(0.7),
+      color: Colors.white.withAlpha((0.7 * 255).round()),
         fontWeight: FontWeight.w600,
       );
 
@@ -53,11 +53,11 @@ class BakwaasTheme {
       {double radius = 24, double opacity = 0.16}) {
     return BoxDecoration(
       borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: Colors.white.withOpacity(opacity + 0.05)),
+      border: Border.all(color: Colors.white.withAlpha(((opacity + 0.05) * 255).round())),
       gradient: cardTint,
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.35),
+          color: Colors.black.withAlpha((0.35 * 255).round()),
           blurRadius: 24,
           offset: const Offset(0, 12),
         ),
@@ -137,17 +137,19 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.black.withOpacity(0.6), Colors.transparent],
+                    colors: [Colors.black.withAlpha((0.6 * 255).round()), Colors.transparent],
                     begin: Alignment.topCenter,
                     end: Alignment.center,
                   ),
                 ),
               ),
             ),
+            // Top area (header + content). Footer (mini-player + nav) is
+            // rendered as an overlay positioned at the bottom so it stays
+            // fixed and doesn't change the height of the main content.
             SafeArea(
-              // ensure the body doesn't extend under system/navigation bars
-              // so bottom controls (and hit testing) work correctly on open
-              bottom: true,
+              top: true,
+              bottom: false,
               child: Column(
                 children: [
                   const SizedBox(height: 6),
@@ -158,32 +160,56 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
                   const SizedBox(height: 10),
                   Expanded(
                     child: Padding(
-                      padding: widget.bodyPadding,
+                      // Ensure callers' bottom padding does not accidentally
+                      // reserve extra space for the footer. We clamp the
+                      // final bottom padding to at most the provided value,
+                      // and add extra space equal to footer height when
+                      // the footer is shown so content won't be obscured.
+                      padding: _effectiveBodyPadding(widget.bodyPadding, widget.showBottomNav),
                       child: widget.body,
                     ),
                   ),
-                  if (widget.showBottomNav) ...[
-                    // Put mini-player and bottom nav inside the SafeArea column
-                    // so they don't overlap and touch targets remain reachable.
-                    _MiniPlayer(),
-                    BakwaasBottomNav(
-                      activeIndex: widget.activeTab,
-                      onTap: widget.onNavTap ?? (index) {
-                        if (index == widget.activeTab) return;
-                        Navigator.of(context).popUntil((r) => r.isFirst);
-                        AppData.rootTab.value = index.clamp(0, 2);
-                        return;
-                      },
-                    ),
-                    const SizedBox(height: 6),
-                  ]
                 ],
               ),
             ),
+            // Fixed footer overlay
+            if (widget.showBottomNav)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: SafeArea(
+                  top: false,
+                  bottom: true,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _MiniPlayer(),
+                      BakwaasBottomNav(
+                        activeIndex: widget.activeTab,
+                        onTap: widget.onNavTap ?? (index) {
+                          if (index == widget.activeTab) return;
+                          Navigator.of(context).popUntil((r) => r.isFirst);
+                          AppData.rootTab.value = index.clamp(0, 2);
+                          return;
+                        },
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  EdgeInsets _effectiveBodyPadding(EdgeInsetsGeometry paddingGeom, bool showFooter) {
+    const footerHeight = 96.0; // reduced footer height (player + nav + margins)
+    final p = paddingGeom is EdgeInsets ? paddingGeom : const EdgeInsets.fromLTRB(20, 0, 20, 16);
+    final bottom = showFooter ? (p.bottom + footerHeight) : p.bottom;
+    return p.copyWith(bottom: bottom);
   }
 }
 
@@ -224,24 +250,26 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
                     title: title,
                     subtitle: subtitle,
                     imageUrl: song['image'],
+                    autoplay: mgr.isPlaying,
+                    showBottomNav: false,
                   )));
         },
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Container(
+          margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
+            color: Colors.white.withAlpha((0.04 * 255).round()),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.04)),
+            border: Border.all(color: Colors.white.withAlpha((0.04 * 255).round())),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
-                children: [
+                        children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
                       color: Colors.white12,
@@ -251,7 +279,7 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
                           : null,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,7 +292,7 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
                         Text(subtitle,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                color: Colors.white.withOpacity(0.7), fontSize: 12)),
+                                color: Colors.white.withAlpha((0.7 * 255).round()), fontSize: 12)),
                       ],
                     ),
                   ),
@@ -285,9 +313,11 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
                             final cur = await _volumeChannel.invokeMethod('getVolume');
                             vol = (cur is double) ? cur : (cur is num ? cur.toDouble() : vol);
                           } catch (_) {}
+                            if (!mounted) return;
 
-                          showDialog(
-                              context: context,
+                            // ignore: use_build_context_synchronously
+                            showDialog(
+                              context: AppData.navigatorKey.currentContext!,
                               builder: (ctx) {
                                 return AlertDialog(
                                   backgroundColor: Colors.black87,
@@ -327,8 +357,8 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
               const SizedBox(height: 6),
               LinearProgressIndicator(
                 value: mgr.progress.clamp(0.0, 1.0),
-                backgroundColor: Colors.white.withOpacity(0.06),
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.tealAccent),
+                backgroundColor: Colors.white.withAlpha((0.06 * 255).round()),
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.tealAccent),
                 minHeight: 3,
               ),
             ],
@@ -404,13 +434,13 @@ class _GlassButton extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: onTap,
-      child: Container(
+        child: Container(
         width: 42,
         height: 42,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: Colors.white.withOpacity(0.06),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          color: Colors.white.withAlpha((0.06 * 255).round()),
+          border: Border.all(color: Colors.white.withAlpha((0.08 * 255).round())),
         ),
         child: Icon(icon, color: Colors.white, size: 20),
       ),
@@ -433,17 +463,17 @@ class BakwaasBottomNav extends StatelessWidget {
     ];
     return SafeArea(
       top: false,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: Container(
+        margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
         // reduce vertical padding to make the nav a bit shorter
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
+          color: Colors.white.withAlpha((0.04 * 255).round()),
           borderRadius: BorderRadius.circular(40),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
+          border: Border.all(color: Colors.white.withAlpha((0.06 * 255).round())),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withAlpha((0.5 * 255).round()),
                 blurRadius: 28,
                 offset: const Offset(0, -6)),
           ],
@@ -461,7 +491,7 @@ class BakwaasBottomNav extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   splashColor: Colors.white24,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6.0),
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -469,23 +499,23 @@ class BakwaasBottomNav extends StatelessWidget {
                         // shows a subtle underline to indicate selection.
                         Padding(
                           // slightly smaller vertical padding for a more compact look
-                          padding: const EdgeInsets.symmetric(vertical: 4.0),
-                          child: Icon(item.icon,
+                            padding: const EdgeInsets.symmetric(vertical: 2.0),
+                            child: Icon(item.icon,
                               color: isActive
-                                  ? BakwaasPalette.softYellow
-                                  : Colors.white.withOpacity(0.88),
-                              size: 20),
+                                ? BakwaasPalette.softYellow
+                                : Colors.white.withAlpha((0.88 * 255).round()),
+                              size: 18),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
                           item.label,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(isActive ? 0.95 : 0.7),
+                            color: Colors.white.withAlpha(((isActive ? 0.95 : 0.7) * 255).round()),
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         // small indicator
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
@@ -535,7 +565,7 @@ class _BlurredAlbumBackground extends StatelessWidget {
           ),
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(color: Colors.black.withOpacity(0.3)),
+            child: Container(color: Colors.black.withAlpha((0.3 * 255).round())),
           )
         ],
       ),

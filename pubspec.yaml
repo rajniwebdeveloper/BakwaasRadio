@@ -1,23 +1,23 @@
 name: bakwaas_fm
-description: A simple mockup app
+description: Bakwaas FM - Free Radio for Silly People
+homepage: https://bakwaasfm.in
 publish_to: 'none'
 version: 10.0.0+10
 
 environment:
-  # Allow newer Dart versions (Dart 3+ with recent Flutter). Updated to avoid
-  # package resolution failures on modern Flutter installations.
-  sdk: '>=2.17.0 <4.0.0'
+  # Use Dart 3+ to match the local Flutter SDK and allow newer package releases.
+  sdk: '>=3.0.0 <4.0.0'
   flutter: '>=3.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  app_links: ^2.0.4
+  app_links: ^7.0.0
   http: ^1.2.1
   audioplayers: ^6.0.0
-  just_audio: ^0.9.33
+  just_audio: ^0.10.5
   audio_service: ^0.18.0
-  audio_session: ^0.1.6
+  audio_session: ^0.2.2
   path_provider: ^2.0.11
   permission_handler: ^12.0.1
   url_launcher: ^6.1.5
@@ -27,9 +27,16 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.2
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
   assets:
     - assets/logo.png
+
+dependency_overrides:
+  characters: 1.4.1
+  get_it: 9.1.1
+  matcher: 0.12.18
+  material_color_utilities: 0.13.0
+  test_api: 0.7.8

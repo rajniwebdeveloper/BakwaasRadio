@@ -150,6 +150,36 @@ class PlaybackManager extends ChangeNotifier {
     }
   }
 
+  /// Ensure the background audio handler is initialized.
+  /// Public wrapper so callers (e.g. app startup) can eagerly start
+  /// the audio_service background task and notification channel.
+  Future<void> ensureBackgroundHandler() async {
+    if (_audioHandler == null) {
+      await _initHandler();
+    }
+  }
+
+  /// Start the native Android keep-alive foreground service.
+  /// Safe no-op on platforms where the method channel is not available.
+  Future<void> startNativeKeepAlive() async {
+    try {
+      await _keepAliveChannel.invokeMethod('startService');
+    } catch (e) {
+      // ignore: avoid_print
+      debugPrint('startNativeKeepAlive failed: $e');
+    }
+  }
+
+  /// Stop the native Android keep-alive foreground service.
+  Future<void> stopNativeKeepAlive() async {
+    try {
+      await _keepAliveChannel.invokeMethod('stopService');
+    } catch (e) {
+      // ignore: avoid_print
+      debugPrint('stopNativeKeepAlive failed: $e');
+    }
+  }
+
   /// Returns true if the background audio service is available and running.
   Future<bool> _audioServiceAvailable() async {
     // Treat the presence of a non-null audio handler as availability.

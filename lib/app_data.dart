@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -75,6 +75,11 @@ class AppData {
 
   /// Optional current user data (empty when not logged in).
   static final ValueNotifier<Map<String, dynamic>> currentUser = ValueNotifier<Map<String, dynamic>>(<String, dynamic>{});
+
+  /// Global navigator key used for cross-app navigation from background
+  /// callbacks (deep links, notifications) where a `BuildContext` may be
+  /// unavailable or unsafe to capture across async gaps.
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   /// Load persisted auth token and user (if any) from `SharedPreferences`.
   /// If a valid token is found, sets `isLoggedIn` and populates `currentUser`.

@@ -55,7 +55,8 @@ class PlaylistDetailPage extends StatelessWidget {
                     title: songMap['title']!,
                     subtitle: songMap['subtitle']!,
                     imageUrl: songMap['image'],
-                    autoplay: true)));
+                    autoplay: true,
+                    showBottomNav: false)));
               },
             ),
             onTap: () {
@@ -71,7 +72,8 @@ class PlaylistDetailPage extends StatelessWidget {
                     title: songMap['title']!,
                     subtitle: songMap['subtitle']!,
                     imageUrl: songMap['image'],
-                    autoplay: true)));
+                    autoplay: true,
+                    showBottomNav: false)));
             },
           );
         },
