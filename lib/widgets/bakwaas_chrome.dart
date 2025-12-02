@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../app_data.dart';
@@ -206,7 +207,12 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
   }
 
   EdgeInsets _effectiveBodyPadding(EdgeInsetsGeometry paddingGeom, bool showFooter) {
-    const footerHeight = 96.0; // reduced footer height (player + nav + margins)
+    // Footer height should scale down on small screens to avoid
+    // overflowing content. Use up to 96px but clamp to a fraction
+    // of the screen height so very small devices remain usable.
+    final screenH = MediaQuery.of(context).size.height;
+    final maxFooter = 96.0;
+    final footerHeight = math.min(maxFooter, screenH * 0.22);
     final p = paddingGeom is EdgeInsets ? paddingGeom : const EdgeInsets.fromLTRB(20, 0, 20, 16);
     final bottom = showFooter ? (p.bottom + footerHeight) : p.bottom;
     return p.copyWith(bottom: bottom);

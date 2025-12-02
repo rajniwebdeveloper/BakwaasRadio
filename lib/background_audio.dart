@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'cache_helper.dart';
+import 'audio_actions.dart';
 
 /// A simple AudioHandler backed by just_audio. Exposes a small surface
 /// suitable for background playback and notifications.
@@ -227,10 +228,24 @@ class BackgroundAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> skipToNext() async {}
+  Future<void> skipToNext() async {
+    debugPrint('BackgroundAudioHandler: skipToNext');
+    try {
+      AudioActions.onSkipNext?.call();
+    } catch (e) {
+      debugPrint('skipToNext callback failed: $e');
+    }
+  }
 
   @override
-  Future<void> skipToPrevious() async {}
+  Future<void> skipToPrevious() async {
+    debugPrint('BackgroundAudioHandler: skipToPrevious');
+    try {
+      AudioActions.onSkipPrevious?.call();
+    } catch (e) {
+      debugPrint('skipToPrevious callback failed: $e');
+    }
+  }
 
   
 }

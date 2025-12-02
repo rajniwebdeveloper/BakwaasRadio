@@ -4,10 +4,14 @@ import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:audio_service/audio_service.dart';
 import 'background_audio.dart';
+import 'audio_actions.dart';
 import 'package:flutter/services.dart';
 import 'cache_helper.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:math' as math;
+import 'library/library_data.dart';
+import 'models/station.dart';
 
 class PlaybackManager extends ChangeNotifier {
   PlaybackManager._internal() {
@@ -144,10 +148,88 @@ class PlaybackManager extends ChangeNotifier {
         }
         notifyListeners();
       });
+      // Wire notification skip actions back to the manager
+      AudioActions.onSkipNext = () {
+        try {
+          playNextStation();
+        } catch (_) {}
+      };
+      AudioActions.onSkipPrevious = () {
+        try {
+          playPreviousStation();
+        } catch (_) {}
+      };
     } catch (e) {
       // initialization failed; keep using local player as fallback
       _audioHandler = null;
     }
+  }
+
+  /// Play the next station. Uses the loaded `LibraryData.stations` list
+  /// to advance from the current station when possible, otherwise picks
+  /// a random station.
+  Future<void> playNextStation() async {
+    final stations = LibraryData.stations.value;
+    if (stations.isEmpty) return;
+    final currentUrl = _currentSong?['url'] ?? _lastSong?['url'];
+    int found = -1;
+    if (currentUrl != null) {
+      for (var i = 0; i < stations.length; i++) {
+        final s = stations[i];
+        final candidates = <String?>[s.playerUrl, s.streamURL, s.mp3Url];
+        for (final c in candidates) {
+          if (c == null) continue;
+          if (c.trim() == currentUrl.trim() || c.contains(currentUrl) || currentUrl.contains(c)) {
+            found = i;
+            break;
+          }
+        }
+        if (found != -1) break;
+      }
+    }
+    Station nextStation;
+    if (found != -1) {
+      nextStation = stations[(found + 1) % stations.length];
+    } else {
+      nextStation = stations[math.Random().nextInt(stations.length)];
+    }
+    final url = nextStation.playerUrl ?? nextStation.streamURL ?? nextStation.mp3Url ?? '';
+    if (url.isEmpty) return;
+    final song = {
+      'title': nextStation.name,
+      'subtitle': nextStation.description ?? '',
+      'image': nextStation.profilepic ?? '',
+      'url': url,
+    };
+    try {
+      await play(song);
+    } catch (_) {}
+  }
+
+  /// Play previous station based on history, or random fallback.
+  Future<void> playPreviousStation() async {
+    final history = _history;
+    if (history.length >= 2) {
+      final prev = history[1];
+      try {
+        await play(prev);
+      } catch (_) {}
+      return;
+    }
+    final stations = LibraryData.stations.value;
+    if (stations.isEmpty) return;
+    final s = stations[math.Random().nextInt(stations.length)];
+    final url = s.playerUrl ?? s.streamURL ?? s.mp3Url ?? '';
+    if (url.isEmpty) return;
+    final song = {
+      'title': s.name,
+      'subtitle': s.description ?? '',
+      'image': s.profilepic ?? '',
+      'url': url,
+    };
+    try {
+      await play(song);
+    } catch (_) {}
   }
 
   /// Ensure the background audio handler is initialized.
@@ -164,8 +246,12 @@ class PlaybackManager extends ChangeNotifier {
   Future<void> startNativeKeepAlive() async {
     try {
       await _keepAliveChannel.invokeMethod('startService');
+    } on MissingPluginException {
+      // The platform implementation may not be registered in some
+      // execution contexts (for example during background isolates
+      // or early startup). This is non-fatal; ignore quietly.
     } catch (e) {
-      // ignore: avoid_print
+      // Log other unexpected errors for debugging
       debugPrint('startNativeKeepAlive failed: $e');
     }
   }
@@ -245,16 +331,34 @@ class PlaybackManager extends ChangeNotifier {
             extras['artUri'] = extras['image']!;
           }
         }
-        await handler.setUrl(song['url']!, extras: extras);
-        await handler.play();
-        final ok = await waitForPlaying();
+        // Try the background audio handler several times (best-effort).
+        // Some devices or networks may cause the handler to fail briefly,
+        // so attempt up to `_maxReconnectAttempts` before falling back
+        // to the local player implementation.
+        bool bgOk = false;
+        for (var attempt = 1; attempt <= _maxReconnectAttempts; attempt++) {
+          try {
+            await handler.setUrl(song['url']!, extras: extras);
+            await handler.play();
+            final ok = await waitForPlaying(timeoutMs: 2500);
+            if (ok) {
+              bgOk = true;
+              break;
+            }
+          } catch (e) {
+            // ignore and retry after a small backoff
+          }
+          // small backoff between attempts
+          await Future.delayed(Duration(milliseconds: 300 * attempt));
+        }
+
         _isLoading = false;
-        if (ok) {
+        if (bgOk) {
           // Ensure native keep-alive foreground service is running so the
           // notification and background sync persist even if the Flutter
           // UI process is backgrounded. Best-effort; ignore errors.
           try {
-            _keepAliveChannel.invokeMethod('startService');
+            await startNativeKeepAlive();
           } catch (_) {}
           _lastSong = Map.from(song);
           _addToHistory(Map.from(song));
@@ -271,7 +375,7 @@ class PlaybackManager extends ChangeNotifier {
           return true;
         }
         notifyListeners();
-        return false;
+        // fall through to local player fallback
       } catch (_) {
         // fall through to local player fallback
       }
@@ -332,7 +436,7 @@ class PlaybackManager extends ChangeNotifier {
     // Stop the keep-alive service when playback is paused/stopped to avoid
     // leaving an unnecessary foreground notification running.
     try {
-      _keepAliveChannel.invokeMethod('stopService');
+      stopNativeKeepAlive();
     } catch (_) {}
   }
 
@@ -381,6 +485,9 @@ class PlaybackManager extends ChangeNotifier {
     _previewTimer?.cancel();
     _audioPlayer.dispose();
     _audioHandler?.stop();
+    // Clear audio action callbacks
+    AudioActions.onSkipNext = null;
+    AudioActions.onSkipPrevious = null;
     super.dispose();
   }
 
