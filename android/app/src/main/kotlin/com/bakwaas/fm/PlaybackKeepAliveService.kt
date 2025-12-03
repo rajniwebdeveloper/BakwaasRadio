@@ -13,6 +13,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.media.app.NotificationCompat.MediaStyle
+import android.graphics.BitmapFactory
 
 class PlaybackKeepAliveService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
@@ -47,14 +49,35 @@ class PlaybackKeepAliveService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification: Notification = NotificationCompat.Builder(this, channelId)
+        // Actions: previous, play/pause, next — these open MainActivity with an "action" extra
+        val prevIntent = Intent(this, MainActivity::class.java).apply { putExtra("action", "previous") }
+        val prevPending = PendingIntent.getActivity(this, 2, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+        val playIntent = Intent(this, MainActivity::class.java).apply { putExtra("action", "play") }
+        val playPending = PendingIntent.getActivity(this, 3, playIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+        val nextIntent = Intent(this, MainActivity::class.java).apply { putExtra("action", "next") }
+        val nextPending = PendingIntent.getActivity(this, 4, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+        // Try to load a large icon from resources if available
+        val largeIcon = try {
+            BitmapFactory.decodeResource(resources, R.drawable.ic_stat_bakwaas)
+        } catch (e: Exception) { null }
+
+        val builder = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Bakwaas FM")
-            .setContentText("Keeping playback alive")
+            .setContentText("Playing")
             .setSmallIcon(R.drawable.ic_stat_bakwaas)
+            .setLargeIcon(largeIcon)
             .setContentIntent(pendingOpen)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
-            .build()
+            .addAction(NotificationCompat.Action.Builder(0, "Prev", prevPending).build())
+            .addAction(NotificationCompat.Action.Builder(0, "Play", playPending).build())
+            .addAction(NotificationCompat.Action.Builder(0, "Next", nextPending).build())
+            .setStyle(MediaStyle().setShowActionsInCompactView(0,1,2))
+
+        val notification = builder.build()
 
         startForeground(notificationId, notification)
 

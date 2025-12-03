@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'playback_manager.dart';
+import 'models/station.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -80,6 +82,40 @@ class AppData {
   /// callbacks (deep links, notifications) where a `BuildContext` may be
   /// unavailable or unsafe to capture across async gaps.
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  /// Whether the app has already performed the update check during this run.
+  /// SplashPage sets this to true after checking so HomePage can skip re-checking.
+  static bool updateChecked = false;
+
+  /// Convenience helper: start playing a song or station and switch the
+  /// app to the Player tab (index 1). This ensures the Player tab is the
+  /// canonical full player UI rather than pushing separate player routes.
+  static Future<void> openPlayerWith({Map<String, dynamic>? song, Station? station}) async {
+    Map<String, dynamic>? toPlay = song;
+    if (station != null) {
+      final url = station.playerUrl ?? station.streamURL ?? station.mp3Url ?? '';
+      toPlay = {
+        'title': station.name,
+        'subtitle': station.description ?? '',
+        'image': station.profilepic ?? '',
+        'url': url,
+      };
+    }
+
+    try {
+      if (toPlay != null && (toPlay['url'] as String?) != null && (toPlay['url'] as String).isNotEmpty) {
+        final songMap = <String, String>{};
+        toPlay.forEach((k, v) {
+          songMap[k] = v == null ? '' : v.toString();
+        });
+        await PlaybackManager.instance.play(songMap);
+      }
+    } catch (_) {}
+
+    try {
+      navigatorKey.currentState?.popUntil((r) => r.isFirst);
+    } catch (_) {}
+    rootTab.value = 1;
+  }
 
   /// Load persisted auth token and user (if any) from `SharedPreferences`.
   /// If a valid token is found, sets `isLoggedIn` and populates `currentUser`.

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'song_page.dart';
 import 'downloads_page.dart';
 import 'library_data.dart';
 import 'liked_songs_manager.dart';
@@ -116,16 +115,13 @@ class _LibraryPageState extends State<LibraryPage> {
                                   width: 220,
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(12),
-                                    onTap: () {
-                                      AppData.rootTab.value = 2;
-                                      Navigator.of(context).push(MaterialPageRoute(
-                                          builder: (_) => SongPage(
-                                                title: s['title'] ?? '',
-                                                subtitle: s['subtitle'] ?? '',
-                                                imageUrl: s['image'],
-                                                autoplay: true,
-                                                showBottomNav: false,
-                                              )));
+                                    onTap: () async {
+                                      final songMap = <String, String>{
+                                        'title': s['title'] ?? '',
+                                        'subtitle': s['subtitle'] ?? '',
+                                        'image': s['image'] ?? '',
+                                      };
+                                      await AppData.openPlayerWith(song: songMap);
                                     },
                                     child: Container(
                                       padding: const EdgeInsets.all(10),
@@ -239,25 +235,16 @@ class _LibraryPageState extends State<LibraryPage> {
             padding: const EdgeInsets.symmetric(horizontal: 0),
             child: InkWell(
               borderRadius: BorderRadius.circular(14),
-              onTap: _history.isNotEmpty
-                  ? () {
+                      onTap: _history.isNotEmpty
+                  ? () async {
                       _history.shuffle();
                       final s = _history.first;
-                      final songMap = {
+                      final songMap = <String, String>{
                         'title': s['title'] ?? '',
                         'subtitle': s['subtitle'] ?? '',
                         'image': s['image'] ?? ''
                       };
-                      PlaybackManager.instance.play(songMap, duration: 191);
-                      AppData.rootTab.value = 2;
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => SongPage(
-                                title: songMap['title']!,
-                                subtitle: songMap['subtitle']!,
-                                imageUrl: songMap['image'],
-                                autoplay: true,
-                                showBottomNav: false,
-                              )));
+                      await AppData.openPlayerWith(song: songMap);
                     }
                   : null,
               child: Container(
@@ -472,25 +459,9 @@ class _LibraryPageState extends State<LibraryPage> {
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: url.isNotEmpty
-            ? () {
-                // Start playback and open SongPage with station details
-                PlaybackManager.instance.play({
-                  'title': s.name,
-                  'subtitle': s.description ?? '',
-                  'image': image,
-                  'url': url
-                });
-                AppData.rootTab.value = 2;
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => SongPage(
-                          station: s,
-                          title: s.name,
-                          subtitle: s.description ?? '',
-                          imageUrl: image,
-                          autoplay: true,
-                          showBottomNav: false,
-                        )));
+            onTap: url.isNotEmpty
+            ? () async {
+                await AppData.openPlayerWith(station: s);
               }
             : null,
         child: Container(
@@ -517,13 +488,8 @@ class _LibraryPageState extends State<LibraryPage> {
               const SizedBox(width: 8),
               IconButton(
                 onPressed: url.isNotEmpty
-                    ? () {
-                        PlaybackManager.instance.play({
-                          'title': s.name,
-                          'subtitle': s.description ?? '',
-                          'image': image,
-                          'url': url
-                        });
+                    ? () async {
+                        await AppData.openPlayerWith(station: s);
                       }
                     : null,
                 icon: Icon(url.isNotEmpty ? Icons.play_arrow : Icons.block, color: url.isNotEmpty ? Colors.tealAccent : Colors.white30),

@@ -63,6 +63,26 @@ class PlaybackManager extends ChangeNotifier {
         }
       }
     });
+
+    // Listen for native notification actions invoked from Android
+    // MainActivity will forward notification intents as a method call
+    // named 'notificationAction' on the 'com.bakwaas.fm/keepalive' channel.
+    try {
+      _keepAliveChannel.setMethodCallHandler((call) async {
+        if (call.method == 'notificationAction') {
+          final arg = call.arguments;
+          final action = arg is String ? arg : (arg?.toString() ?? '');
+          if (action == 'play' || action == 'pause' || action == 'toggle') {
+            toggle();
+          } else if (action == 'next' || action == 'skipNext') {
+            await playNextStation();
+          } else if (action == 'previous' || action == 'prev' || action == 'skipPrevious') {
+            await playPreviousStation();
+          }
+        }
+        return null;
+      });
+    } catch (_) {}
   }
   static final PlaybackManager instance = PlaybackManager._internal();
 
@@ -260,8 +280,11 @@ class PlaybackManager extends ChangeNotifier {
   Future<void> stopNativeKeepAlive() async {
     try {
       await _keepAliveChannel.invokeMethod('stopService');
+    } on MissingPluginException {
+      // Platform implementation not available (early startup/background isolate).
+      // Treat this as a no-op and avoid noisy logging.
     } catch (e) {
-      // ignore: avoid_print
+      // Other errors are useful for debugging.
       debugPrint('stopNativeKeepAlive failed: $e');
     }
   }

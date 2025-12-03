@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'song_page.dart';
 import '../app_data.dart';
 import 'liked_songs_manager.dart';
 
@@ -118,18 +117,9 @@ class _LikedSongsContentState extends State<LikedSongsContent> {
                             IconButton(
                               icon: const Icon(Icons.play_arrow,
                                   color: Colors.white70),
-                              onPressed: () {
-                                AppData.rootTab.value = 2;
-                                Navigator.of(context).push(MaterialPageRoute(
-                                  builder: (_) => SongPage(
-                                    title: s['title'] ?? '',
-                                    subtitle: s['subtitle'] ?? '',
-                                    imageUrl: s['image'],
-                                    autoplay: true,
-                                    showBottomNav: false,
-                                  ),
-                                ));
-                              },
+                              onPressed: () async {
+                                    await AppData.openPlayerWith(song: s);
+                                  },
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete_outline,
@@ -138,17 +128,8 @@ class _LikedSongsContentState extends State<LikedSongsContent> {
                             ),
                           ],
                         ),
-                        onTap: () {
-                          AppData.rootTab.value = 2;
-                          Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => SongPage(
-                              title: s['title'] ?? '',
-                              subtitle: s['subtitle'] ?? '',
-                              imageUrl: s['image'],
-                              autoplay: true,
-                              showBottomNav: false,
-                            ),
-                          ));
+                        onTap: () async {
+                          await AppData.openPlayerWith(song: s);
                         },
                       ),
                   );

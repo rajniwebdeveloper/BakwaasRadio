@@ -13,12 +13,12 @@ import 'library/playlist_detail_page.dart';
 import 'library/liked_songs_page.dart';
 import 'library/downloads_page.dart';
 import 'widgets/bakwaas_chrome.dart';
+import 'modal_helper.dart';
 import 'widgets/orbital_ring.dart';
 import 'stations_page.dart';
 import 'deep_link_handler.dart';
 import 'dart:io' as io;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/services.dart' show SystemNavigator;
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:http/http.dart' as http;
 import 'config.dart';
@@ -169,6 +169,97 @@ class _SplashPageState extends State<SplashPage> {
       // reachability and fetch data. Playback restoration/resume should
       // be explicit (handled by player screen or user action).
 
+      // --- Run update check on the splash screen so user sees it early.
+      try {
+        if (!AppData.updateChecked) {
+          debugPrint('Splash: checking update info');
+          final nowTs = DateTime.now().toUtc().toIso8601String();
+          final info = await ApiService.getUpdateInfo(v: AppInfo.version, ts: nowTs);
+          if (info != null && info is Map<String, dynamic>) {
+            String key;
+            if (kIsWeb) {
+              key = 'web';
+            } else if (io.Platform.isIOS) {
+              key = 'iso';
+            } else if (io.Platform.isAndroid) {
+              key = 'android';
+            } else if (io.Platform.isMacOS) {
+              key = 'macos';
+            } else if (io.Platform.isWindows) {
+              key = 'windows';
+            } else {
+              key = 'web';
+            }
+            final platformInfo = info[key];
+            if (platformInfo is Map<String, dynamic>) {
+              final serverVersion = (platformInfo['version'] ?? '') as String;
+              final serverBuild = (platformInfo['build'] ?? platformInfo['code']);
+              bool shouldShow = false;
+              if (serverVersion.isNotEmpty) {
+                if (_compareVersions(serverVersion, AppInfo.version) > 0) shouldShow = true;
+              }
+              if (!shouldShow && serverBuild != null) {
+                try {
+                  final int serverBuildInt = int.parse(serverBuild.toString());
+                  if (serverBuildInt > AppInfo.buildNumber) shouldShow = true;
+                } catch (_) {}
+              }
+              if (shouldShow && mounted) {
+                final releaseNotes = (platformInfo['releaseNotes'] ?? '') as String;
+                final url = (platformInfo['url'] ?? '') as String;
+                // Prefer the app-level navigator context so the dialog is shown
+                // by a stable navigator. If it's not available, skip showing the
+                // update dialog to avoid using a possibly stale `context`.
+                final navCtx = AppData.navigatorKey.currentContext;
+                if (navCtx != null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    final ctx = AppData.navigatorKey.currentContext;
+                    if (ctx == null) return;
+                    // Show a dismissible update dialog. Per request: closing
+                    // should simply dismiss the popup and continue.
+                    // We always allow dismiss here (even for forced updates)
+                    // because the user asked for Close to only remove popup.
+                    // ignore: unawaited_futures
+                    ModalHelper.showSingleDialog<void>(
+                      context: ctx,
+                      barrierDismissible: true,
+                      builder: (innerCtx) {
+                        return AlertDialog(
+                          title: const Text('Update Available'),
+                          content: SingleChildScrollView(child: Text(releaseNotes.isNotEmpty ? releaseNotes : 'A new version is available.')),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(innerCtx).pop();
+                              },
+                              child: const Text('Close'),
+                            ),
+                            TextButton(
+                              onPressed: () async {
+                                Navigator.of(innerCtx).pop();
+                                if (url.isNotEmpty) {
+                                  try {
+                                    await launchUrlString(url);
+                                  } catch (_) {}
+                                }
+                              },
+                              child: const Text('Update Now'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  });
+                }
+              }
+            }
+          }
+          AppData.updateChecked = true;
+        }
+      } catch (e) {
+        debugPrint('Splash: update check failed: $e');
+      }
+
       // Small delay so splash is visible briefly
       await Future.delayed(const Duration(milliseconds: 700));
 
@@ -209,7 +300,7 @@ class _SplashPageState extends State<SplashPage> {
           ),
           // Semi-transparent overlay for readable text
           Positioned.fill(
-            child: Container(color: Colors.black.withOpacity(0.45)),
+            child: Container(color: Colors.black.withAlpha((0.45 * 255).round())),
           ),
           // Centered app name and status/progress
           Center(
@@ -284,6 +375,17 @@ class _HomePageState extends State<HomePage>
 
   /// Run update check first (on Home), then fetch stations.
   Future<void> _checkUpdateThenLoadStations() async {
+    // If Splash already ran the update check, skip re-checking here.
+    if (AppData.updateChecked) {
+      try {
+        await LibraryData.load();
+        debugPrint('Home: stations loaded: ${LibraryData.stations.value.length}');
+      } catch (e) {
+        debugPrint('Home: failed to load stations: $e');
+      }
+      return;
+    }
+
     try {
       debugPrint('Home: checking update info');
       final nowTs = DateTime.now().toUtc().toIso8601String();
@@ -340,46 +442,54 @@ class _HomePageState extends State<HomePage>
               debugPrint('Home: Ignoring update because update URL is missing or unreachable');
             } else {
               // Show dialog; if user selects Close we exit the app.
-              // ignore: use_build_context_synchronously
-              await showDialog<void>(
-                context: context,
-                barrierDismissible: !force,
-                builder: (ctx) {
-                  return WillPopScope(
-                    onWillPop: () async => !force,
-                    child: AlertDialog(
-                      title: const Text('Update Available'),
-                      content: SingleChildScrollView(child: Text(releaseNotes.isNotEmpty ? releaseNotes : 'A new version is available.')),
-                      actions: [
-                        TextButton(
-                          onPressed: () async {
-                            Navigator.of(ctx).pop();
-                            await Future.delayed(const Duration(milliseconds: 200));
-                            try {
-                              SystemNavigator.pop();
-                            } catch (_) {
-                              io.exit(0);
-                            }
-                          },
-                          child: const Text('Close'),
+                // Prefer the app-level navigator context so the dialog is shown
+                // by a stable navigator. If it's not available, skip showing the
+                // update dialog to avoid using a possibly stale `context`.
+                final navCtx = AppData.navigatorKey.currentContext;
+                if (navCtx == null) return;
+                if (!mounted) return;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  final ctx = AppData.navigatorKey.currentContext;
+                  if (ctx == null) return;
+                  // ignore: unawaited_futures
+                  ModalHelper.showSingleDialog<void>(
+                    context: ctx,
+                    barrierDismissible: !force,
+                    builder: (innerCtx) {
+                      // Use WillPopScope here to control system back behavior.
+                      // WillPopScope is deprecated in newer Flutter releases,
+                      // but we keep it with an explicit ignore for now to avoid
+                      // changing navigation semantics until a full migration.
+                      // ignore: deprecated_member_use
+                      return WillPopScope(
+                        onWillPop: () async => !force,
+                        child: AlertDialog(
+                          title: const Text('Update Available'),
+                          content: SingleChildScrollView(child: Text(releaseNotes.isNotEmpty ? releaseNotes : 'A new version is available.')),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(innerCtx).pop();
+                              },
+                              child: const Text('Close'),
+                            ),
+                            TextButton(
+                              onPressed: () async {
+                                Navigator.of(innerCtx).pop();
+                                if (url.isNotEmpty) {
+                                  try {
+                                    await launchUrlString(url);
+                                  } catch (_) {}
+                                }
+                              },
+                              child: const Text('Update Now'),
+                            ),
+                          ],
                         ),
-                        TextButton(
-                          onPressed: () async {
-                            Navigator.of(ctx).pop();
-                            if (url.isNotEmpty) {
-                              try {
-                                await launchUrlString(url);
-                              } catch (_) {}
-                            }
-                          },
-                          child: const Text('Update Now'),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   );
-                },
-              );
-              if (!mounted) return;
+                });
             }
           }
         }
@@ -448,15 +558,9 @@ class _HomePageState extends State<HomePage>
       await PlaybackManager.instance.play(song, duration: 10);
     } catch (_) {}
     if (!mounted) return;
-    Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => SongPage(
-              station: s,
-              title: s.name,
-              subtitle: s.description ?? '',
-              imageUrl: s.profilepic,
-                                      autoplay: false,
-                                      showBottomNav: false,
-            )));
+    // Start preview in background only — do not open the full Player UI.
+    // This keeps the preview unobtrusive and prevents navigation during splash/home.
+    // Do not switch tabs or push SongPage; playback continues in background.
   }
 
   void _handlePlayback() => setState(() {});
@@ -473,14 +577,7 @@ class _HomePageState extends State<HomePage>
       final prev = history[1];
       final ok = await PlaybackManager.instance.play(prev);
       if (ok && mounted) {
-        Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => SongPage(
-                  title: prev['title'] ?? '',
-                  subtitle: prev['subtitle'] ?? '',
-                  imageUrl: prev['image'],
-                  autoplay: true,
-                                showBottomNav: false,
-                )));
+        await AppData.openPlayerWith(song: prev);
       }
       return;
     }
@@ -498,14 +595,7 @@ class _HomePageState extends State<HomePage>
         };
         final ok = await PlaybackManager.instance.play(song);
         if (ok && mounted) {
-          Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => SongPage(
-                    title: song['title'] ?? '',
-                    subtitle: song['subtitle'] ?? '',
-                    imageUrl: song['image'],
-                    autoplay: true,
-                    showBottomNav: false,
-                  )));
+          await AppData.openPlayerWith(song: song);
         }
       }
     }
@@ -546,14 +636,7 @@ class _HomePageState extends State<HomePage>
         };
         final ok = await PlaybackManager.instance.play(song);
         if (ok && mounted) {
-          Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => SongPage(
-                    title: song['title'] ?? '',
-                    subtitle: song['subtitle'] ?? '',
-                    imageUrl: song['image'],
-                    autoplay: true,
-                    showBottomNav: false,
-                  )));
+          await AppData.openPlayerWith(song: song);
         }
       }
       return;
@@ -570,7 +653,7 @@ class _HomePageState extends State<HomePage>
     return BakwaasScaffold(
       backgroundImage: cover,
       activeTab: _activeTab,
-      onMenuTap: () => showModalBottomSheet<void>(
+      onMenuTap: () => ModalHelper.showSingleModalBottomSheet<void>(
           context: context,
           backgroundColor: Colors.transparent,
           builder: (_) {
@@ -823,16 +906,10 @@ class _HomePageState extends State<HomePage>
                         ListTile(
                           leading: const Icon(Icons.play_circle_fill, color: Colors.white),
                           title: Text(lab('menu_now_playing', 'Now Playing'), style: const TextStyle(color: Colors.white)),
-                          onTap: () {
+                          onTap: () async {
                             Navigator.of(context).pop();
                             final song = _heroSong ?? {'title': 'Dhaka FM', 'subtitle': 'Live Radio', 'image': ''};
-                            Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => SongPage(
-                                      title: song['title'] ?? 'Dhaka FM',
-                                      subtitle: song['subtitle'] ?? 'Live Radio',
-                                      imageUrl: song['image'],
-                                      autoplay: _playback.isPlaying,
-                                    )));
+                            await AppData.openPlayerWith(song: song);
                           },
                         ),
                         ListTile(
@@ -882,28 +959,11 @@ class _HomePageState extends State<HomePage>
                   children: [
                     _buildHeroSection(heroSong),
                     const SizedBox(height: 18),
-                    // Quick access to Stations (kept for consistency)
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const StationsPage())),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        decoration:
-                            BakwaasTheme.glassDecoration(radius: 22, opacity: 0.06),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.radio, color: Colors.white70),
-                            SizedBox(width: 12),
-                            Expanded(
-                                child: Text('Browse Stations',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700))),
-                            Icon(Icons.chevron_right, color: Colors.white70)
-                          ],
-                        ),
-                      ),
+                    // Inline system volume control (replaces Browse Stations)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BakwaasTheme.glassDecoration(radius: 22, opacity: 0.06),
+                      child: const SystemVolumeControl(),
                     ),
                     const SizedBox(height: 18),
                   ],
@@ -1310,14 +1370,8 @@ class Section extends StatelessWidget {
                             width: 150,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(26),
-                              onTap: () {
-                                Navigator.of(context).push(MaterialPageRoute(
-                                    builder: (_) => SongPage(
-                                        station: station,
-                                        title: station.name,
-                                        subtitle: station.description ?? '',
-                                        imageUrl: station.profilepic,
-                                        autoplay: true)));
+                              onTap: () async {
+                                await AppData.openPlayerWith(station: station);
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(12),
@@ -1394,13 +1448,9 @@ class Section extends StatelessWidget {
                         width: 140,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(24),
-                          onTap: () {
-                            Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => SongPage(
-                                    title: title,
-                                    subtitle: '',
-                                    imageUrl: null,
-                                    autoplay: false)));
+                          onTap: () async {
+                            final songMap = <String, String>{'title': title, 'subtitle': '', 'image': ''};
+                            await AppData.openPlayerWith(song: songMap);
                           },
                           child: Container(
                             padding: const EdgeInsets.all(12),
@@ -1603,11 +1653,7 @@ class AllSongsPage extends StatelessWidget {
                 final s = songs[idx];
                 return InkWell(
                   borderRadius: BorderRadius.circular(18),
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => SongPage(
-                          title: s['title'] ?? '',
-                          subtitle: s['subtitle'] ?? '',
-                          imageUrl: s['image']))),
+                    onTap: () async => await AppData.openPlayerWith(song: s),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 10),
@@ -1694,12 +1740,7 @@ class TrendingGridPage extends StatelessWidget {
                 final s = songs[i % songs.length];
                 return InkWell(
                   borderRadius: BorderRadius.circular(22),
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => SongPage(
-                          title: s['title'] ?? '',
-                          subtitle: s['subtitle'] ?? '',
-                          imageUrl: s['image'],
-                          autoplay: true))),
+                  onTap: () async => await AppData.openPlayerWith(song: s),
                   child: Container(
                     decoration:
                         BakwaasTheme.glassDecoration(radius: 22, opacity: 0.08),

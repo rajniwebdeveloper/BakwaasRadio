@@ -8,13 +8,13 @@ import '../widgets/bakwaas_chrome.dart';
 import '../widgets/orbital_ring.dart';
 import 'package:flutter/services.dart';
 
-class _SystemVolumeControl extends StatefulWidget {
-  const _SystemVolumeControl();
+class SystemVolumeControl extends StatefulWidget {
+  const SystemVolumeControl({super.key});
   @override
-  State<_SystemVolumeControl> createState() => _SystemVolumeControlState();
+  State<SystemVolumeControl> createState() => _SystemVolumeControlState();
 }
 
-class _SystemVolumeControlState extends State<_SystemVolumeControl> {
+class _SystemVolumeControlState extends State<SystemVolumeControl> {
   static const MethodChannel _volumeChannel = MethodChannel('com.bakwaas.fm/volume');
   double _vol = 0.5;
 
@@ -37,7 +37,7 @@ class _SystemVolumeControlState extends State<_SystemVolumeControl> {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Icon(Icons.volume_up, color: Colors.white70),
+        const Icon(Icons.mic, color: Colors.white70),
         const SizedBox(width: 12),
         Expanded(
           child: SliderTheme(
@@ -227,7 +227,12 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
   final double screenWidth = MediaQuery.of(context).size.width;
-  final double albumSize = (screenWidth * 0.55).clamp(160.0, 360.0);
+  final double screenHeight = MediaQuery.of(context).size.height;
+  // Base album size on width, but cap it to a fraction of the screen height
+  // so very tall layouts won't overflow. Keep a reasonable min/max as well.
+  final double baseSize = (screenWidth * 0.55).clamp(160.0, 360.0);
+  final double maxByHeight = screenHeight * 0.45;
+  final double albumSize = math.min(baseSize, maxByHeight);
     final current = _songs[_currentIndex];
     final imageUrl = current['image'];
 
@@ -240,12 +245,12 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
       bodyPadding: const EdgeInsets.fromLTRB(12, 0, 12, 120),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final availableHeight = constraints.maxHeight;
-          return SizedBox(
-            height: availableHeight,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
                 const SizedBox(height: 12),
                 SizedBox(
               width: albumSize + 64,
@@ -505,7 +510,7 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
             // Inline system volume slider (controls Android STREAM_MUSIC)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
-              child: _SystemVolumeControl(),
+              child: SystemVolumeControl(),
             ),
             // const SizedBox(height: 10),
             // Padding(
@@ -624,12 +629,16 @@ class _SongPageState extends State<SongPage> with TickerProviderStateMixin {
             //     ],
               // ),
             // ),
-            const Spacer(),
+            // Ensure there's some bottom spacing so the last controls are
+            // comfortably above the footer when scrolled to the end.
+            const SizedBox(height: 40),
             const SizedBox(height: 40),
           ],
-        ),
-      );
-    }),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

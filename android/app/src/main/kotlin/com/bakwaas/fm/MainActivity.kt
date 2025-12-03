@@ -11,11 +11,13 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
 	private val CHANNEL = "com.bakwaas.fm/keepalive"
+	private lateinit var keepAliveChannel: MethodChannel
 
 	override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
 		super.configureFlutterEngine(flutterEngine)
 
-		MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+		keepAliveChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+		keepAliveChannel.setMethodCallHandler { call, result ->
 			when (call.method) {
 				"startService" -> {
 					try {
@@ -71,3 +73,16 @@ class MainActivity: FlutterActivity() {
 		}
 	}
 }
+	override fun onNewIntent(intent: Intent?) {
+		super.onNewIntent(intent)
+		if (intent == null) return
+		val action = intent.getStringExtra("action")
+		if (action != null) {
+			try {
+				// Forward the notification action to Dart via the same keepalive channel.
+				keepAliveChannel.invokeMethod("notificationAction", action)
+			} catch (e: Exception) {
+				Log.e("MainActivity", "failed to invoke notificationAction", e)
+			}
+		}
+	}

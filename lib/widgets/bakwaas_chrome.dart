@@ -2,10 +2,10 @@ import 'dart:ui';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../app_data.dart';
 import '../playback_manager.dart';
 import '../config.dart';
-import '../library/song_page.dart';
 import 'package:flutter/services.dart';
 
 class BakwaasPalette {
@@ -95,6 +95,10 @@ class BakwaasScaffold extends StatefulWidget {
 
 class _BakwaasScaffoldState extends State<BakwaasScaffold> {
   String? _liveBackground;
+  final GlobalKey _footerKey = GlobalKey();
+  double _measuredFooterHeight = 0.0;
+  bool _menuLocked = false;
+  bool _exitLocked = false;
 
   @override
   void initState() {
@@ -118,6 +122,29 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
   void dispose() {
     PlaybackManager.instance.removeListener(_playbackChanged);
     super.dispose();
+  }
+
+  void _handleMenuTap() {
+    if (_menuLocked) return;
+    _menuLocked = true;
+    try {
+      widget.onMenuTap?.call();
+    } catch (_) {}
+    // unlock after short delay to allow modal to open without double-invoke
+    Future.delayed(const Duration(milliseconds: 600), () {
+      _menuLocked = false;
+    });
+  }
+
+  void _handleExitTap() {
+    if (_exitLocked) return;
+    _exitLocked = true;
+    try {
+      widget.onExitTap?.call();
+    } catch (_) {}
+    Future.delayed(const Duration(milliseconds: 400), () {
+      _exitLocked = false;
+    });
   }
 
   @override
@@ -155,8 +182,8 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
                 children: [
                   const SizedBox(height: 6),
                   BakwaasTopBar(
-                    onMenuTap: widget.onMenuTap,
-                    onExitTap: widget.onExitTap,
+                    onMenuTap: () => _handleMenuTap(),
+                    onExitTap: () => _handleExitTap(),
                   ),
                   const SizedBox(height: 10),
                   Expanded(
@@ -185,21 +212,54 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _MiniPlayer(),
-                      BakwaasBottomNav(
-                        activeIndex: widget.activeTab,
-                        onTap: widget.onNavTap ?? (index) {
-                          if (index == widget.activeTab) return;
-                          Navigator.of(context).popUntil((r) => r.isFirst);
-                          AppData.rootTab.value = index.clamp(0, 2);
-                          return;
-                        },
+                      // Wrap footer in a keyed container so we can measure its
+                      // height at runtime and reserve exact padding for content.
+                      Container(
+                        key: _footerKey,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Show mini-player on non-player tabs so users have
+                            // quick access to current playback. When the Player
+                            // tab (index 1) is active the full player UI is
+                            // shown there, so hide the mini-player to avoid a
+                            // duplicate control surface.
+                            if (widget.activeTab != 1) _MiniPlayer(),
+                            BakwaasBottomNav(
+                              activeIndex: widget.activeTab,
+                              onTap: widget.onNavTap ?? (index) {
+                                if (index == widget.activeTab) return;
+                                Navigator.of(context).popUntil((r) => r.isFirst);
+                                AppData.rootTab.value = index.clamp(0, 2);
+                                return;
+                              },
+                            ),
+                            const SizedBox(height: 6),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 6),
                     ],
                   ),
                 ),
               ),
+                // Debug overlay: show measured footer height when running in debug
+                if (kDebugMode && widget.showBottomNav)
+                  Positioned(
+                    right: 8,
+                    bottom: (_measuredFooterHeight > 0 ? _measuredFooterHeight + 8 : 8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black87,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: Text(
+                        'footer=${_measuredFooterHeight.toStringAsFixed(0)}',
+                        style: const TextStyle(color: Colors.white, fontSize: 11),
+                      ),
+                    ),
+                  ),
           ],
         ),
       ),
@@ -208,14 +268,39 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
 
   EdgeInsets _effectiveBodyPadding(EdgeInsetsGeometry paddingGeom, bool showFooter) {
     // Footer height should scale down on small screens to avoid
-    // overflowing content. Use up to 96px but clamp to a fraction
-    // of the screen height so very small devices remain usable.
+    // overflowing content. Use up to a capped size but prefer the
+    // measured footer height when available to avoid under/over-reserving.
     final screenH = MediaQuery.of(context).size.height;
-    final maxFooter = 96.0;
-    final footerHeight = math.min(maxFooter, screenH * 0.22);
+    final maxFooter = 140.0;
+    final estimatedFooter = 48.0 /* mini player */ + 72.0 /* bottom nav */ + 12.0;
+    double footerHeight;
+    if (_measuredFooterHeight > 0.0) {
+      footerHeight = _measuredFooterHeight;
+    } else {
+      footerHeight = math.min(maxFooter, math.max(estimatedFooter, screenH * 0.20));
+    }
     final p = paddingGeom is EdgeInsets ? paddingGeom : const EdgeInsets.fromLTRB(20, 0, 20, 16);
-    final bottom = showFooter ? (p.bottom + footerHeight) : p.bottom;
+    // Reserve the larger of current bottom padding or the footer height so
+    // we don't double-count and cause overflow.
+    final bottom = showFooter ? math.max(p.bottom, footerHeight) : p.bottom;
+    // After layout, attempt to measure footer so future builds reserve exact space.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measureFooter());
     return p.copyWith(bottom: bottom);
+  }
+
+  void _measureFooter() {
+    try {
+      final ctx = _footerKey.currentContext;
+      if (ctx == null) return;
+      final box = ctx.findRenderObject() as RenderBox?;
+      if (box == null) return;
+      final h = box.size.height + MediaQuery.of(context).viewPadding.bottom;
+      if (h > 0 && (h - _measuredFooterHeight).abs() > 1.0) {
+        setState(() {
+          _measuredFooterHeight = h;
+        });
+      }
+    } catch (_) {}
   }
 }
 
@@ -251,14 +336,11 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
 
       return GestureDetector(
         onTap: () {
-          Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => SongPage(
-                    title: title,
-                    subtitle: subtitle,
-                    imageUrl: song['image'],
-                    autoplay: mgr.isPlaying,
-                    showBottomNav: false,
-                  )));
+          // Switch to the Player tab (index 1) instead of opening a separate player route
+          try {
+            Navigator.of(context).popUntil((r) => r.isFirst);
+          } catch (_) {}
+          AppData.rootTab.value = 1;
         },
           child: Container(
           margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),

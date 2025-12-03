@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'song_page.dart';
 import '../app_data.dart';
 
 class AlbumsPage extends StatefulWidget {
@@ -106,17 +105,13 @@ class _AlbumsPageState extends State<AlbumsPage> {
                       ),
                       title: Text(a['title'] ?? '',
                           style: const TextStyle(fontWeight: FontWeight.w600)),
-                      onTap: () {
-                        AppData.rootTab.value = 2;
-                        Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => SongPage(
-                            title: a['title'] ?? '',
-                            subtitle: 'Various Artists',
-                            imageUrl: a['image'],
-                            autoplay: false,
-                            showBottomNav: false,
-                          ),
-                        ));
+                      onTap: () async {
+                        final songMap = <String, String>{
+                          'title': a['title'] ?? '',
+                          'subtitle': 'Various Artists',
+                          'image': a['image'] ?? ''
+                        };
+                        await AppData.openPlayerWith(song: songMap);
                       },
                     ),
                   );
