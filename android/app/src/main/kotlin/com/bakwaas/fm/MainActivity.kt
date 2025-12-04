@@ -5,11 +5,11 @@ import android.os.Build
 import android.util.Log
 import android.media.AudioManager
 import kotlin.math.roundToInt
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-class MainActivity: FlutterActivity() {
+class MainActivity: FlutterFragmentActivity() {
 	private val CHANNEL = "com.bakwaas.fm/keepalive"
 	private lateinit var keepAliveChannel: MethodChannel
 
@@ -22,8 +22,38 @@ class MainActivity: FlutterActivity() {
 				"startService" -> {
 					try {
 						val intent = Intent(this, PlaybackKeepAliveService::class.java)
+						// Accept optional metadata map to show in the native notification
+						val args = call.arguments
+						if (args is Map<*, *>) {
+							val title = args["title"] as? String
+							val subtitle = args["subtitle"] as? String
+							val artUri = args["artUri"] as? String
+							// isPlaying/loading may be passed as strings ('true'/'false') or booleans
+							val isPlayingRaw = args["isPlaying"]
+							val loadingRaw = args["loading"]
+							var isPlayingBool: Boolean? = null
+							var loadingBool: Boolean? = null
+							if (isPlayingRaw is Boolean) isPlayingBool = isPlayingRaw
+							if (isPlayingRaw is String) isPlayingBool = isPlayingRaw.toBoolean()
+							if (loadingRaw is Boolean) loadingBool = loadingRaw
+							if (loadingRaw is String) loadingBool = loadingRaw.toBoolean()
+							if (title != null) intent.putExtra("title", title)
+							if (subtitle != null) intent.putExtra("subtitle", subtitle)
+							if (artUri != null) intent.putExtra("artUri", artUri)
+							if (isPlayingBool != null) intent.putExtra("isPlaying", isPlayingBool)
+							if (loadingBool != null) intent.putExtra("loading", loadingBool)
+						}
 						if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-							startForegroundService(intent)
+							try {
+								startForegroundService(intent)
+							} catch (ise: IllegalStateException) {
+								// Some OEM/Android versions disallow starting a foreground
+								// service from the background (mAllowStartForeground=false).
+								// Fall back to a normal startService call to avoid a hard
+								// exception; the service will attempt to call startForeground
+								// itself when it can.
+								startService(intent)
+							}
 						} else {
 							startService(intent)
 						}

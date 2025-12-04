@@ -2,7 +2,7 @@ name: bakwaas_fm
 description: Bakwaas FM - Free Radio for Silly People
 homepage: https://bakwaasfm.in
 publish_to: 'none'
-version: 10.0.1+11
+version: 10.0.2+12
 
 environment:
   # Use Dart 3+ to match the local Flutter SDK and allow newer package releases.

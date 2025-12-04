@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math' as math;
 import 'library/library_data.dart';
 import 'models/station.dart';
+import 'library/liked_songs_manager.dart';
 
 class PlaybackManager extends ChangeNotifier {
   PlaybackManager._internal() {
@@ -72,9 +73,27 @@ class PlaybackManager extends ChangeNotifier {
         if (call.method == 'notificationAction') {
           final arg = call.arguments;
           final action = arg is String ? arg : (arg?.toString() ?? '');
-          if (action == 'play' || action == 'pause' || action == 'toggle') {
-            toggle();
+          debugPrint('PlaybackManager: received native notificationAction -> $action');
+          if (action == 'play' || action == 'pause' || action == 'toggle' || action == 'play_pause') {
+            // If background handler is available prefer it, otherwise act on the local player directly.
+            if (_audioHandler != null) {
+              toggle();
+            } else {
+              // Direct local control
+              if (_isPlaying) {
+                pause();
+              } else {
+                // If no current song selected, use lastSong as fallback
+                final toPlay = _currentSong ?? _lastSong;
+                if (toPlay != null) {
+                  _manuallyPaused = false;
+                  // fire-and-forget
+                  play(toPlay);
+                }
+              }
+            }
           } else if (action == 'next' || action == 'skipNext') {
+            // direct next
             await playNextStation();
           } else if (action == 'previous' || action == 'prev' || action == 'skipPrevious') {
             await playPreviousStation();
@@ -82,7 +101,9 @@ class PlaybackManager extends ChangeNotifier {
         }
         return null;
       });
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('PlaybackManager: error setting keepAlive handler: $e');
+    }
   }
   static final PlaybackManager instance = PlaybackManager._internal();
 
@@ -191,10 +212,39 @@ class PlaybackManager extends ChangeNotifier {
   /// to advance from the current station when possible, otherwise picks
   /// a random station.
   Future<void> playNextStation() async {
+    // Prefer the user's liked songs list if it contains multiple entries.
+    final liked = LikedSongsManager.liked.value;
     final stations = LibraryData.stations.value;
-    if (stations.isEmpty) return;
+    if (stations.isEmpty && liked.isEmpty) return;
     final currentUrl = _currentSong?['url'] ?? _lastSong?['url'];
     int found = -1;
+    // If the liked list has at least 2 items, use it as the playlist source.
+    if (liked.length >= 2) {
+      // Try to find current in liked list
+      if (currentUrl != null) {
+        for (var i = 0; i < liked.length; i++) {
+          final s = liked[i];
+          final c = s['url'];
+          if (c != null && currentUrl.contains(c) || (c != null && c.contains(currentUrl))) {
+            found = i;
+            break;
+          }
+        }
+      }
+      Map<String, String> nextMap;
+      if (found != -1) {
+        nextMap = liked[(found + 1) % liked.length];
+      } else {
+        nextMap = liked[math.Random().nextInt(liked.length)];
+      }
+      try {
+        await play(nextMap);
+      } catch (_) {}
+      return;
+    }
+
+    if (stations.isEmpty) return;
+
     if (currentUrl != null) {
       for (var i = 0; i < stations.length; i++) {
         final s = stations[i];
@@ -209,6 +259,7 @@ class PlaybackManager extends ChangeNotifier {
         if (found != -1) break;
       }
     }
+
     Station nextStation;
     if (found != -1) {
       nextStation = stations[(found + 1) % stations.length];
@@ -275,6 +326,19 @@ class PlaybackManager extends ChangeNotifier {
     } catch (e) {
       // Log other unexpected errors for debugging
       debugPrint('startNativeKeepAlive failed: $e');
+    }
+  }
+
+  /// Start the native keep-alive foreground service with metadata so the
+  /// native notification can display title/subtitle/artwork when audio
+  /// is played using the local player (audio_service unavailable).
+  Future<void> startNativeKeepAliveWithMeta(Map<String, String> meta) async {
+    try {
+      await _keepAliveChannel.invokeMethod('startService', meta);
+    } on MissingPluginException {
+      // ignore
+    } catch (e) {
+      debugPrint('startNativeKeepAliveWithMeta failed: $e');
     }
   }
 
@@ -380,11 +444,19 @@ class PlaybackManager extends ChangeNotifier {
 
         _isLoading = false;
         if (bgOk) {
+          _isPlaying = true;
           // Ensure native keep-alive foreground service is running so the
           // notification and background sync persist even if the Flutter
           // UI process is backgrounded. Best-effort; ignore errors.
           try {
-            await startNativeKeepAlive();
+            final meta = <String, String>{
+              'title': song['title'] ?? 'Bakwaas FM',
+              'subtitle': song['subtitle'] ?? 'Live Radio',
+              'isPlaying': 'true',
+              'loading': 'false',
+            };
+            if (extras.containsKey('artUri')) meta['artUri'] = extras['artUri'] as String;
+            await startNativeKeepAliveWithMeta(meta);
           } catch (_) {}
           _lastSong = Map.from(song);
           _addToHistory(Map.from(song));
@@ -409,12 +481,46 @@ class PlaybackManager extends ChangeNotifier {
     debugPrint('PlaybackManager.play: falling back to local player for ${song['url']}');
 
     try {
+      // Inform native notification that we're buffering/loading for local fallback
+      try {
+        final loadingMeta = <String, String>{
+          'title': song['title'] ?? 'Bakwaas FM',
+          'subtitle': song['subtitle'] ?? 'Live Radio',
+          'loading': 'true',
+          'isPlaying': 'false',
+        };
+        if (song.containsKey('image') && song['image'] != null && song['image']!.isNotEmpty) {
+          try {
+            final cached = await CacheHelper.cacheImage(song['image']!);
+            if (cached != null && cached.isNotEmpty) loadingMeta['artUri'] = Uri.file(cached).toString();
+          } catch (_) {}
+        }
+        await startNativeKeepAliveWithMeta(loadingMeta);
+      } catch (_) {}
+
       await _audioPlayer.play(UrlSource(song['url']!));
       final ok = await waitForPlaying();
       _isLoading = false;
       if (ok) {
+        _isPlaying = true;
         _lastSong = Map.from(song);
         _addToHistory(Map.from(song));
+        // Ensure native keep-alive notification shows even when using local player.
+        try {
+          final meta = <String, String>{
+            'title': song['title'] ?? 'Bakwaas FM',
+            'subtitle': song['subtitle'] ?? 'Live Radio',
+            'isPlaying': 'true',
+            'loading': 'false',
+          };
+          if (song.containsKey('image') && song['image'] != null && song['image']!.isNotEmpty) {
+            try {
+              final cached = await CacheHelper.cacheImage(song['image']!);
+              if (cached != null && cached.isNotEmpty) meta['artUri'] = Uri.file(cached).toString();
+            } catch (_) {}
+          }
+          await startNativeKeepAliveWithMeta(meta);
+        } catch (_) {}
         // schedule preview auto-pause when requested
         if (duration > 0) {
           _previewTimer?.cancel();
@@ -450,7 +556,7 @@ class PlaybackManager extends ChangeNotifier {
     } catch (_) {}
   }
 
-  void pause() {
+  Future<void> pause() async {
     _manuallyPaused = true;
     _isLoading = false;
     // cancel any preview timer if user paused
@@ -460,10 +566,24 @@ class PlaybackManager extends ChangeNotifier {
     } else {
       _audioPlayer.pause();
     }
+    _isPlaying = false;
+    notifyListeners();
     // Stop the keep-alive service when playback is paused/stopped to avoid
     // leaving an unnecessary foreground notification running.
     try {
-      stopNativeKeepAlive();
+      final meta = <String, String>{
+        'title': _currentSong?['title'] ?? _lastSong?['title'] ?? 'Bakwaas FM',
+        'subtitle': _currentSong?['subtitle'] ?? _lastSong?['subtitle'] ?? 'Paused',
+        'isPlaying': 'false',
+        'loading': 'false',
+      };
+      if (_currentSong != null && _currentSong!.containsKey('image')) {
+        try {
+          final cached = await CacheHelper.cacheImage(_currentSong!['image'] ?? '');
+          if (cached != null && cached.isNotEmpty) meta['artUri'] = Uri.file(cached).toString();
+        } catch (_) {}
+      }
+      await startNativeKeepAliveWithMeta(meta);
     } catch (_) {}
   }
 

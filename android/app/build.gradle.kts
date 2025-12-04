@@ -35,6 +35,7 @@ android {
         applicationId = "com.bakwaas.fm"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // Support back to Android 4.1 (API 16) while building against SDK 36
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

@@ -11,6 +11,7 @@ import 'app_data.dart';
 import 'profile_page.dart';
 import 'library/playlist_detail_page.dart';
 import 'library/liked_songs_page.dart';
+import 'library/liked_songs_manager.dart';
 import 'library/downloads_page.dart';
 import 'widgets/bakwaas_chrome.dart';
 import 'modal_helper.dart';
@@ -31,12 +32,12 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Initialize just_audio_background so Android/iOS notification channel
   // and media session are ready before starting playback or the handler.
-  try {
+    try {
     await JustAudioBackground.init(
       androidNotificationChannelId: 'com.bakwaas.fm.audio',
       androidNotificationChannelName: 'Bakwaas Audio',
       androidNotificationOngoing: true,
-      androidNotificationIcon: 'drawable/ic_stat_bakwaas',
+      androidNotificationIcon: 'ic_stat_bakwaas',
     );
   } catch (e) {
     // non-fatal if the package isn't available or init fails
@@ -53,6 +54,11 @@ Future<void> main() async {
     await PlaybackManager.instance.ensureBackgroundHandler();
   } catch (e) {
     debugPrint('Main: ensureBackgroundHandler failed: $e');
+  }
+  try {
+    await LikedSongsManager.loadFromPrefs();
+  } catch (e) {
+    debugPrint('Main: failed to load liked songs: $e');
   }
   runApp(const MyApp());
 }
@@ -1018,13 +1024,49 @@ class _HomePageState extends State<HomePage>
             ],
           ),
           const SizedBox(height: 12),
-          Text(song['title'] ?? '',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(song['title'] ?? '',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5)),
+              ),
+              Builder(builder: (ctx) {
+                final cur = song;
+                final songMap = {
+                  'title': cur['title'] ?? '',
+                  'subtitle': cur['subtitle'] ?? '',
+                  'image': cur['image'] ?? '',
+                  'url': cur['url'] ?? ''
+                };
+                final liked = LikedSongsManager.contains(songMap);
+                return IconButton(
+                  onPressed: () {
+                    if (liked) {
+                      LikedSongsManager.remove(songMap);
+                    } else {
+                      LikedSongsManager.add(songMap);
+                    }
+                    setState(() {});
+                  },
+                  icon: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 260),
+                    transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                    child: Icon(
+                      liked ? Icons.favorite : Icons.favorite_border,
+                      key: ValueKey<bool>(liked),
+                      color: Colors.pinkAccent,
+                    ),
+                  ),
+                );
+              })
+            ],
+          ),
           const SizedBox(height: 6),
               Text(song['subtitle'] ?? '',
               textAlign: TextAlign.center,

@@ -426,7 +426,7 @@ Future<AudioHandler> initBackgroundAudioHandler() async {
       // When notification is clicked resume the activity
       androidResumeOnClick: true,
       // Use a small notification icon (add this to your Android drawable)
-      androidNotificationIcon: 'drawable/ic_stat_bakwaas',
+      androidNotificationIcon: 'ic_stat_bakwaas',
       androidNotificationClickStartsActivity: true,
     ),
   );

@@ -18,10 +18,9 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
-            android:name=".MainActivity"
+            android:name="com.bakwaas.fm.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
@@ -67,7 +66,21 @@
                forwards actions to the MainActivity (which in turn forwards to
                Dart via the MethodChannel). -->
            <receiver android:name=".NotificationActionReceiver" android:exported="true" />
+           <!-- Ensure the app receives hardware/media button events. This registers
+                the AndroidX MediaButtonReceiver so media button intents (headset,
+                Bluetooth controls) are delivered to the app and forwarded to the
+                media session/audio service. -->
+           <receiver android:name="androidx.media.session.MediaButtonReceiver"
+                     android:exported="false">
+               <intent-filter>
+                   <action android:name="android.intent.action.MEDIA_BUTTON" />
+               </intent-filter>
+           </receiver>
     </application>
+    <!-- Optionally allow restart after device boot (useful if you implement
+         a boot-time resume behavior). This permission is not strictly required
+         for background playback, but can be useful in some deployments. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
          https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.

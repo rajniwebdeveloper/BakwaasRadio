@@ -13,7 +13,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import android.app.Notification.Builder as FrameworkNotificationBuilder
+import android.graphics.drawable.Icon
 import android.graphics.BitmapFactory
+import android.media.session.MediaSession
 
 class PlaybackKeepAliveService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
@@ -39,9 +42,10 @@ class PlaybackKeepAliveService : Service() {
             manager.createNotificationChannel(chan)
         }
 
-        val openIntent = Intent(this, MainActivity::class.java)
-        openIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        val pendingOpen = PendingIntent.getActivity(
+        // Notification tap will send a broadcast for "next" so tapping
+        // the notification advances to the next track without opening the app.
+        val openIntent = Intent(this, NotificationActionReceiver::class.java).apply { putExtra("action", "next") }
+        val pendingOpen = PendingIntent.getBroadcast(
             this,
             0,
             openIntent,
@@ -64,27 +68,109 @@ class PlaybackKeepAliveService : Service() {
         val nextPending = PendingIntent.getBroadcast(this, 4, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
         // Try to load a large icon from resources if available
+        // Prefer artwork passed via intent extras (file:// URI) so the
+        // notification can show the currently-playing artwork even when
+        // the Flutter engine is not running. Fallback to bundled resource.
+        val artUriString = intent?.getStringExtra("artUri")
         val largeIcon = try {
-            BitmapFactory.decodeResource(resources, R.drawable.ic_stat_bakwaas)
-        } catch (e: Exception) { null }
+            if (artUriString != null) {
+                if (artUriString.startsWith("file://")) {
+                    val path = artUriString.removePrefix("file://")
+                    BitmapFactory.decodeFile(path)
+                } else if (artUriString.startsWith("http://") || artUriString.startsWith("https://")) {
+                    // Try to download the image synchronously with a short timeout
+                    try {
+                        val url = java.net.URL(artUriString)
+                        val conn = url.openConnection()
+                        conn.connectTimeout = 3000
+                        conn.readTimeout = 3000
+                        val `is` = conn.getInputStream()
+                        val bmp = BitmapFactory.decodeStream(`is`)
+                        try { `is`.close() } catch (ignored: Exception) {}
+                        bmp
+                    } catch (e: Exception) {
+                        BitmapFactory.decodeResource(resources, R.drawable.ic_stat_bakwaas)
+                    }
+                } else {
+                    BitmapFactory.decodeResource(resources, R.drawable.ic_stat_bakwaas)
+                }
+            } else {
+                BitmapFactory.decodeResource(resources, R.drawable.ic_stat_bakwaas)
+            }
+        } catch (e: Exception) {
+            null
+        }
 
-        val builder = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Bakwaas FM")
-            .setContentText("Playing")
-            .setSmallIcon(R.drawable.ic_stat_bakwaas)
-            .setLargeIcon(largeIcon)
-            .setContentIntent(pendingOpen)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true)
-            .addAction(NotificationCompat.Action(R.drawable.ic_prev, "Prev", prevPending))
-            .addAction(NotificationCompat.Action(R.drawable.ic_play, "Play", playPending))
-            .addAction(NotificationCompat.Action(R.drawable.ic_next, "Next", nextPending))
-            .setStyle(androidx.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(0,1,2))
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        // Create a MediaSessionCompat so the notification/media framework has a
+        // valid compat media session token. This improves lock-screen controls
+        // and allows the system to show the rich media controls and artwork.
+        val mediaSession = MediaSession(this, "BakwaasMediaSession")
+        mediaSession.setActive(true)
 
-        val notification = builder.build()
+        // Read title/subtitle and playback flags from intent extras when provided.
+        val titleExtra = intent?.getStringExtra("title") ?: "Bakwaas FM"
+        var subtitleExtra = intent?.getStringExtra("subtitle") ?: "Playing"
+        val isPlayingExtra = try { intent?.getBooleanExtra("isPlaying", false) ?: false } catch (e: Exception) { false }
+        val loadingExtra = try { intent?.getBooleanExtra("loading", false) ?: false } catch (e: Exception) { false }
+        if (loadingExtra) {
+            subtitleExtra = "Buffering..."
+        }
+
+        // Build a notification. Prefer the framework Notification.Builder with
+        // MediaStyle on Android O+ so the media session token is accepted and
+        // action icons appear correctly on the lock screen and compact view.
+        val notification: Notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val playIconRes = if (isPlayingExtra) R.drawable.ic_pause else R.drawable.ic_play
+            val nb = FrameworkNotificationBuilder(this, channelId)
+                .setContentTitle(titleExtra)
+                .setContentText(subtitleExtra)
+                .setSmallIcon(R.drawable.ic_stat_bakwaas)
+                .setLargeIcon(largeIcon)
+                .setContentIntent(pendingOpen)
+                .setOngoing(true)
+
+            // Add actions with icons so the notification shows icon buttons.
+            nb.addAction(Notification.Action.Builder(Icon.createWithResource(this, R.drawable.ic_prev), "", prevPending).build())
+            nb.addAction(Notification.Action.Builder(Icon.createWithResource(this, playIconRes), "", playPending).build())
+            nb.addAction(Notification.Action.Builder(Icon.createWithResource(this, R.drawable.ic_next), "", nextPending).build())
+
+            // Show a spinner/progress when loading/buffering, otherwise clear progress.
+            if (loadingExtra) {
+                nb.setProgress(0, 0, true)
+            } else {
+                nb.setProgress(0, 0, false)
+            }
+
+            // Attach framework MediaStyle that accepts a framework session token.
+            nb.setStyle(Notification.MediaStyle().setShowActionsInCompactView(0,1,2).setMediaSession(mediaSession.sessionToken))
+            nb.build()
+        } else {
+            // Fallback: use NotificationCompat for older devices (icons may be shown differently).
+            val playIconRes = if (isPlayingExtra) R.drawable.ic_pause else R.drawable.ic_play
+            val cb = NotificationCompat.Builder(this, channelId)
+                .setContentTitle(titleExtra)
+                .setContentText(subtitleExtra)
+                .setSmallIcon(R.drawable.ic_stat_bakwaas)
+                .setLargeIcon(largeIcon)
+                .setContentIntent(pendingOpen)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setOngoing(true)
+                .addAction(R.drawable.ic_prev, "Prev", prevPending)
+                .addAction(playIconRes, if (isPlayingExtra) "Pause" else "Play", playPending)
+                .addAction(R.drawable.ic_next, "Next", nextPending)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            if (loadingExtra) {
+                cb.setProgress(0, 0, true)
+            } else {
+                cb.setProgress(0, 0, false)
+            }
+            cb.build()
+        }
 
         startForeground(notificationId, notification)
+
+        // Keep the MediaSessionCompat around while the service runs; release when destroyed.
+        _mediaSession = mediaSession
 
         // Return START_STICKY so the system will try to recreate the service
         // after it has enough memory.
@@ -109,7 +195,31 @@ class PlaybackKeepAliveService : Service() {
     }
 
     override fun onDestroy() {
+        try {
+            _mediaSession?.release()
+        } catch (e: Exception) {
+            Log.w("PlaybackKeepAliveService", "failed to release media session: $e")
+        }
+        // If the service is destroyed unexpectedly, schedule a quick restart
+        // to try to recover the foreground notification and keep playback alive.
+        try {
+            val restart = Intent(applicationContext, PlaybackKeepAliveService::class.java)
+            val pending = PendingIntent.getService(
+                applicationContext,
+                2,
+                restart,
+                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            am.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 750, pending)
+        } catch (e: Exception) {
+            Log.w("PlaybackKeepAliveService", "failed to schedule restart: $e")
+        }
+
         super.onDestroy()
         Log.d("PlaybackKeepAliveService", "onDestroy called")
     }
+
+    // Hold media session so it can be released on destroy
+    private var _mediaSession: MediaSession? = null
 }
