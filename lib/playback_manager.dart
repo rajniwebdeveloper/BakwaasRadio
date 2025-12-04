@@ -336,6 +336,7 @@ class PlaybackManager extends ChangeNotifier {
     }
 
     if (await _audioServiceAvailable()) {
+      debugPrint('PlaybackManager.play: attempting background handler for ${song['url']}');
       try {
         final handler = _audioHandler as dynamic;
         final extras = Map<String, String>.from(song);
@@ -403,6 +404,7 @@ class PlaybackManager extends ChangeNotifier {
         // fall through to local player fallback
       }
     }
+    debugPrint('PlaybackManager.play: falling back to local player for ${song['url']}');
 
     try {
       await _audioPlayer.play(UrlSource(song['url']!));
@@ -466,12 +468,21 @@ class PlaybackManager extends ChangeNotifier {
   void toggle() {
     if (_isPlaying) {
       pause();
-    } else {
-      if (_currentSong != null) {
-        _manuallyPaused = false;
-        play(_currentSong!);
-      }
+      return;
     }
+    // If no current song is selected, fall back to the last played song
+    // so the play button still resumes something sensible.
+    if (_currentSong != null) {
+      _manuallyPaused = false;
+      play(_currentSong!);
+      return;
+    }
+    if (_lastSong != null) {
+      _manuallyPaused = false;
+      play(_lastSong!);
+      return;
+    }
+    // No song available to play — nothing to do. UI may handle this case.
   }
 
   void seek(double value) {

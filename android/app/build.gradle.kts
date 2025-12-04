@@ -59,3 +59,9 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Provide MediaStyle support and other media helpers on newer Android
+    // versions. This helps if we later want to use androidx.media APIs.
+    implementation("androidx.media:media:1.7.0")
+}

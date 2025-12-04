@@ -22,11 +22,40 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:http/http.dart' as http;
 import 'config.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 // ApiService already imported via package import at top
 
 // Demo/sample songs removed. App will show live data or empty states.
 
-void main() => runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Initialize just_audio_background so Android/iOS notification channel
+  // and media session are ready before starting playback or the handler.
+  try {
+    await JustAudioBackground.init(
+      androidNotificationChannelId: 'com.bakwaas.fm.audio',
+      androidNotificationChannelName: 'Bakwaas Audio',
+      androidNotificationOngoing: true,
+      androidNotificationIcon: 'drawable/ic_stat_bakwaas',
+    );
+  } catch (e) {
+    // non-fatal if the package isn't available or init fails
+    debugPrint('JustAudioBackground.init failed: $e');
+  }
+
+  // Request notification permission early (Android 13+) — non-blocking.
+  try {
+    await requestNotificationPermission();
+  } catch (_) {}
+  // Ensure the background audio handler (audio_service) is initialized
+  // early so notifications/media session are ready before the UI starts.
+  try {
+    await PlaybackManager.instance.ensureBackgroundHandler();
+  } catch (e) {
+    debugPrint('Main: ensureBackgroundHandler failed: $e');
+  }
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -93,7 +122,7 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _initialize() async {
     try {
-      setState(() => _status = 'Restoring playback...');
+      setState(() => _status = 'Starting...');
       await PlaybackManager.instance.loadPersisted();
 
       // Request notification permission early (Android 13+) so the
@@ -106,20 +135,11 @@ class _SplashPageState extends State<SplashPage> {
         // and the audio_service are ready before playback starts. This
         // improves the chance that the Android notification appears and
         // background playback works reliably when the user starts playback.
-        try {
-          await PlaybackManager.instance.ensureBackgroundHandler();
-          // Start the native keep-alive foreground service so the
-          // notification channel and native service are running prior
-          // to any user-initiated playback. This helps ensure the
-          // notification appears reliably when playback starts.
           try {
-            await PlaybackManager.instance.startNativeKeepAlive();
+            await PlaybackManager.instance.ensureBackgroundHandler();
           } catch (e) {
-            debugPrint('Splash: startNativeKeepAlive failed: $e');
+            debugPrint('Splash: ensureBackgroundHandler failed: $e');
           }
-        } catch (e) {
-          debugPrint('Splash: ensureBackgroundHandler failed: $e');
-        }
 
 
       // Fetch UI labels/config from backend (optional). Failures are non-fatal.
@@ -169,96 +189,7 @@ class _SplashPageState extends State<SplashPage> {
       // reachability and fetch data. Playback restoration/resume should
       // be explicit (handled by player screen or user action).
 
-      // --- Run update check on the splash screen so user sees it early.
-      try {
-        if (!AppData.updateChecked) {
-          debugPrint('Splash: checking update info');
-          final nowTs = DateTime.now().toUtc().toIso8601String();
-          final info = await ApiService.getUpdateInfo(v: AppInfo.version, ts: nowTs);
-          if (info != null && info is Map<String, dynamic>) {
-            String key;
-            if (kIsWeb) {
-              key = 'web';
-            } else if (io.Platform.isIOS) {
-              key = 'iso';
-            } else if (io.Platform.isAndroid) {
-              key = 'android';
-            } else if (io.Platform.isMacOS) {
-              key = 'macos';
-            } else if (io.Platform.isWindows) {
-              key = 'windows';
-            } else {
-              key = 'web';
-            }
-            final platformInfo = info[key];
-            if (platformInfo is Map<String, dynamic>) {
-              final serverVersion = (platformInfo['version'] ?? '') as String;
-              final serverBuild = (platformInfo['build'] ?? platformInfo['code']);
-              bool shouldShow = false;
-              if (serverVersion.isNotEmpty) {
-                if (_compareVersions(serverVersion, AppInfo.version) > 0) shouldShow = true;
-              }
-              if (!shouldShow && serverBuild != null) {
-                try {
-                  final int serverBuildInt = int.parse(serverBuild.toString());
-                  if (serverBuildInt > AppInfo.buildNumber) shouldShow = true;
-                } catch (_) {}
-              }
-              if (shouldShow && mounted) {
-                final releaseNotes = (platformInfo['releaseNotes'] ?? '') as String;
-                final url = (platformInfo['url'] ?? '') as String;
-                // Prefer the app-level navigator context so the dialog is shown
-                // by a stable navigator. If it's not available, skip showing the
-                // update dialog to avoid using a possibly stale `context`.
-                final navCtx = AppData.navigatorKey.currentContext;
-                if (navCtx != null) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    final ctx = AppData.navigatorKey.currentContext;
-                    if (ctx == null) return;
-                    // Show a dismissible update dialog. Per request: closing
-                    // should simply dismiss the popup and continue.
-                    // We always allow dismiss here (even for forced updates)
-                    // because the user asked for Close to only remove popup.
-                    // ignore: unawaited_futures
-                    ModalHelper.showSingleDialog<void>(
-                      context: ctx,
-                      barrierDismissible: true,
-                      builder: (innerCtx) {
-                        return AlertDialog(
-                          title: const Text('Update Available'),
-                          content: SingleChildScrollView(child: Text(releaseNotes.isNotEmpty ? releaseNotes : 'A new version is available.')),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(innerCtx).pop();
-                              },
-                              child: const Text('Close'),
-                            ),
-                            TextButton(
-                              onPressed: () async {
-                                Navigator.of(innerCtx).pop();
-                                if (url.isNotEmpty) {
-                                  try {
-                                    await launchUrlString(url);
-                                  } catch (_) {}
-                                }
-                              },
-                              child: const Text('Update Now'),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  });
-                }
-              }
-            }
-          }
-          AppData.updateChecked = true;
-        }
-      } catch (e) {
-        debugPrint('Splash: update check failed: $e');
-      }
+      // Update check moved to HomePage so the popup shows after the app opens.
 
       // Small delay so splash is visible briefly
       await Future.delayed(const Duration(milliseconds: 700));
@@ -347,8 +278,9 @@ class _HomePageState extends State<HomePage>
         AnimationController(vsync: this, duration: const Duration(seconds: 12))
           ..repeat();
     _playback.addListener(_handlePlayback);
-    // Ensure library live data is loaded so UI can react in real-time.
-    LibraryData.load();
+    // Library data will be loaded after persisted playback is restored
+    // (see post-frame callback) so the preview selection can prefer the
+    // last-played song. Do not eagerly call LibraryData.load() here.
     // Initialize active tab from global state so initial rendering matches
     // any previous tab requests (prevents first-frame mismatch).
     _activeTab = AppData.rootTab.value.clamp(0, 2);
@@ -375,18 +307,17 @@ class _HomePageState extends State<HomePage>
 
   /// Run update check first (on Home), then fetch stations.
   Future<void> _checkUpdateThenLoadStations() async {
-    // If Splash already ran the update check, skip re-checking here.
-    if (AppData.updateChecked) {
-      try {
-        await LibraryData.load();
-        debugPrint('Home: stations loaded: ${LibraryData.stations.value.length}');
-      } catch (e) {
-        debugPrint('Home: failed to load stations: $e');
-      }
-      return;
+    // First, always load stations so UI is populated.
+    try {
+      await LibraryData.load();
+      debugPrint('Home: stations loaded: ${LibraryData.stations.value.length}');
+    } catch (e) {
+      debugPrint('Home: failed to load stations: $e');
     }
 
+    // Then run the update check once (show popup after stations are visible).
     try {
+      if (AppData.updateChecked) return;
       debugPrint('Home: checking update info');
       final nowTs = DateTime.now().toUtc().toIso8601String();
       final info = await ApiService.getUpdateInfo(v: AppInfo.version, ts: nowTs);
@@ -441,69 +372,54 @@ class _HomePageState extends State<HomePage>
             if (!urlValid) {
               debugPrint('Home: Ignoring update because update URL is missing or unreachable');
             } else {
-              // Show dialog; if user selects Close we exit the app.
-                // Prefer the app-level navigator context so the dialog is shown
-                // by a stable navigator. If it's not available, skip showing the
-                // update dialog to avoid using a possibly stale `context`.
-                final navCtx = AppData.navigatorKey.currentContext;
-                if (navCtx == null) return;
-                if (!mounted) return;
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  final ctx = AppData.navigatorKey.currentContext;
-                  if (ctx == null) return;
-                  // ignore: unawaited_futures
-                  ModalHelper.showSingleDialog<void>(
-                    context: ctx,
-                    barrierDismissible: !force,
-                    builder: (innerCtx) {
-                      // Use WillPopScope here to control system back behavior.
-                      // WillPopScope is deprecated in newer Flutter releases,
-                      // but we keep it with an explicit ignore for now to avoid
-                      // changing navigation semantics until a full migration.
-                      // ignore: deprecated_member_use
-                      return WillPopScope(
-                        onWillPop: () async => !force,
-                        child: AlertDialog(
-                          title: const Text('Update Available'),
-                          content: SingleChildScrollView(child: Text(releaseNotes.isNotEmpty ? releaseNotes : 'A new version is available.')),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(innerCtx).pop();
-                              },
-                              child: const Text('Close'),
-                            ),
-                            TextButton(
-                              onPressed: () async {
-                                Navigator.of(innerCtx).pop();
-                                if (url.isNotEmpty) {
-                                  try {
-                                    await launchUrlString(url);
-                                  } catch (_) {}
-                                }
-                              },
-                              child: const Text('Update Now'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  );
-                });
+              final navCtx = AppData.navigatorKey.currentContext;
+              if (navCtx == null) return;
+              if (!mounted) return;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final ctx = AppData.navigatorKey.currentContext;
+                if (ctx == null) return;
+                // ignore: unawaited_futures
+                ModalHelper.showSingleDialog<void>(
+                  context: ctx,
+                  barrierDismissible: !force,
+                  builder: (innerCtx) {
+                    // ignore: deprecated_member_use
+                    return WillPopScope(
+                      onWillPop: () async => !force,
+                      child: AlertDialog(
+                        title: const Text('Update Available'),
+                        content: SingleChildScrollView(child: Text(releaseNotes.isNotEmpty ? releaseNotes : 'A new version is available.')),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(innerCtx).pop();
+                            },
+                            child: const Text('Close'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              Navigator.of(innerCtx).pop();
+                              if (url.isNotEmpty) {
+                                try {
+                                  await launchUrlString(url);
+                                } catch (_) {}
+                              }
+                            },
+                            child: const Text('Update Now'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              });
             }
           }
         }
       }
+      AppData.updateChecked = true;
     } catch (e) {
       debugPrint('Home: update check failed or timed out: $e');
-    }
-
-    // Now fetch stations (non-blocking failures are OK)
-    try {
-      await LibraryData.load();
-      debugPrint('Home: stations loaded: ${LibraryData.stations.value.length}');
-    } catch (e) {
-      debugPrint('Home: failed to load stations: $e');
     }
   }
 
@@ -518,12 +434,12 @@ class _HomePageState extends State<HomePage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // When app is backgrounded or the screen locks, pause playback.
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      try {
-        PlaybackManager.instance.pause();
-      } catch (_) {}
-    }
+    // Previously the app paused playback on background/inactive states.
+    // That behavior can cause notification taps or brief lifecycle
+    // transitions to unintentionally stop playback. Let the audio
+    // handler and the system audio focus manage pause/resume instead
+    // so tapping notifications or system UI doesn't unexpectedly pause.
+    // No-op here intentionally.
   }
 
   void _onStationsLoaded() {
@@ -534,26 +450,33 @@ class _HomePageState extends State<HomePage>
     if (_previewStarted) return;
     final stations = LibraryData.stations.value;
     if (stations.isEmpty) return;
-    Station? chosen;
-    for (final s in stations) {
-      final url = s.playerUrl ?? s.streamURL ?? s.mp3Url ?? '';
-      if (url.isNotEmpty) {
-        chosen = s;
-        break;
-      }
-    }
-    if (chosen == null) return;
     if (PlaybackManager.instance.isPlaying) return;
     // Respect user setting: only autoplay preview when enabled
     if (!AppData.enablePreviewAutoplay.value) return;
-    final Station s = chosen;
+
+    // If the user has a previously played song (or currentSong), use that
+    // as the preview; otherwise pick a random station.
+    Map<String, String>? song;
+    final pm = PlaybackManager.instance;
+    final prev = pm.currentSong ?? pm.lastSong;
+    if (prev != null && (prev['url'] ?? '').isNotEmpty) {
+      song = Map.from(prev);
+    } else {
+      // pick a random station with a valid url
+      final candidates = stations.where((s) {
+        final url = s.playerUrl ?? s.streamURL ?? s.mp3Url ?? '';
+        return url.isNotEmpty;
+      }).toList();
+      if (candidates.isEmpty) return;
+      final s = candidates[math.Random().nextInt(candidates.length)];
+      song = {
+        'title': s.name,
+        'subtitle': s.description ?? '',
+        'image': s.profilepic ?? '',
+        'url': s.playerUrl ?? s.streamURL ?? s.mp3Url ?? ''
+      };
+    }
     _previewStarted = true;
-    final song = {
-      'title': s.name,
-      'subtitle': s.description ?? '',
-      'image': s.profilepic ?? '',
-      'url': s.playerUrl ?? s.streamURL ?? s.mp3Url ?? ''
-    };
     try {
       await PlaybackManager.instance.play(song, duration: 10);
     } catch (_) {}

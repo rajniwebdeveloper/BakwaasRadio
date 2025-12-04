@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../app_data.dart';
 import '../playback_manager.dart';
 import '../config.dart';
@@ -242,24 +241,7 @@ class _BakwaasScaffoldState extends State<BakwaasScaffold> {
                   ),
                 ),
               ),
-                // Debug overlay: show measured footer height when running in debug
-                if (kDebugMode && widget.showBottomNav)
-                  Positioned(
-                    right: 8,
-                    bottom: (_measuredFooterHeight > 0 ? _measuredFooterHeight + 8 : 8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black87,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.white12),
-                      ),
-                      child: Text(
-                        'footer=${_measuredFooterHeight.toStringAsFixed(0)}',
-                        style: const TextStyle(color: Colors.white, fontSize: 11),
-                      ),
-                    ),
-                  ),
+                // (debug overlay removed) footer measurement not shown in UI
           ],
         ),
       ),

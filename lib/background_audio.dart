@@ -1,8 +1,12 @@
+// Updated: Background audio handler tuned for audio_service + just_audio
+// Ensures proper audio session activation, notification foreground service
+// management, and metadata updates for lock-screen and notification controls.
 import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'cache_helper.dart';
@@ -13,41 +17,29 @@ import 'audio_actions.dart';
 class BackgroundAudioHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
   Timer? _metadataTimer;
+  AudioSession? _session;
+  final List<MediaItem> _queue = <MediaItem>[];
+  int _currentIndex = -1;
   final Duration _metadataInterval = const Duration(seconds: 60);
-
+  static const MethodChannel _keepAliveChannel = MethodChannel('com.bakwaas.fm/keepalive');
   BackgroundAudioHandler() {
     debugPrint('BackgroundAudioHandler: initializing');
-    // Forward player events to the audio_service clients
-    _player.playerStateStream.listen((state) {
-      final playing = state.playing;
-      final processingState = state.processingState;
-      playbackState.add(playbackState.value.copyWith(
-        playing: playing,
-        processingState: _mapProcessingState(processingState),
-        controls: [
-          MediaControl.skipToPrevious,
-          if (playing) MediaControl.pause else MediaControl.play,
-          MediaControl.stop,
-          MediaControl.skipToNext,
-        ],
-      ));
-    });
+    // Configure audio session and playback event handling asynchronously.
+    // Initialize a sensible default playback state so the system
+    // has a consistent starting state before the player emits events.
+    playbackState.add(playbackState.value.copyWith(
+      controls: [MediaControl.play, MediaControl.stop],
+      androidCompactActionIndices: const [0],
+      systemActions: const {MediaAction.seek},
+      processingState: AudioProcessingState.idle,
+      playing: false,
+      updatePosition: Duration.zero,
+      bufferedPosition: Duration.zero,
+      speed: 1.0,
+    ));
 
-    _player.durationStream.listen((d) {
-      final item = mediaItem.value;
-      if (item != null) {
-        mediaItem.add(item.copyWith(duration: d));
-      }
-    });
-
-    _player.positionStream.listen((pos) {
-      final state = playbackState.value;
-      playbackState.add(state.copyWith(updatePosition: pos));
-    });
-
-    // Start periodic metadata updater which will poll stream metadata
-    // (ICY) for live radio streams and update the active mediaItem so the
-    // system notification shows current track info.
+    _init();
+    // Periodic metadata updater for live streams (ICY metadata)
     _metadataTimer = Timer.periodic(_metadataInterval, (_) async {
       try {
         await _updateMetadataIfNeeded();
@@ -55,6 +47,60 @@ class BackgroundAudioHandler extends BaseAudioHandler with SeekHandler {
         // ignore metadata errors
       }
     });
+  }
+
+  Future<void> _init() async {
+    try {
+      final session = await AudioSession.instance;
+      _session = session;
+      await session.configure(const AudioSessionConfiguration.music());
+      // Keep local copies of last-known positions so we can populate
+      // playbackState consistently from the playerState stream.
+      Duration lastPosition = Duration.zero;
+      Duration lastBuffered = Duration.zero;
+
+      _player.positionStream.listen((pos) {
+        lastPosition = pos;
+        final state = playbackState.value;
+        playbackState.add(state.copyWith(updatePosition: pos));
+      });
+
+      _player.bufferedPositionStream.listen((buf) {
+        lastBuffered = buf;
+        final state = playbackState.value;
+        playbackState.add(state.copyWith(bufferedPosition: buf));
+      });
+
+      _player.playerStateStream.listen((state) {
+        final playing = state.playing;
+        final processingState = state.processingState;
+        playbackState.add(playbackState.value.copyWith(
+          controls: [
+            MediaControl.skipToPrevious,
+            if (playing) MediaControl.pause else MediaControl.play,
+            MediaControl.stop,
+            MediaControl.skipToNext,
+          ],
+          androidCompactActionIndices: const [0, 1, 3],
+          systemActions: const {MediaAction.seek},
+          processingState: _mapProcessingState(processingState),
+          playing: playing,
+          updatePosition: lastPosition,
+          bufferedPosition: lastBuffered,
+          speed: _player.speed,
+        ));
+      });
+
+      // Update duration when available
+      _player.durationStream.listen((d) {
+        final item = mediaItem.value;
+        if (item != null && d != null) {
+          mediaItem.add(item.copyWith(duration: d));
+        }
+      });
+    } catch (e) {
+      debugPrint('BackgroundAudioHandler: init failed: $e');
+    }
   }
 
   AudioProcessingState _mapProcessingState(ProcessingState s) {
@@ -72,15 +118,47 @@ class BackgroundAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> play() {
+  Future<void> play() async {
     debugPrint('BackgroundAudioHandler: play called');
-    return _player.play();
+    try {
+      await _player.play();
+    } catch (e) {
+      debugPrint('BackgroundAudioHandler: play error: $e');
+      rethrow;
+    }
+    // Request audio focus and mark the audio session active where possible.
+    try {
+      if (_session != null) await _session!.setActive(true);
+    } catch (e) {
+      if (kDebugMode) debugPrint('AudioSession setActive(true) failed: $e');
+    }
+    // Best-effort: start the native keep-alive foreground service so the
+    // notification/foreground process stays alive even if the Flutter
+    // UI is destroyed or the app is swiped away.
+    try {
+      await _keepAliveChannel.invokeMethod('startService');
+    } on MissingPluginException {
+      // native implementation not available in some contexts; ignore
+    } catch (e) {
+      if (kDebugMode) debugPrint('keepAlive startService failed: $e');
+    }
   }
 
   @override
-  Future<void> pause() {
+  Future<void> pause() async {
     debugPrint('BackgroundAudioHandler: pause called');
-    return _player.pause();
+    try {
+      await _player.pause();
+    } catch (e) {
+      debugPrint('BackgroundAudioHandler: pause error: $e');
+      rethrow;
+    }
+    // Pause playback and release audio focus.
+    try {
+      if (_session != null) await _session!.setActive(false);
+    } catch (e) {
+      if (kDebugMode) debugPrint('AudioSession setActive(false) failed: $e');
+    }
   }
 
   @override
@@ -88,9 +166,27 @@ class BackgroundAudioHandler extends BaseAudioHandler with SeekHandler {
     debugPrint('BackgroundAudioHandler: stop called');
     _metadataTimer?.cancel();
     _metadataTimer = null;
-    final res = await _player.stop();
+    // Stop player and release audio focus.
+    try {
+      await _player.stop();
+    } catch (e) {
+      debugPrint('BackgroundAudioHandler: stop error: $e');
+    }
+    try {
+      if (_session != null) await _session!.setActive(false);
+    } catch (e) {
+      if (kDebugMode) debugPrint('AudioSession setActive(false) failed: $e');
+    }
+    // Best-effort: stop the native keep-alive foreground service so the
+    // notification and native service are removed when playback stops.
+    try {
+      await _keepAliveChannel.invokeMethod('stopService');
+    } on MissingPluginException {
+      // ignore
+    } catch (e) {
+      if (kDebugMode) debugPrint('keepAlive stopService failed: $e');
+    }
     debugPrint('BackgroundAudioHandler: stop completed');
-    return res;
   }
 
   @override
@@ -101,40 +197,58 @@ class BackgroundAudioHandler extends BaseAudioHandler with SeekHandler {
     // prepare session
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
-    // load source
+    // Prefer to cache artwork first so we can tag the AudioSource with a
+    // local file:// URI. This improves notification artwork reliability when
+    // the Flutter isolate is killed and `just_audio_background` needs a
+    // local asset to display.
     try {
-      await _player.setUrl(url);
       final title = extras?['title'] ?? url;
-      final artString = extras?['artUri'];
-      var artUri = artString != null ? Uri.tryParse(artString) : null;
-      mediaItem.add(MediaItem(
+      final artString = extras?['artUri'] ?? extras?['image'];
+      Uri? artUri;
+      if (artString != null && artString.isNotEmpty) {
+        final parsed = Uri.tryParse(artString);
+        if (parsed != null && (parsed.scheme == 'http' || parsed.scheme == 'https')) {
+          try {
+            final cached = await CacheHelper.cacheImage(parsed.toString());
+            if (cached != null && cached.isNotEmpty) {
+              artUri = Uri.file(cached);
+            } else {
+              artUri = parsed;
+            }
+          } catch (e) {
+            artUri = parsed;
+          }
+        } else {
+          artUri = parsed;
+        }
+      }
+
+      final item = MediaItem(
         id: url,
         album: extras?['album'],
         title: title,
         artUri: artUri,
-      ));
-      debugPrint('BackgroundAudioHandler: mediaItem added id=$url title=$title artUri=$artUri');
+      );
 
-      // If artUri is a remote URL, attempt to cache it locally and update
-      // the mediaItem so Android notification can use a local file:// URI
-      // for its large icon (more reliable when the app process is killed).
-      try {
-        if (artUri != null && (artUri.scheme == 'http' || artUri.scheme == 'https')) {
-          final cached = await CacheHelper.cacheImage(artUri.toString());
-          if (cached != null && cached.isNotEmpty) {
-            final item = mediaItem.value;
-            if (item != null) {
-              final updated = item.copyWith(artUri: Uri.file(cached));
-              mediaItem.add(updated);
-            }
-          }
-        }
-      } catch (e) {
-        if (kDebugMode) debugPrint('art cache update failed: $e');
-      }
+      // Use AudioSource.uri with a tag so just_audio_background can show the
+      // notification even if the Flutter engine is suspended. Tagging with
+      // the `MediaItem` keeps audio metadata consistent between audio_service
+      // and just_audio_background.
+      final source = AudioSource.uri(Uri.parse(url), tag: item);
+      await _player.setAudioSource(source);
+      mediaItem.add(item);
+      debugPrint('BackgroundAudioHandler: mediaItem added id=$url title=$title artUri=$artUri');
     } catch (e) {
       debugPrint('setUrl error: $e');
-      rethrow;
+      // Fallback: try the simple setUrl if setAudioSource failed
+      try {
+        await _player.setUrl(url);
+        final title = extras?['title'] ?? url;
+        mediaItem.add(MediaItem(id: url, album: extras?['album'], title: title));
+      } catch (e2) {
+        debugPrint('setUrl fallback failed: $e2');
+        rethrow;
+      }
     }
   }
 
@@ -222,14 +336,40 @@ class BackgroundAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> addQueueItem(MediaItem mediaItem) async {
-    // simple single-item behavior for now
-    this.mediaItem.add(mediaItem);
-    await _player.setUrl(mediaItem.id);
+    // Append to internal queue so notification skip actions work even when
+    // the app UI is not present. Keep the public API unchanged.
+    _queue.add(mediaItem);
+    // If nothing is currently loaded, make this the current item.
+    if (_currentIndex == -1) {
+      _currentIndex = 0;
+      final first = _queue[_currentIndex];
+      this.mediaItem.add(first);
+      try {
+        final source = AudioSource.uri(Uri.parse(first.id), tag: first);
+        await _player.setAudioSource(source);
+      } catch (e) {
+        await _player.setUrl(first.id);
+      }
+    }
   }
 
   @override
   Future<void> skipToNext() async {
     debugPrint('BackgroundAudioHandler: skipToNext');
+    if (_queue.isNotEmpty && _currentIndex < _queue.length - 1) {
+      _currentIndex++;
+      final item = _queue[_currentIndex];
+      this.mediaItem.add(item);
+      try {
+        final source = AudioSource.uri(Uri.parse(item.id), tag: item);
+        await _player.setAudioSource(source);
+      } catch (e) {
+        await _player.setUrl(item.id);
+      }
+      await play();
+      return;
+    }
+    // Fallback to app-level callback if queue navigation isn't available.
     try {
       AudioActions.onSkipNext?.call();
     } catch (e) {
@@ -240,6 +380,20 @@ class BackgroundAudioHandler extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> skipToPrevious() async {
     debugPrint('BackgroundAudioHandler: skipToPrevious');
+    if (_queue.isNotEmpty && _currentIndex > 0) {
+      _currentIndex--;
+      final item = _queue[_currentIndex];
+      this.mediaItem.add(item);
+      try {
+        final source = AudioSource.uri(Uri.parse(item.id), tag: item);
+        await _player.setAudioSource(source);
+      } catch (e) {
+        await _player.setUrl(item.id);
+      }
+      await play();
+      return;
+    }
+    // Fallback to app-level callback if queue navigation isn't available.
     try {
       AudioActions.onSkipPrevious?.call();
     } catch (e) {

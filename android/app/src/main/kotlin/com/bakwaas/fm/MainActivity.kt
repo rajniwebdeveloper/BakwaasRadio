@@ -46,6 +46,19 @@ class MainActivity: FlutterActivity() {
 				else -> result.notImplemented()
 			}
 		}
+
+		// If the Activity was started fresh from a notification action, the
+		// Intent may contain an "action" extra. Forward it to Dart so the
+		// background handler and PlaybackManager receive the notification action
+		// even when the Activity is created (not just when onNewIntent is used).
+		try {
+			val initialAction = intent?.getStringExtra("action")
+			if (initialAction != null) {
+				keepAliveChannel.invokeMethod("notificationAction", initialAction)
+			}
+		} catch (e: Exception) {
+			Log.e("MainActivity", "failed to forward initial notification action", e)
+		}
 		// Volume control channel: get/set system media volume (0.0 - 1.0)
 		MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.bakwaas.fm/volume").setMethodCallHandler { call, result ->
 			try {
@@ -72,10 +85,9 @@ class MainActivity: FlutterActivity() {
 			}
 		}
 	}
-}
-	override fun onNewIntent(intent: Intent?) {
+
+	override fun onNewIntent(intent: Intent) {
 		super.onNewIntent(intent)
-		if (intent == null) return
 		val action = intent.getStringExtra("action")
 		if (action != null) {
 			try {
@@ -86,3 +98,5 @@ class MainActivity: FlutterActivity() {
 			}
 		}
 	}
+
+}

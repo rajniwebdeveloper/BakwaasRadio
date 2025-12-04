@@ -13,7 +13,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import androidx.media.app.NotificationCompat.MediaStyle
 import android.graphics.BitmapFactory
 
 class PlaybackKeepAliveService : Service() {
@@ -50,14 +49,19 @@ class PlaybackKeepAliveService : Service() {
         )
 
         // Actions: previous, play/pause, next — these open MainActivity with an "action" extra
-        val prevIntent = Intent(this, MainActivity::class.java).apply { putExtra("action", "previous") }
-        val prevPending = PendingIntent.getActivity(this, 2, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        // Use broadcast pending intents for action buttons. A small
+        // `NotificationActionReceiver` will receive these and forward the
+        // action to the activity (or handle it directly). Using broadcasts
+        // avoids launching an activity directly from the notification action
+        // and works more consistently across Android 12+.
+        val prevIntent = Intent(this, NotificationActionReceiver::class.java).apply { putExtra("action", "previous") }
+        val prevPending = PendingIntent.getBroadcast(this, 2, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
-        val playIntent = Intent(this, MainActivity::class.java).apply { putExtra("action", "play") }
-        val playPending = PendingIntent.getActivity(this, 3, playIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val playIntent = Intent(this, NotificationActionReceiver::class.java).apply { putExtra("action", "play") }
+        val playPending = PendingIntent.getBroadcast(this, 3, playIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
-        val nextIntent = Intent(this, MainActivity::class.java).apply { putExtra("action", "next") }
-        val nextPending = PendingIntent.getActivity(this, 4, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val nextIntent = Intent(this, NotificationActionReceiver::class.java).apply { putExtra("action", "next") }
+        val nextPending = PendingIntent.getBroadcast(this, 4, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
         // Try to load a large icon from resources if available
         val largeIcon = try {
@@ -72,10 +76,9 @@ class PlaybackKeepAliveService : Service() {
             .setContentIntent(pendingOpen)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
-            .addAction(NotificationCompat.Action.Builder(0, "Prev", prevPending).build())
-            .addAction(NotificationCompat.Action.Builder(0, "Play", playPending).build())
-            .addAction(NotificationCompat.Action.Builder(0, "Next", nextPending).build())
-            .setStyle(MediaStyle().setShowActionsInCompactView(0,1,2))
+            .addAction(NotificationCompat.Action(0, "Prev", prevPending))
+            .addAction(NotificationCompat.Action(0, "Play", playPending))
+            .addAction(NotificationCompat.Action(0, "Next", nextPending))
 
         val notification = builder.build()
 

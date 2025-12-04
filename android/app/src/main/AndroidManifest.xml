@@ -1,8 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.bakwaas.fm">
+    <!-- Optional feature hint: app supports media playback but does not
+         require special hardware. This is non-breaking and helps the
+         Play Store / device feature discovery on some platforms. -->
+    <uses-feature android:name="android.software.media_playback" android:required="false" />
     <!-- App permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Required on Android 13+/SDK 34+ when using mediaPlayback foreground services -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Allow keeping CPU awake during playback (foreground service) -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Required on Android 13+ to post notifications; request at runtime as well. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
@@ -43,7 +51,7 @@
              user swipes the app away. The AudioService plugin will bind
              to this service class at runtime. -->
         <service android:name="com.ryanheise.audioservice.AudioService"
-             android:exported="false"
+             android:exported="true"
              android:stopWithTask="false"
              android:foregroundServiceType="mediaPlayback">
             <intent-filter>
@@ -54,6 +62,11 @@
              android:exported="false"
              android:stopWithTask="false"
              android:foregroundServiceType="mediaPlayback" />
+           <!-- Receiver for notification action buttons. Receives broadcasts from
+               the PendingIntents attached to the notification action buttons and
+               forwards actions to the MainActivity (which in turn forwards to
+               Dart via the MethodChannel). -->
+           <receiver android:name=".NotificationActionReceiver" android:exported="true" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
