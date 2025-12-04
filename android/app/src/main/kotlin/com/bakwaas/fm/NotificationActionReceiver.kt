@@ -18,11 +18,13 @@ class NotificationActionReceiver : BroadcastReceiver() {
         try {
             val action = intent?.getStringExtra("action")
             if (action == null) return
+            // Prefer starting the MainActivity so the Flutter engine is created
+            // and the action is forwarded to Dart via the keepalive channel.
             val i = Intent(context, MainActivity::class.java)
             i.putExtra("action", action)
-            // We're in a BroadcastReceiver; ensure we start activity from
-            // a new task so the system will bring or create the activity.
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            // Ensure we reuse the existing activity when possible; use
+            // CLEAR_TOP so onNewIntent is delivered to a running activity.
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             context.startActivity(i)
         } catch (e: Exception) {
             Log.e("NotificationActionRcvr", "failed to forward action", e)

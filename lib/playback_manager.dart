@@ -156,6 +156,7 @@ class PlaybackManager extends ChangeNotifier {
       _audioHandler = await initBackgroundAudioHandler();
       // subscribe to handler streams to reflect state in the manager
       _audioHandler!.playbackState.listen((state) {
+        debugPrint('PlaybackManager: playbackState received from handler: playing=${state.playing} processingState=${state.processingState}');
         _isPlaying = state.playing;
         // reflect audio_service processing state as loading flag
         _isLoading = state.processingState == AudioProcessingState.loading;
@@ -163,6 +164,7 @@ class PlaybackManager extends ChangeNotifier {
         notifyListeners();
       });
       _audioHandler!.mediaItem.listen((item) {
+        debugPrint('PlaybackManager: mediaItem received from handler: $item');
         if (item != null) {
           _durationSeconds = item.duration?.inSeconds ?? _durationSeconds;
         }

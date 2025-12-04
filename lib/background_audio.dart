@@ -28,8 +28,13 @@ class BackgroundAudioHandler extends BaseAudioHandler with SeekHandler {
     // Initialize a sensible default playback state so the system
     // has a consistent starting state before the player emits events.
     playbackState.add(playbackState.value.copyWith(
-      controls: [MediaControl.play, MediaControl.stop],
-      androidCompactActionIndices: const [0],
+      controls: [
+        MediaControl.skipToPrevious,
+        MediaControl.play,
+        MediaControl.stop,
+        MediaControl.skipToNext,
+      ],
+      androidCompactActionIndices: const [0, 1, 3],
       systemActions: const {MediaAction.seek},
       processingState: AudioProcessingState.idle,
       playing: false,

@@ -76,9 +76,11 @@ class PlaybackKeepAliveService : Service() {
             .setContentIntent(pendingOpen)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
-            .addAction(NotificationCompat.Action(0, "Prev", prevPending))
-            .addAction(NotificationCompat.Action(0, "Play", playPending))
-            .addAction(NotificationCompat.Action(0, "Next", nextPending))
+            .addAction(NotificationCompat.Action(R.drawable.ic_prev, "Prev", prevPending))
+            .addAction(NotificationCompat.Action(R.drawable.ic_play, "Play", playPending))
+            .addAction(NotificationCompat.Action(R.drawable.ic_next, "Next", nextPending))
+            .setStyle(androidx.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(0,1,2))
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         val notification = builder.build()
 
