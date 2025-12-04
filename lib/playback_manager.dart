@@ -7,6 +7,7 @@ import 'background_audio.dart';
 import 'audio_actions.dart';
 import 'package:flutter/services.dart';
 import 'cache_helper.dart';
+import 'app_data.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math' as math;
@@ -74,6 +75,18 @@ class PlaybackManager extends ChangeNotifier {
           final arg = call.arguments;
           final action = arg is String ? arg : (arg?.toString() ?? '');
           debugPrint('PlaybackManager: received native notificationAction -> $action');
+          // Debounce: ignore repeated identical actions received within a short window
+          // Some devices/ROMs may deliver both a media key event and also start
+          // the activity which forwards the same action; this prevents double-handling.
+          final now = DateTime.now().millisecondsSinceEpoch;
+          try {
+            if (_lastNotificationAction != null && _lastNotificationAction == action && (now - _lastNotificationActionAtMs) < 600) {
+              debugPrint('PlaybackManager: ignored duplicate notificationAction -> $action');
+              return null;
+            }
+          } catch (_) {}
+          _lastNotificationAction = action;
+          _lastNotificationActionAtMs = now;
           if (action == 'play' || action == 'pause' || action == 'toggle' || action == 'play_pause') {
             // If background handler is available prefer it, otherwise act on the local player directly.
             if (_audioHandler != null) {
@@ -98,12 +111,71 @@ class PlaybackManager extends ChangeNotifier {
           } else if (action == 'previous' || action == 'prev' || action == 'skipPrevious') {
             await playPreviousStation();
           }
+          } else if (call.method == 'openPlayer') {
+            // Open the full player UI and start playback if a URL was provided.
+            try {
+              final mapArg = call.arguments as Map?;
+              if (mapArg != null) {
+                final songMap = <String, dynamic>{};
+                mapArg.forEach((k, v) {
+                  if (v != null) songMap[k.toString()] = v;
+                });
+                // Prefer station semantics if a URL is provided
+                await AppData.openPlayerWith(song: songMap);
+              }
+            } catch (e) {
+              // ignore failures
+            }
         }
         return null;
       });
     } catch (e) {
       debugPrint('PlaybackManager: error setting keepAlive handler: $e');
     }
+      // Drain any pending notification action that the native side cached
+      // while the Dart isolate was starting. This ensures actions aren't
+      // lost if they arrived before the MethodChannel handler was ready.
+      try {
+        _keepAliveChannel.invokeMethod<String>('getPendingNotificationAction').then((pending) {
+          if (pending == null || pending.isEmpty) return;
+          debugPrint('PlaybackManager: processing pending notificationAction -> $pending');
+          final action = pending;
+          final now = DateTime.now().millisecondsSinceEpoch;
+          try {
+            if (_lastNotificationAction != null && _lastNotificationAction == action && (now - _lastNotificationActionAtMs) < 600) {
+              debugPrint('PlaybackManager: ignored duplicate pending notificationAction -> $action');
+              return;
+            }
+            _lastNotificationAction = action;
+            _lastNotificationActionAtMs = now;
+            if (action == 'play' || action == 'pause' || action == 'toggle' || action == 'play_pause') {
+              if (_audioHandler != null) {
+                toggle();
+              } else {
+                if (_isPlaying) {
+                  pause();
+                } else {
+                  final toPlay = _currentSong ?? _lastSong;
+                  if (toPlay != null) {
+                    _manuallyPaused = false;
+                    play(toPlay);
+                  }
+                }
+              }
+            } else if (action == 'next' || action == 'skipNext') {
+              playNextStation();
+            } else if (action == 'previous' || action == 'prev' || action == 'skipPrevious') {
+              playPreviousStation();
+            }
+          } catch (e) {
+            // ignore errors handling pending action
+          }
+        }).catchError((_) {
+          // ignore if native doesn't implement
+        });
+      } catch (e) {
+        // ignore if native side doesn't implement this method or other errors
+      }
   }
   static final PlaybackManager instance = PlaybackManager._internal();
 
@@ -116,6 +188,10 @@ class PlaybackManager extends ChangeNotifier {
   bool _isLoading = false;
   double _progress = 0.0; // 0.0 - 1.0
   int _durationSeconds = 0;
+
+  // Last notification action received and timestamp (ms) for debounce
+  String? _lastNotificationAction;
+  int _lastNotificationActionAtMs = 0;
 
   // simple volume support to satisfy callers in UI
   double _volume = 1.0;

@@ -21,6 +21,8 @@ class LibraryPage extends StatefulWidget {
 
 class _LibraryPageState extends State<LibraryPage> {
   final List<Map<String, String>> _history = [];
+  // Prevent rapid double-taps on per-station play buttons
+  final Set<String> _playButtonCooldown = <String>{};
 
   @override
   void initState() {
@@ -487,12 +489,32 @@ class _LibraryPageState extends State<LibraryPage> {
               ),
               const SizedBox(width: 8),
               IconButton(
-                onPressed: url.isNotEmpty
+                // Play button should start playback but NOT navigate to the
+                // full player UI. Tapping the rest of the tile (the body)
+                // navigates to the player. Also add a short cooldown to
+                // avoid multiple rapid presses starting duplicate plays.
+                onPressed: (url.isNotEmpty && !_playButtonCooldown.contains(url))
                     ? () async {
-                        await AppData.openPlayerWith(station: s);
+                        final songMap = {'title': s.name, 'subtitle': s.description ?? '', 'image': image, 'url': url};
+                        // add cooldown
+                        _playButtonCooldown.add(url);
+                        // fire-and-forget play request
+                        try {
+                          await PlaybackManager.instance.play(songMap);
+                        } catch (_) {}
+                        // release cooldown shortly after
+                        Future.delayed(const Duration(milliseconds: 700), () {
+                          if (mounted) setState(() => _playButtonCooldown.remove(url));
+                        });
+                        // refresh UI immediately so button appears disabled
+                        setState(() {});
                       }
                     : null,
-                icon: Icon(url.isNotEmpty ? Icons.play_arrow : Icons.block, color: url.isNotEmpty ? Colors.tealAccent : Colors.white30),
+                icon: Padding(
+                  padding: const EdgeInsets.all(6.0),
+                  child: Icon(url.isNotEmpty ? Icons.play_arrow : Icons.block,
+                      color: url.isNotEmpty ? Colors.tealAccent : Colors.white30),
+                ),
               )
               ,
               IconButton(

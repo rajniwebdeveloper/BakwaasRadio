@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_data.dart';
+import '../playback_manager.dart';
 import 'liked_songs_manager.dart';
 
 // Embedded content widget used by HomePage and the full Liked page.
@@ -13,6 +14,7 @@ class LikedSongsContent extends StatefulWidget {
 class _LikedSongsContentState extends State<LikedSongsContent> {
   final TextEditingController _searchController = TextEditingController();
   bool _showSearch = false;
+  final Set<String> _playButtonCooldown = <String>{};
 
   @override
   void dispose() {
@@ -117,9 +119,25 @@ class _LikedSongsContentState extends State<LikedSongsContent> {
                             IconButton(
                               icon: const Icon(Icons.play_arrow,
                                   color: Colors.white70),
-                              onPressed: () async {
-                                    await AppData.openPlayerWith(song: s);
-                                  },
+                              onPressed: (_playButtonCooldown.contains(s['url'] ?? '') || (s['url'] ?? '').isEmpty)
+                                  ? null
+                                  : () async {
+                                      final url = s['url'] ?? '';
+                                      final song = <String, String>{
+                                        'title': s['title'] ?? '',
+                                        'subtitle': s['subtitle'] ?? '',
+                                        'image': s['image'] ?? '',
+                                        'url': url,
+                                      };
+                                      _playButtonCooldown.add(url);
+                                      try {
+                                        await PlaybackManager.instance.play(song);
+                                      } catch (_) {}
+                                      Future.delayed(const Duration(milliseconds: 700), () {
+                                        if (mounted) setState(() => _playButtonCooldown.remove(url));
+                                      });
+                                      setState(() {});
+                                    },
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete_outline,

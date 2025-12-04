@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_data.dart';
+import '../playback_manager.dart';
 
 class PlaylistDetailPage extends StatelessWidget {
   final Map<String, dynamic> playlist;
@@ -46,7 +47,10 @@ class PlaylistDetailPage extends StatelessWidget {
                   'subtitle': s['subtitle'] ?? '',
                   'image': s['image'] ?? ''
                 };
-                await AppData.openPlayerWith(song: songMap);
+                // Start playback but do not navigate to the full player UI.
+                try {
+                  await PlaybackManager.instance.play(songMap);
+                } catch (_) {}
               },
             ),
             onTap: () async {

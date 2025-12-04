@@ -5,13 +5,21 @@ import android.os.Build
 import android.util.Log
 import android.media.AudioManager
 import kotlin.math.roundToInt
-import io.flutter.embedding.android.FlutterFragmentActivity
+import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-class MainActivity: FlutterFragmentActivity() {
+class MainActivity: FlutterActivity() {
 	private val CHANNEL = "com.bakwaas.fm/keepalive"
 	private lateinit var keepAliveChannel: MethodChannel
+
+	companion object {
+		// Store a pending notification action if it can't be delivered
+		// immediately to the Dart side (for example if the Dart isolate
+		// hasn't finished initializing). Dart can call `getPendingNotificationAction`
+		// to retrieve and clear this value on startup.
+		var pendingNotificationAction: String? = null
+	}
 
 	override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
 		super.configureFlutterEngine(flutterEngine)
@@ -73,6 +81,10 @@ class MainActivity: FlutterFragmentActivity() {
 						result.error("stop_failed", e.message, null)
 					}
 				}
+				"getPendingNotificationAction" -> {
+					result.success(pendingNotificationAction)
+					pendingNotificationAction = null
+				}
 				else -> result.notImplemented()
 			}
 		}
@@ -84,7 +96,29 @@ class MainActivity: FlutterFragmentActivity() {
 		try {
 			val initialAction = intent?.getStringExtra("action")
 			if (initialAction != null) {
-				keepAliveChannel.invokeMethod("notificationAction", initialAction)
+				try {
+					keepAliveChannel.invokeMethod("notificationAction", initialAction)
+				} catch (e: Exception) {
+					// Dart may not be ready to receive method calls; stash the
+					// action for Dart to retrieve after initialization.
+					pendingNotificationAction = initialAction
+				}
+			}
+			// Also handle a request to open the player with metadata coming
+			// from the notification content tap. If present, forward to Dart
+			// so the UI can navigate to the player immediately.
+			try {
+				val openPlayer = intent?.getBooleanExtra("openPlayer", false) ?: false
+				if (openPlayer) {
+					val m = HashMap<String, Any?>()
+					intent?.getStringExtra("title")?.let { m["title"] = it }
+					intent?.getStringExtra("subtitle")?.let { m["subtitle"] = it }
+					intent?.getStringExtra("artUri")?.let { m["artUri"] = it }
+					intent?.getStringExtra("url")?.let { m["url"] = it }
+					keepAliveChannel.invokeMethod("openPlayer", m)
+				}
+			} catch (e: Exception) {
+				// ignore
 			}
 		} catch (e: Exception) {
 			Log.e("MainActivity", "failed to forward initial notification action", e)
@@ -95,7 +129,9 @@ class MainActivity: FlutterFragmentActivity() {
 				val am = getSystemService(AUDIO_SERVICE) as AudioManager
 				when (call.method) {
 					"getVolume" -> {
-						val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+						// If Dart isn't ready, remember the action for later retrieval.
+						pendingNotificationAction = action
+						Log.e("MainActivity", "failed to invoke notificationAction", e)
 						val cur = am.getStreamVolume(AudioManager.STREAM_MUSIC)
 						val frac = if (max > 0) cur.toDouble() / max.toDouble() else 0.0
 						result.success(frac)
@@ -127,6 +163,18 @@ class MainActivity: FlutterFragmentActivity() {
 				Log.e("MainActivity", "failed to invoke notificationAction", e)
 			}
 		}
+			// Also handle openPlayer intents arriving via newIntent
+			try {
+				val openPlayer = intent.getBooleanExtra("openPlayer", false)
+				if (openPlayer) {
+					val m = HashMap<String, Any?>()
+					intent.getStringExtra("title")?.let { m["title"] = it }
+					intent.getStringExtra("subtitle")?.let { m["subtitle"] = it }
+					intent.getStringExtra("artUri")?.let { m["artUri"] = it }
+					intent.getStringExtra("url")?.let { m["url"] = it }
+					keepAliveChannel.invokeMethod("openPlayer", m)
+				}
+			} catch (e: Exception) {}
 	}
 
 }

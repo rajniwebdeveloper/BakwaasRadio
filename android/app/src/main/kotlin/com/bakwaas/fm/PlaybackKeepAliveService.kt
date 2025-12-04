@@ -42,10 +42,36 @@ class PlaybackKeepAliveService : Service() {
             manager.createNotificationChannel(chan)
         }
 
-        // Notification tap will send a broadcast for "next" so tapping
-        // the notification advances to the next track without opening the app.
-        val openIntent = Intent(this, NotificationActionReceiver::class.java).apply { putExtra("action", "next") }
-        val pendingOpen = PendingIntent.getBroadcast(
+        // Notification tap should open the app's main activity (full player UI).
+        // Previously this sent a broadcast for "next" which could be confusing
+        // and made the notification tap not open the app. Use an activity
+        // pending intent so tapping the notification brings the app to foreground.
+        // Build an intent that will both bring the app to foreground and
+        // carry metadata so the Dart side can open the player UI immediately.
+        val openIntent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            // Pass along meta so Dart can open the full player when tapped.
+            // These extras are best-effort; if not present they will be ignored.
+            intent?.extras?.let {
+                // no-op; keep existing extras if any
+            }
+        }
+        // When we show notification metadata (title/subtitle/artUri) pass those along
+        // so tapping the notification can open the app to that specific item.
+        try {
+            val titleExtra = intent?.getStringExtra("title")
+            val subtitleExtra = intent?.getStringExtra("subtitle")
+            val artUriExtra = intent?.getStringExtra("artUri")
+            val urlExtra = intent?.getStringExtra("url")
+            if (titleExtra != null) openIntent.putExtra("title", titleExtra)
+            if (subtitleExtra != null) openIntent.putExtra("subtitle", subtitleExtra)
+            if (artUriExtra != null) openIntent.putExtra("artUri", artUriExtra)
+            if (urlExtra != null) openIntent.putExtra("url", urlExtra)
+            // Signal that the intent should open the player UI
+            openIntent.putExtra("openPlayer", true)
+        } catch (e: Exception) {}
+
+        val pendingOpen = PendingIntent.getActivity(
             this,
             0,
             openIntent,
@@ -113,7 +139,7 @@ class PlaybackKeepAliveService : Service() {
         val isPlayingExtra = try { intent?.getBooleanExtra("isPlaying", false) ?: false } catch (e: Exception) { false }
         val loadingExtra = try { intent?.getBooleanExtra("loading", false) ?: false } catch (e: Exception) { false }
         if (loadingExtra) {
-            subtitleExtra = "Buffering..."
+            subtitleExtra = "Playing..."
         }
 
         // Build a notification. Prefer the framework Notification.Builder with
@@ -130,9 +156,12 @@ class PlaybackKeepAliveService : Service() {
                 .setOngoing(true)
 
             // Add actions with icons so the notification shows icon buttons.
-            nb.addAction(Notification.Action.Builder(Icon.createWithResource(this, R.drawable.ic_prev), "", prevPending).build())
-            nb.addAction(Notification.Action.Builder(Icon.createWithResource(this, playIconRes), "", playPending).build())
-            nb.addAction(Notification.Action.Builder(Icon.createWithResource(this, R.drawable.ic_next), "", nextPending).build())
+            // Provide readable titles for actions so they are easier to tap on
+            // some device notification UIs and so the touch area is slightly
+            // larger than an icon-only action.
+            nb.addAction(Notification.Action.Builder(Icon.createWithResource(this, R.drawable.ic_prev), "Prev", prevPending).build())
+            nb.addAction(Notification.Action.Builder(Icon.createWithResource(this, playIconRes), if (isPlayingExtra) "Pause" else "Play", playPending).build())
+            nb.addAction(Notification.Action.Builder(Icon.createWithResource(this, R.drawable.ic_next), "Next", nextPending).build())
 
             // Show a spinner/progress when loading/buffering, otherwise clear progress.
             if (loadingExtra) {
