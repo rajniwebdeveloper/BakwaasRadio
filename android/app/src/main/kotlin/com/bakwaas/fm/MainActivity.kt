@@ -129,9 +129,7 @@ class MainActivity: FlutterActivity() {
 				val am = getSystemService(AUDIO_SERVICE) as AudioManager
 				when (call.method) {
 					"getVolume" -> {
-						// If Dart isn't ready, remember the action for later retrieval.
-						pendingNotificationAction = action
-						Log.e("MainActivity", "failed to invoke notificationAction", e)
+						val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
 						val cur = am.getStreamVolume(AudioManager.STREAM_MUSIC)
 						val frac = if (max > 0) cur.toDouble() / max.toDouble() else 0.0
 						result.success(frac)
