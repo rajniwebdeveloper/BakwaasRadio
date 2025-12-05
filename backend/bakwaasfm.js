@@ -9,21 +9,22 @@ const PORT = process.env.PORT || 3222;
 
 console.log('🚀 Starting BakwaasFM Server...');
 
-// Middleware
-// app.use(cors({
-//   origin: ['http://localhost:8080','http://localhost:3222', 'https://radio.rajnikantmahato.me'],
-//   credentials: true
-// }));
-
-
+// Middleware - Allow all CORS requests
 const corsOptions = {
-  origin: '*',
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  origin: '*', // Allow all origins
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+  allowedHeaders: '*', // Allow all headers
+  exposedHeaders: '*', // Expose all headers
+  credentials: false, // Set to false when origin is '*'
   preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
+  maxAge: 86400 // Cache preflight for 24 hours
 };
 
 app.use(cors(corsOptions));
+
+// Handle preflight requests for all routes
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 
@@ -71,6 +72,9 @@ app.use('/api/update', require('./routes/update'));
 
 // Add player proxy route
 app.use('/player', require('./routes/player'));
+
+// Add proxy route for images and media
+app.use('/proxy', require('./routes/proxy'));
 
 // Add a test endpoint to verify API is working
 app.get('/api/health', (req, res) => {

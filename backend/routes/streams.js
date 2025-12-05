@@ -4,14 +4,21 @@ const Stream = require('../models/Stream');
 
 console.log('🛣️  Loading radio streams routes...');
 
-// Helper function to generate player URL for streams
-function generateStreamPlayerUrl(stream) {
-  const baseUrl = process.env.BASE_URL || 'http://localhost:3222';
+// Helper function to generate player URL for streams from request hostname
+function generateStreamPlayerUrl(stream, req = null) {
+  let baseUrl;
+  if (req) {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3222';
+    baseUrl = `${protocol}://${host}`;
+  } else {
+    baseUrl = process.env.BASE_URL || 'http://localhost:3222';
+  }
   return `${baseUrl}/player/stream/${stream.id}`;
 }
 
 // Helper function to format stream response with player URL
-function formatStreamWithPlayerUrl(stream, showOriginal = false) {
+function formatStreamWithPlayerUrl(stream, showOriginal = false, req = null) {
   const formatted = {
     ...stream.toObject ? stream.toObject() : stream,
     // Only include originalUrl when showing originals for admin purposes
@@ -23,12 +30,12 @@ function formatStreamWithPlayerUrl(stream, showOriginal = false) {
     formatted.audioUrl = stream.url || stream.audioUrl; // Keep original URL
     formatted.url = stream.url; // Keep original URL
     formatted.mp3Url = stream.url; // Keep original URL
-    formatted.playerUrl = generateStreamPlayerUrl(stream); // Still include player URL for reference
+    formatted.playerUrl = generateStreamPlayerUrl(stream, req); // Still include player URL for reference
   } else {
-    formatted.url = generateStreamPlayerUrl(stream); // Replace with player URL
-    formatted.mp3Url = generateStreamPlayerUrl(stream); // Replace with player URL
-    formatted.audioUrl = generateStreamPlayerUrl(stream); // Replace with player URL
-    formatted.playerUrl = generateStreamPlayerUrl(stream); // Add explicit player URL
+    formatted.url = generateStreamPlayerUrl(stream, req); // Replace with player URL
+    formatted.mp3Url = generateStreamPlayerUrl(stream, req); // Replace with player URL
+    formatted.audioUrl = generateStreamPlayerUrl(stream, req); // Replace with player URL
+    formatted.playerUrl = generateStreamPlayerUrl(stream, req); // Add explicit player URL
   }
   
   return formatted;
@@ -43,7 +50,7 @@ router.get('/', async (req, res) => {
     console.log(`✅ Found ${streams.length} radio streams`);
     
     // Format streams with player URLs
-    const formattedStreams = streams.map(stream => formatStreamWithPlayerUrl(stream, showOriginal));
+    const formattedStreams = streams.map(stream => formatStreamWithPlayerUrl(stream, showOriginal, req));
     res.json(formattedStreams);
   } catch (error) {
     console.error('❌ Error fetching streams:', error.message);
@@ -65,7 +72,7 @@ router.get('/:id', async (req, res) => {
     console.log('✅ Stream found:', stream.name);
     
     // Format with player URL
-    const formattedStream = formatStreamWithPlayerUrl(stream, showOriginal);
+    const formattedStream = formatStreamWithPlayerUrl(stream, showOriginal, req);
     res.json(formattedStream);
   } catch (error) {
     console.error('❌ Error fetching stream:', error.message);
@@ -84,7 +91,7 @@ router.get('/category/:category', async (req, res) => {
     console.log(`✅ Found ${streams.length} streams in category ${category}`);
     
     // Format streams with player URLs
-    const formattedStreams = streams.map(stream => formatStreamWithPlayerUrl(stream, showOriginal));
+    const formattedStreams = streams.map(stream => formatStreamWithPlayerUrl(stream, showOriginal, req));
     res.json(formattedStreams);
   } catch (error) {
     console.error('❌ Error fetching streams by category:', error.message);

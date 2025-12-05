@@ -980,5 +980,21 @@ router.post('/user/plan', authMiddleware, async (req, res) => {
     }
 });
 
+// Lightweight endpoint that returns the origin (protocol + host) as seen
+// by the server for the incoming request. This is useful for clients to
+// discover which domain/protocol the server will use when generating
+// proxy/player URLs. It respects standard reverse-proxy headers.
+router.get('/host', (req, res) => {
+    try {
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+        const host = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${process.env.PORT || '3222'}`;
+        const origin = `${protocol}://${host}`;
+        return res.json({ ok: true, origin, protocol, host });
+    } catch (e) {
+        console.error('/api/host error:', e && e.message);
+        return res.status(500).json({ ok: false });
+    }
+});
+
 module.exports = router;
 

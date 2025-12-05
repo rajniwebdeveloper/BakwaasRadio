@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:http/http.dart' as http;
 
@@ -16,8 +17,24 @@ class AppConfig {
     // If a forced base is set (useful for debugging / browser testing), return it.
     if (_forcedBaseUrl != null && _forcedBaseUrl!.isNotEmpty) return _forcedBaseUrl!;
     if (_cachedBaseUrl != null) return _cachedBaseUrl!;
+    // If running on web, prefer the current page origin so the app will
+    // automatically use the same hostname as the hosted site.
+    // This makes the proxy/player URLs match the domain the app is served from.
+    try {
+      if (kIsWeb) {
+        final origin = Uri.base.origin;
+        if (origin.isNotEmpty && (origin.startsWith('http://') || origin.startsWith('https://'))) {
+          _cachedBaseUrl = origin;
+          debugPrint('AppConfig.resolveApiBaseUrl -> using web origin $origin');
+          return _cachedBaseUrl!;
+        }
+      }
+    } catch (_) {
+      // ignore - Uri.base may behave unexpectedly in some test environments
+    }
+
     // Prefer a local backend during development. Try multiple local host
-    // variants first (web, emulator, simulator) and then fall back to
+    // variants first (emulator, simulator) and then fall back to
     // public hosts in the order requested by the user.
     final List<String> localCandidates = kIsWeb
       ? ['http://localhost:3222', 'http://127.0.0.1:3222']
@@ -33,39 +50,58 @@ class AppConfig {
 
     final probeTimeout = timeout.inSeconds < 3 ? const Duration(seconds: 3) : timeout;
 
-    // Helper to probe a single URL's /api/health endpoint
-    Future<bool> probe(String base) async {
+    // Preferred probe: ask the server what origin it will use when
+    // generating URLs. Backend exposes `/api/host` which returns
+    // { origin: "https://bakwaasfm.in" } (and respects X-Forwarded-*).
+    // Fallback probe: `/api/health` for older servers.
+    Future<String?> probeForOrigin(String base) async {
+      // Try /api/host first
+      try {
+        final uri = Uri.parse('$base/api/host');
+        final resp = await http.get(uri).timeout(probeTimeout);
+        if (resp.statusCode == 200 && resp.body.isNotEmpty) {
+          final Map<String, dynamic> json = jsonDecode(resp.body);
+          if (json.containsKey('origin') && json['origin'] is String && (json['origin'] as String).isNotEmpty) {
+            return json['origin'] as String;
+          }
+        }
+      } catch (_) {
+        // ignore - host endpoint may not exist on older servers
+      }
+
+      // Fallback to health check
       try {
         final uri = Uri.parse('$base/api/health');
         final resp = await http.get(uri).timeout(probeTimeout);
-        return resp.statusCode == 200;
-      } catch (e) {
-        return false;
+        if (resp.statusCode == 200) return base;
+      } catch (_) {
+        return null;
       }
+      return null;
     }
 
-    // Try locals first (in user-requested order: localhost first)
+    // Try locals first (in user-requested order)
     for (final candidate in localCandidates) {
-      final ok = await probe(candidate);
-      if (ok) {
-        _cachedBaseUrl = candidate;
-        debugPrint('AppConfig.resolveApiBaseUrl -> using $candidate (local)');
+      final origin = await probeForOrigin(candidate);
+      if (origin != null) {
+        _cachedBaseUrl = origin;
+        debugPrint('AppConfig.resolveApiBaseUrl -> using $origin (local candidate $candidate)');
         return _cachedBaseUrl!;
       }
     }
 
     // Try public hosts in the specified order
     for (final candidate in publicCandidates) {
-      final ok = await probe(candidate);
-      if (ok) {
-        _cachedBaseUrl = candidate;
-        debugPrint('AppConfig.resolveApiBaseUrl -> using $candidate (public)');
+      final origin = await probeForOrigin(candidate);
+      if (origin != null) {
+        _cachedBaseUrl = origin;
+        debugPrint('AppConfig.resolveApiBaseUrl -> using $origin (public candidate $candidate)');
         return _cachedBaseUrl!;
       }
     }
 
     // If none responded, fall back to the primary public host as a last resort
-    _cachedBaseUrl = publicCandidates.isNotEmpty ? publicCandidates.first : 'https://radio.rajnikantmahato.me';
+    _cachedBaseUrl = publicCandidates.isNotEmpty ? publicCandidates.first : 'https://bakwaasfm.in';
     debugPrint('AppConfig.resolveApiBaseUrl -> falling back to $_cachedBaseUrl');
     return _cachedBaseUrl!;
   }

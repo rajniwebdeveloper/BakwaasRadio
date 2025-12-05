@@ -4,29 +4,64 @@ const Radio = require('../models/Radio');
 
 console.log('🛣️  Loading radio routes...');
 
-// Helper function to generate player URL for radio items
-function generateRadioPlayerUrl(radioItem) {
-  const baseUrl = process.env.BASE_URL || 'http://localhost:3222';
+// Helper function to generate player URL for radio items from request hostname
+function generateRadioPlayerUrl(radioItem, req = null) {
+  let baseUrl;
+  if (req) {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3222';
+    baseUrl = `${protocol}://${host}`;
+  } else {
+    baseUrl = process.env.BASE_URL || 'http://localhost:3222';
+  }
   return `${baseUrl}/player/radio/${radioItem._id}`;
 }
 
+// Helper function to generate proxied image URL from request hostname
+function generateProxyImageUrl(item, imageType = 'profilepic', entityType = 'radio', req = null) {
+  let baseUrl;
+  if (req) {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3222';
+    baseUrl = `${protocol}://${host}`;
+  } else {
+    baseUrl = process.env.BASE_URL || 'http://localhost:3222';
+  }
+  const itemId = item._id || item.id;
+  return `${baseUrl}/proxy/${entityType}/${itemId}/${imageType}`;
+}
+
 // Helper function to format radio response with player URL
-function formatRadioWithPlayerUrl(radioItem, showOriginal = false) {
+function formatRadioWithPlayerUrl(radioItem, showOriginal = false, req = null) {
   const formatted = {
     ...radioItem.toObject ? radioItem.toObject() : radioItem,
     // Only include originalAudioUrl when showing originals for admin purposes
-    ...(showOriginal && { originalAudioUrl: radioItem.audioUrl })
+    ...(showOriginal && { 
+      originalAudioUrl: radioItem.audioUrl,
+      originalImageUrl: radioItem.imageUrl
+    })
   };
   
-  // If showOriginal is true, keep the original audioUrl
+  // If showOriginal is true, keep the original URLs
   if (showOriginal) {
     formatted.mp3Url = radioItem.audioUrl; // Keep original URL
     formatted.audioUrl = radioItem.audioUrl; // Keep original URL
-    formatted.playerUrl = generateRadioPlayerUrl(radioItem); // Still include player URL for reference
+    formatted.playerUrl = generateRadioPlayerUrl(radioItem, req); // Still include player URL for reference
+    formatted.imageUrl = radioItem.imageUrl; // Keep original image URL
   } else {
-    formatted.mp3Url = generateRadioPlayerUrl(radioItem); // Keep original URL
-    formatted.audioUrl = generateRadioPlayerUrl(radioItem); // Replace with player URL
-    formatted.playerUrl = generateRadioPlayerUrl(radioItem); // Add explicit player URL
+    formatted.mp3Url = generateRadioPlayerUrl(radioItem, req);
+    formatted.audioUrl = generateRadioPlayerUrl(radioItem, req); // Replace with player URL
+    formatted.playerUrl = generateRadioPlayerUrl(radioItem, req); // Add explicit player URL
+    
+    // Proxy image if exists
+    if (radioItem.imageUrl) {
+      formatted.imageUrl = `/proxy/image?url=${encodeURIComponent(radioItem.imageUrl)}`;
+      if (req) {
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+        const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3222';
+        formatted.imageUrl = `${protocol}://${host}${formatted.imageUrl}`;
+      }
+    }
   }
   
   return formatted;
@@ -94,13 +129,20 @@ router.get('/', async (req, res) => {
 
       // Add player URL if audioUrl exists
       if (item.audioUrl) {
-        baseFormatted.originalAudioUrl = item.audioUrl;
-        if (!showOriginal) {
-          baseFormatted.audioUrl = generateRadioPlayerUrl(item);
-          baseFormatted.playerUrl = generateRadioPlayerUrl(item);
+        if (showOriginal) {
+          baseFormatted.originalAudioUrl = item.audioUrl;
+          baseFormatted.audioUrl = item.audioUrl;
+          baseFormatted.playerUrl = generateRadioPlayerUrl(item, req);
         } else {
-          baseFormatted.audioUrl = item.audioUrl; // Keep original
-          baseFormatted.playerUrl = generateRadioPlayerUrl(item);
+          baseFormatted.audioUrl = generateRadioPlayerUrl(item, req);
+          baseFormatted.playerUrl = generateRadioPlayerUrl(item, req);
+          
+          // Proxy image
+          if (item.imageUrl) {
+            const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+            const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3222';
+            baseFormatted.imageUrl = `${protocol}://${host}/proxy/image?url=${encodeURIComponent(item.imageUrl)}`;
+          }
         }
       } else {
         baseFormatted.audioUrl = '';
@@ -172,10 +214,17 @@ router.get('/list', async (req, res) => {
       if (showOriginal) {
         formatted.audioUrl = item.audioUrl; // Keep original URL
       } else {
-        formatted.audioUrl = generateRadioPlayerUrl(item);
+        formatted.audioUrl = generateRadioPlayerUrl(item, req);
+        
+        // Proxy image
+        if (item.imageUrl) {
+          const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+          const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3222';
+          formatted.imageUrl = `${protocol}://${host}/proxy/image?url=${encodeURIComponent(item.imageUrl)}`;
+        }
       }
       
-      formatted.playerUrl = generateRadioPlayerUrl(item);
+      formatted.playerUrl = generateRadioPlayerUrl(item, req);
       return formatted;
     });
     
@@ -202,7 +251,7 @@ router.get('/:id', async (req, res) => {
     await radioItem.save();
     
     console.log('✅ Radio item found:', radioItem.title);
-    res.json(formatRadioWithPlayerUrl(radioItem, showOriginal));
+    res.json(formatRadioWithPlayerUrl(radioItem, showOriginal, req));
   } catch (error) {
     console.error('❌ Error fetching radio item:', error.message);
     res.status(500).json({ message: error.message });
@@ -223,7 +272,7 @@ router.get('/category/:category', async (req, res) => {
       .limit(limit);
       
     console.log(`✅ Found ${radioItems.length} radio items in category ${category}`);
-    res.json(radioItems.map(item => formatRadioWithPlayerUrl(item, showOriginal)));
+    res.json(radioItems.map(item => formatRadioWithPlayerUrl(item, showOriginal, req)));
   } catch (error) {
     console.error('❌ Error fetching radio items by category:', error.message);
     res.status(500).json({ message: error.message });
@@ -242,7 +291,7 @@ router.get('/featured/list', async (req, res) => {
       .limit(limit);
       
     console.log(`✅ Found ${radioItems.length} featured radio items`);
-    res.json(radioItems.map(item => formatRadioWithPlayerUrl(item, showOriginal)));
+    res.json(radioItems.map(item => formatRadioWithPlayerUrl(item, showOriginal, req)));
   } catch (error) {
     console.error('❌ Error fetching featured radio items:', error.message);
     res.status(500).json({ message: error.message });
@@ -267,7 +316,7 @@ router.get('/search', async (req, res) => {
     }).sort({ createdAt: -1 }).limit(limit);
     
     console.log(`✅ Found ${items.length} radio items matching query: ${query}`);
-    res.json(items.map(item => formatRadioWithPlayerUrl(item, showOriginal)));
+    res.json(items.map(item => formatRadioWithPlayerUrl(item, showOriginal, req)));
   } catch (error) {
     console.error('❌ Error searching radio items:', error.message);
     res.status(500).json({ message: error.message });
@@ -292,7 +341,7 @@ router.get('/search/:query', async (req, res) => {
     }).sort({ createdAt: -1 }).limit(limit);
     
     console.log(`✅ Found ${items.length} radio items matching query: ${query}`);
-    res.json(items.map(item => formatRadioWithPlayerUrl(item, showOriginal)));
+    res.json(items.map(item => formatRadioWithPlayerUrl(item, showOriginal, req)));
   } catch (error) {
     console.error('❌ Error searching radio items:', error.message);
     res.status(500).json({ message: error.message });
@@ -345,7 +394,7 @@ router.post('/', async (req, res) => {
     
     const newRadioItem = await radioItem.save();
     console.log('✅ Radio item created successfully:', newRadioItem.title);
-    res.status(201).json(formatRadioWithPlayerUrl(newRadioItem));
+    res.status(201).json(formatRadioWithPlayerUrl(newRadioItem, false, req));
   } catch (error) {
     console.error('❌ Error creating radio item:', error.message);
     res.status(400).json({ message: error.message });
@@ -361,7 +410,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Radio item not found' });
     }
     console.log('✅ Radio item updated successfully:', updatedRadioItem.title);
-    res.json(formatRadioWithPlayerUrl(updatedRadioItem));
+    res.json(formatRadioWithPlayerUrl(updatedRadioItem, false, req));
   } catch (error) {
     console.error('❌ Error updating radio item:', error.message);
     res.status(400).json({ message: error.message });

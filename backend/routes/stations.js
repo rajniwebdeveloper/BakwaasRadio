@@ -5,29 +5,105 @@ const Series = require('../models/Series');
 
 console.log('🛣️  Loading station routes...');
 
-// Helper function to generate player URL
-function generatePlayerUrl(item, type = 'station') {
-  const baseUrl = process.env.BASE_URL || 'http://localhost:3222';
+// Helper function to generate player URL from request hostname
+function generatePlayerUrl(item, type = 'station', req = null) {
+  let baseUrl;
+  if (req) {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3222';
+    baseUrl = `${protocol}://${host}`;
+  } else {
+    baseUrl = process.env.BASE_URL || 'http://localhost:3222';
+  }
   return `${baseUrl}/player/${type}/${item._id || item.id}`;
 }
 
+// Helper function to generate proxied image URL from request hostname
+function generateProxyImageUrl(item, imageType = 'profilepic', entityType = 'station', req = null) {
+  let baseUrl;
+  if (req) {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3222';
+    baseUrl = `${protocol}://${host}`;
+  } else {
+    baseUrl = process.env.BASE_URL || 'http://localhost:3222';
+  }
+  const itemId = item._id || item.id;
+  return `${baseUrl}/proxy/${entityType}/${itemId}/${imageType}`;
+}
+
+// Helper function to generate generic proxy URL from request hostname
+function generateGenericProxyUrl(url, type = 'image', req = null) {
+  if (!url) return '';
+  let baseUrl;
+  if (req) {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3222';
+    baseUrl = `${protocol}://${host}`;
+  } else {
+    baseUrl = process.env.BASE_URL || 'http://localhost:3222';
+  }
+  return `${baseUrl}/proxy/${type}?url=${encodeURIComponent(url)}`;
+}
+
 // Helper function to format station response with player URL
-function formatStationWithPlayerUrl(station, showOriginal = false) {
+function formatStationWithPlayerUrl(station, showOriginal = false, req = null) {
   const formatted = {
     ...station.toObject ? station.toObject() : station,
     // Only include originalMp3Url when showing originals for admin purposes
-    ...(showOriginal && { originalMp3Url: station.mp3Url })
+    ...(showOriginal && { 
+      originalMp3Url: station.mp3Url,
+      originalProfilepic: station.profilepic,
+      originalBanner: station.banner
+    })
   };
   
-  // If showOriginal is true, keep the original URL
+  // If showOriginal is true, keep the original URLs
   if (showOriginal) {
     formatted.mp3Url = station.mp3Url; // Keep original URL
-    formatted.audioUrl = station.audioUrl; // Keep original URL (fixed: was radioItem.audioUrl)
-    formatted.playerUrl = generatePlayerUrl(station, 'station'); // Still include player URL for reference
+    formatted.audioUrl = station.audioUrl; // Keep original URL
+    formatted.playerUrl = generatePlayerUrl(station, 'station', req); // Still include player URL for reference
+    formatted.profilepic = station.profilepic; // Keep original profilepic
+    formatted.banner = station.banner; // Keep original banner
   } else {
-    formatted.mp3Url = generatePlayerUrl(station, 'station'); // Replace with player URL
-    formatted.audioUrl = generatePlayerUrl(station, 'station'); // Replace with player URL
-    formatted.playerUrl = generatePlayerUrl(station, 'station'); // Add explicit player URL
+    // Replace with proxied URLs
+    formatted.mp3Url = generatePlayerUrl(station, 'station', req); // Replace with player URL
+    formatted.audioUrl = generatePlayerUrl(station, 'station', req); // Replace with player URL
+    formatted.playerUrl = generatePlayerUrl(station, 'station', req); // Add explicit player URL
+    
+    // Proxy images
+    if (station.profilepic) {
+      formatted.profilepic = generateProxyImageUrl(station, 'profilepic', 'station', req);
+    }
+    if (station.banner) {
+      formatted.banner = generateProxyImageUrl(station, 'banner', 'station', req);
+    }
+  }
+  
+  return formatted;
+}
+
+// Helper function to format series response with proxied URLs
+function formatSeriesWithProxyUrls(series, showOriginal = false, req = null) {
+  const formatted = {
+    ...series.toObject ? series.toObject() : series,
+    ...(showOriginal && {
+      originalProfilepic: series.profilepic,
+      originalBanner: series.banner
+    })
+  };
+  
+  if (showOriginal) {
+    formatted.profilepic = series.profilepic;
+    formatted.banner = series.banner;
+  } else {
+    // Proxy images
+    if (series.profilepic) {
+      formatted.profilepic = generateProxyImageUrl(series, 'profilepic', 'series', req);
+    }
+    if (series.banner) {
+      formatted.banner = generateProxyImageUrl(series, 'banner', 'series', req);
+    }
   }
   
   return formatted;
@@ -73,12 +149,22 @@ router.get('/', async (req, res) => {
           baseFormatted.mp3Url = station.mp3Url; // Keep original URL
           baseFormatted.originalMp3Url = station.mp3Url; // Include original for admins
         } else {
-          baseFormatted.mp3Url = generatePlayerUrl(station, 'station');
+          baseFormatted.mp3Url = generatePlayerUrl(station, 'station', req);
         }
-        baseFormatted.playerUrl = generatePlayerUrl(station, 'station');
+        baseFormatted.playerUrl = generatePlayerUrl(station, 'station', req);
       } else {
         baseFormatted.mp3Url = '';
         baseFormatted.playerUrl = '';
+      }
+
+      // Proxy images
+      if (!showOriginal) {
+        if (station.profilepic) {
+          baseFormatted.profilepic = generateProxyImageUrl(station, 'profilepic', 'station', req);
+        }
+        if (station.banner) {
+          baseFormatted.banner = generateProxyImageUrl(station, 'banner', 'station', req);
+        }
       }
 
       return baseFormatted;
@@ -94,10 +180,14 @@ router.get('/', async (req, res) => {
 // GET all series
 router.get('/series/list', async (req, res) => {
   try {
-    console.log('📡 GET /api/stations/series/list - Fetching all series');
+    const showOriginal = req.query.show === 'original';
+    console.log(`📡 GET /api/stations/series/list - Fetching all series. ShowOriginal: ${showOriginal}`);
     const series = await Series.find({ isActive: true }).sort({ name: 1 });
     console.log(`✅ Found ${series.length} series`);
-    res.json(series);
+    
+    // Format with proxy URLs
+    const formattedSeries = series.map(s => formatSeriesWithProxyUrls(s, showOriginal, req));
+    res.json(formattedSeries);
   } catch (error) {
     console.error('❌ Error fetching series:', error.message);
     res.status(500).json({ message: error.message });
@@ -140,7 +230,7 @@ router.get('/series/:seriesName/info', async (req, res) => {
     }).sort({ episodeNumber: 1 });
     
     // Format episodes with player URLs
-    const formattedEpisodes = episodes.map(episode => formatStationWithPlayerUrl(episode, showOriginal));
+    const formattedEpisodes = episodes.map(episode => formatStationWithPlayerUrl(episode, showOriginal, req));
     
     // Return combined data
     res.json({
@@ -210,7 +300,7 @@ router.get('/:id', async (req, res) => {
     console.log(`✅ Found station: ${station.name}`);
     
     // Format with player URL
-    const formattedStation = formatStationWithPlayerUrl(station, showOriginal);
+    const formattedStation = formatStationWithPlayerUrl(station, showOriginal, req);
     res.json(formattedStation);
   } catch (error) {
     console.error('❌ Error fetching station by ID:', error.message);
@@ -221,7 +311,8 @@ router.get('/:id', async (req, res) => {
 // GET all series with complete metadata
 router.get('/series/all', async (req, res) => {
   try {
-    console.log('📡 GET /api/stations/series/all - Fetching all series with complete metadata');
+    const showOriginal = req.query.show === 'original';
+    console.log(`📡 GET /api/stations/series/all - Fetching all series with complete metadata. ShowOriginal: ${showOriginal}`);
     const series = await Series.find({ isActive: true })
       .select('_id name description profilepic banner genre language tags isActive createdAt updatedAt')
       .sort({ name: 1 });
@@ -243,14 +334,14 @@ router.get('/series/all', async (req, res) => {
         
         console.log(`📝 Series "${s.name}" has ${episodes.length} episodes`);
         
-        return {
+        const baseData = {
           _id: s._id,
           seriesName: s.name,
           name: s.name,
           seriesDescription: s.description || '',
           description: s.description || '',
-          banner: s.banner || '',
-          profilepic: s.profilepic || '',
+          banner: showOriginal ? (s.banner || '') : (s.banner ? generateProxyImageUrl(s, 'banner', 'series', req) : ''),
+          profilepic: showOriginal ? (s.profilepic || '') : (s.profilepic ? generateProxyImageUrl(s, 'profilepic', 'series', req) : ''),
           genre: s.genre || 'General',
           language: s.language || 'Hindi',
           tags: Array.isArray(s.tags) ? s.tags : [],
